@@ -1,0 +1,64 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    name: All Checks
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    env:
+      DEBUG: dali-orm:*
+      VP_HOME: .vite-plus
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{github.event.pull_request.head.sha}}
+          fetch-depth: 0
+      - uses: jdx/mise-action@v4
+      - name: Get pnpm store directory
+        id: pnpm-cache
+        run: echo "store=$(pnpm store path)" >> $GITHUB_OUTPUT
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm-cache.outputs.store }}
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-
+
+      - run: mkdir -p ~/.vite-plus/cache
+      - name: Cache vite-plus task cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.vite-plus/cache
+          key: ${{ runner.os }}-vp-${{ hashFiles('pnpm-lock.yaml') }}-${{ github.run_id }}
+          restore-keys: |
+            ${{ runner.os }}-vp-${{ hashFiles('pnpm-lock.yaml') }}-
+            ${{ runner.os }}-vp-
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm vp run ci
+      - run: pnpm test:coverage
+      - run: pnpm lint
+      - name: Fetch main branch
+        run: git fetch origin main:main
+
+      - name: Check for changeset
+        if: github.event_name == 'pull_request'
+        run: pnpm changeset status --since=main
+      - name: Report Coverage
+        if: always()
+        uses: davelosert/vitest-coverage-report-action@v2
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          json-summary-path: ./coverage/coverage-summary.json
+          json-final-path: ./coverage/coverage-final.json

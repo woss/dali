@@ -1,0 +1,26 @@
+{
+  "version": "20260517230800",
+  "name": "create_user",
+  "createdAt": "2026-05-17T21:08:00.771Z",
+  "tables": [
+    {
+      "name": "user",
+      "columns": [
+        {
+          "name": "name",
+          "tableName": "user",
+          "config": {
+            "type": "string"
+          }
+        }
+      ],
+      "config": {
+        "schema": "full",
+        "type": "normal"
+      }
+    }
+  ],
+  "access": [],
+  "events": [],
+  "functions": []
+}

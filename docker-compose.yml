@@ -1,0 +1,40 @@
+# SurrealDB Docker Compose Configuration
+# For local development and testing
+#
+# Usage:
+#   docker compose up -d
+#   docker compose down
+#
+# Default credentials: admin / admin
+# HTTP API: http://localhost:10101
+
+services:
+  surrealdb:
+    image: surrealdb/surrealdb:latest
+    restart: unless-stopped
+    user: root
+    ports:
+      - '10101:8000'
+    environment:
+      SURREAL_INSECURE_FORWARD_ACCESS_ERRORS: 'true'
+    volumes:
+      - surrealdb_data:/data
+      # - ./data:/data
+    entrypoint:
+      - /surreal
+      - start
+      - --log
+      - info
+      - --user
+      - admin
+      - --pass
+      - admin
+      - surrealkv:/data/orm.db
+    labels:
+      - 'com.surrealdb.description=SurrealDB Multi-model Database'
+      - 'com.surrealdb.version=latest'
+      - 'com.surrealdb.project=dali-orm'
+      - 'com.surrealdb.usage=development'
+
+volumes:
+  surrealdb_data: {}

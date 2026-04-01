@@ -1,0 +1,169 @@
+{
+  "version": 1,
+  "dialect": "surrealdb",
+  "id": "9ffbd761c1ff",
+  "entries": [
+    {
+      "idx": 1,
+      "when": "2026-05-18T19:58:05.385180798Z",
+      "tag": "init",
+      "breakpoints": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "hash": "69618f1cce67f226f42858487ab7a2cecd92d9872d8e0426730aaf96b440d8ec"
+    },
+    {
+      "idx": 2,
+      "when": "2026-05-18T19:58:05.449271173Z",
+      "tag": "embedding",
+      "breakpoints": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "hash": "be5537da85ac69902587617203990151876188d5691f462c796dad9a9ccba006"
+    },
+    {
+      "idx": 3,
+      "when": "2026-05-18T19:58:05.460704882Z",
+      "tag": "rm-user-embed",
+      "breakpoints": [
+        true
+      ],
+      "hash": "7c8daa7f1a92cc18df23554efb048b413233a2a78661dbbceb9504cc2a3171f8"
+    },
+    {
+      "idx": 4,
+      "when": "2026-05-18T19:58:05.476489882Z",
+      "tag": "add",
+      "breakpoints": [
+        true
+      ],
+      "hash": "d7b7798dae1c2d3e1279d9e350d9d12ce2aaf62cbef11973878a12c9a950c764"
+    },
+    {
+      "idx": 5,
+      "when": "2026-05-18T19:58:05.507556798Z",
+      "tag": "uses_model",
+      "breakpoints": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+      ],
+      "hash": "fc279ef1e7020851154d5be76b20965d81dd5a754a8d95b2340ee9a85f6376a8"
+    },
+    {
+      "idx": 6,
+      "when": "2026-05-18T19:58:05.531608423Z",
+      "tag": "uses_model_idx",
+      "breakpoints": [
+        true
+      ],
+      "hash": "0dca6334ba7fae08fa6e12201850bb4505f90c0c2e91d4f22fcc2aa1f362df12"
+    },
+    {
+      "idx": 7,
+      "when": "2026-05-18T19:58:05.547126257Z",
+      "tag": "add_indexes",
+      "breakpoints": [
+        true
+      ],
+      "hash": "d61c51b7cb46113ab278953fa5d5b92c1c8d98b0415059adc5adbbd0db8f1806"
+    },
+    {
+      "idx": 8,
+      "when": "2026-05-18T19:58:05.569433423Z",
+      "tag": "add-content-hash",
+      "breakpoints": [
+        true,
+        true
+      ],
+      "hash": "9377baa6ac76ca1154aa31eeab579c26bad96e30b0e4ceca525e5ad3c6d4f195"
+    },
+    {
+      "idx": 9,
+      "when": "2026-05-18T19:58:05.584056673Z",
+      "tag": "add_variant_to_model",
+      "breakpoints": [
+        true
+      ],
+      "hash": "3581205a73e769ab4d71e63038789a044d07f869d27ab468fdd4d693aae45fae"
+    },
+    {
+      "idx": 10,
+      "when": "2026-05-18T19:58:05.608515715Z",
+      "tag": "cleanup_session",
+      "breakpoints": [
+        true,
+        true,
+        true
+      ],
+      "hash": "684512cced354001620ccf60ce0f893df41520755e8d686e7bb854a7c6661b39"
+    },
+    {
+      "idx": 11,
+      "when": "2026-05-18T19:58:05.62075259Z",
+      "tag": "add_index_to_partofproject",
+      "breakpoints": [
+        true
+      ],
+      "hash": "a1ec6f8ff2f95a31f6910b02335e2b17d9a571ff56fa6ad4a0208d576f8ae14b"
+    },
+    {
+      "idx": 12,
+      "when": "2026-05-18T19:58:05.649588715Z",
+      "tag": "content_hash_blake3",
+      "breakpoints": [
+        true
+      ],
+      "hash": "e4b5cbc69e4c78d8ce59721256096e143c4c5d88b8c763cd1a77f36b7e36dcdb"
+    }
+  ]
+}

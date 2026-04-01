@@ -1,0 +1,38 @@
+{
+  "js/ts.preferences.importModuleSpecifier": "relative",
+  "js/ts.tsdk.promptToUseWorkspaceVersion": true,
+  "editor.codeActionsOnSave": {
+    "source.fixAll.oxc": "explicit"
+    // "source.fixAll": "always"
+  },
+  "editor.formatOnSave": true,
+  "[svelte]": {
+    "editor.defaultFormatter": "svelte.svelte-vscode"
+  },
+  "[javascript]": {
+    "editor.defaultFormatter": "oxc.oxc",
+    // Optional: Auto-format on save
+    "editor.formatOnSave": true,
+    // Use "modifications" to format only changed lines
+    "editor.formatOnSaveMode": "file"
+  },
+  // Disable built-in TypeScript formatter (critical!)
+  "[typescript]": {
+    "editor.defaultFormatter": "oxc.oxc",
+    // Optional: Auto-format on save
+    "editor.formatOnSave": true,
+    // Use "modifications" to format only changed lines
+    "editor.formatOnSaveMode": "file"
+  },
+  "[json]": {
+    "editor.defaultFormatter": "oliversturm.fix-json"
+  },
+  "[yaml]": {
+    "editor.defaultFormatter": "oxc.oxc",
+    "editor.autoIndent": "advanced"
+  },
+  "[dockercompose]": {
+    "editor.autoIndent": "advanced"
+  },
+  "js/ts.tsdk.path": "node_modules/typescript/lib"
+}

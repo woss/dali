@@ -1,0 +1,10 @@
+{
+  "servers": {
+    "code-review-graph": {
+      "command": "uvx",
+      "args": ["code-review-graph", "serve"],
+      "cwd": "/Users/woss/projects/woss/surrealdb-orm",
+      "type": "stdio"
+    }
+  }
+}

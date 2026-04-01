@@ -1,0 +1,13 @@
+{
+  "log_enabled": false,
+  "commit_message_provider": "opencode",
+  "commit_message_model": "big-pickle",
+  "llm_timeout_ms": 15000,
+  "max_diff_chars": 4000,
+  "branch_slug_max_length": 50,
+  "auto_update": true,
+  "default_branch_pattern": "^ge-branch-\\d+$",
+  "stale_lock_ms": 300000,
+  "notification_max_age_ms": 300000,
+  "inference_enabled": true
+}

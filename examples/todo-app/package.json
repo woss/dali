@@ -1,0 +1,30 @@
+{
+  "name": "@dali-orm/examples-todo-app",
+  "description": "Todo app example with SvelteKit and DaliORM",
+  "type": "module",
+  "scripts": {
+    "generate": "dali-orm generate",
+    "dev": "vp dev",
+    "migrate:status": "dali-orm migrate status",
+    "migrate:up": "dali-orm migrate up",
+    "orm": "dali-orm"
+  },
+  "dependencies": {
+    "@surrealdb/node-darwin-arm64": "1.0.0-beta.3",
+    "@woss/dali-orm": "workspace:*",
+    "surrealdb": "catalog:",
+    "svelte": "^4.0.0"
+  },
+  "devDependencies": {
+    "@sveltejs/adapter-auto": "^3.0.0",
+    "@sveltejs/kit": "^2.0.0",
+    "@sveltejs/vite-plugin-svelte": "^3.0.0",
+    "svelte": "^4.0.0",
+    "svelte-check": "^3.0.0",
+    "tsx": "4.21.0",
+    "typescript": "catalog:",
+    "valibot": "catalog:",
+    "vite": "catalog:",
+    "vite-plus": "catalog:"
+  }
+}

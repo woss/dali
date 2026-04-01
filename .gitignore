@@ -1,0 +1,17 @@
+node_modules
+coverage
+dist
+build
+*.log
+.env
+.turbo
+tmp/
+test-db/
+test-*.db/
+test-results/
+*/test-results/
+data/
+history.txt
+.playwright-mcp/
+# Added by code-review-graph
+.code-review-graph/

@@ -1,0 +1,52 @@
+# Version control
+.git/**
+
+# Dependencies
+node_modules/**
+.pnpm-store/**
+.pnpmfile.cjs
+
+# Build output
+dist/**
+build/**
+.turbo/**
+.out/**
+.next/**
+.nuxt/**
+.cache/**
+.vite/**
+.astro/**
+
+# SvelteKit
+.svelte-kit/**
+.sveltekit/**
+
+# Tests
+test-results/**
+**/test-results/**
+test-db/**
+test-*.db/**
+coverage/**
+data/**
+
+# Temp / transient
+tmp/**
+temp/**
+*.log
+.env
+.env.*
+!.env.example
+
+# DB files (codegraph internal)
+*.db
+*.db-shm
+*.db-wal
+
+# Archives
+*.tgz
+*.tar.gz
+
+# Presentation layer
+**.local/**
+.DS_Store
+Thumbs.db
