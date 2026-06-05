@@ -13,7 +13,10 @@
       "properties": {
         "mode": {
           "type": "string",
-          "enum": ["embed", "remote"],
+          "enum": [
+            "embed",
+            "remote"
+          ],
           "description": "Storage mode: 'embed' for local embedded database, 'remote' for remote server"
         },
         "embed": {
@@ -22,7 +25,10 @@
             "engine": {
               "default": "surrealkv",
               "type": "string",
-              "enum": ["surrealkv", "memory"],
+              "enum": [
+                "surrealkv",
+                "memory"
+              ],
               "description": "Embedded engine type: 'surrealkv' (persistent, default) or 'memory' (in-memory, resets on restart)"
             },
             "dataPath": {
@@ -30,7 +36,10 @@
               "description": "Path to store embedded data (required when engine is 'surrealkv'). Supports ~ for home directory. Defaults to ~/.config/dali-memory/data/"
             }
           },
-          "required": ["engine", "dataPath"],
+          "required": [
+            "engine",
+            "dataPath"
+          ],
           "additionalProperties": false,
           "description": "Embedded storage settings (required when mode is 'embed')"
         },
@@ -69,12 +78,16 @@
               "description": "SurrealDB database to use for memory storage"
             }
           },
-          "required": ["url"],
+          "required": [
+            "url"
+          ],
           "additionalProperties": false,
           "description": "Remote storage settings (required when mode is 'remote')"
         }
       },
-      "required": ["mode"],
+      "required": [
+        "mode"
+      ],
       "additionalProperties": false,
       "description": "Storage backend configuration"
     },
@@ -95,7 +108,10 @@
         },
         "provider": {
           "type": "string",
-          "enum": ["remote", "local"],
+          "enum": [
+            "remote",
+            "local"
+          ],
           "description": "Embedding provider: 'remote' (API endpoint) or 'local' (local HuggingFace pipeline). Defaults to 'remote' for backward compatibility"
         },
         "modelCacheDir": {
@@ -103,7 +119,10 @@
           "description": "Directory to cache downloaded models (used by 'local' provider). Defaults to ~/.config/dali-memory/model_cache/"
         }
       },
-      "required": ["endpoint", "model"],
+      "required": [
+        "endpoint",
+        "model"
+      ],
       "additionalProperties": false,
       "description": "Embedding model configuration"
     },
@@ -118,7 +137,9 @@
               "description": "Enable capturing chat messages for memory"
             }
           },
-          "required": ["enabled"],
+          "required": [
+            "enabled"
+          ],
           "additionalProperties": false,
           "description": "Chat message memory capture settings"
         },
@@ -130,7 +151,9 @@
               "description": "Enable automatic memory capture from session activity"
             }
           },
-          "required": ["enabled"],
+          "required": [
+            "enabled"
+          ],
           "additionalProperties": false,
           "description": "Automatic memory capture settings"
         }
@@ -139,6 +162,8 @@
       "description": "Plugin behavior configuration"
     }
   },
-  "required": ["storage"],
+  "required": [
+    "storage"
+  ],
   "additionalProperties": false
 }
