@@ -192,16 +192,17 @@ export class SurrealQLGenerator {
     if (baseType === 'record' && (column.config.recordTable || column.config.linksTo)) {
       typeStr = `record<${column.config.recordTable || column.config.linksTo}>`;
     }
-    // FLEXIBLE before TYPE — SurrealDB requires FLEXIBLE TYPE, not TYPE FLEXIBLE
-    if (column.config.flexible) {
-      parts.push('FLEXIBLE');
-    }
 
     // FLEXIBLE only pairs with plain TYPE object, not option<object>
     if (column.config.optional && !(column.config.flexible && baseType === 'object')) {
       typeStr = `option<${typeStr}>`;
     }
     parts.push(`TYPE ${typeStr}`);
+
+    // FLEXIBLE must be specified after TYPE in SurrealDB
+    if (column.config.flexible) {
+      parts.push('FLEXIBLE');
+    }
 
     // READONLY
     if (column.config.readonly) {
@@ -241,16 +242,17 @@ export class SurrealQLGenerator {
     if (baseType === 'record' && (column.config.recordTable || column.config.linksTo)) {
       typeStr = `record<${column.config.recordTable || column.config.linksTo}>`;
     }
-    // FLEXIBLE before TYPE — SurrealDB requires FLEXIBLE TYPE, not TYPE FLEXIBLE
-    if (column.config.flexible) {
-      parts.push('FLEXIBLE');
-    }
 
     // FLEXIBLE only pairs with plain TYPE object, not option<object>
     if (column.config.optional && !(column.config.flexible && baseType === 'object')) {
       typeStr = `option<${typeStr}>`;
     }
     parts.push(`TYPE ${typeStr}`);
+
+    // FLEXIBLE must be specified after TYPE in SurrealDB
+    if (column.config.flexible) {
+      parts.push('FLEXIBLE');
+    }
 
     // READONLY
     if (column.config.readonly) {
@@ -309,7 +311,15 @@ export class SurrealQLGenerator {
         parts.push(`DIMENSION ${index.dimension}`);
       }
       if (index.vectorType) {
-        parts.push(`TYPE ${index.vectorType}`);
+        // Map internal vectorType names to SurrealDB's expected format
+        // SurrealDB supports: F64, F32, I64, I32, I16 (docs.surrealdb.com)
+        const VECTOR_TYPE_TO_SQL: Record<string, string> = {
+          float32: 'F32',
+          float64: 'F64',
+          float: 'F64', // deprecated alias — F64 is the HNSW default
+        };
+        const sqlType = VECTOR_TYPE_TO_SQL[index.vectorType] ?? index.vectorType;
+        parts.push(`TYPE ${sqlType}`);
       }
       if (index.distance) {
         parts.push(`DISTANCE ${index.distance}`);

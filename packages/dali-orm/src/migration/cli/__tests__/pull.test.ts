@@ -34,7 +34,6 @@ function makeConfig(overrides: Partial<Config> = {}): Config {
     migrations: {
       dir: './migrations',
       table: '__test_pull_migrations',
-      journalDir: './meta',
     },
   };
   return {

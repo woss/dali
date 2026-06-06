@@ -49,7 +49,6 @@ function makeConfig(overrides: Partial<Config> = {}): Config {
     schema: { dir: './schema', pattern: '**/*.{js,ts}' },
     migrations: {
       dir: './migrations',
-      journalDir: './meta',
       table: '__test_migrations',
     },
   } as Config;

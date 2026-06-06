@@ -358,9 +358,9 @@ async function handleGenerate(args: string[], options: CLIOptions, config: Confi
   }
 
   // Determine snapshot directory - prefer CLI option, then config, then default
-  // Resolve relative to cwd (consistent with migrations.dir and schema.dir)
-  const snapshotDirOption = options.snapshots ?? config.snapshots?.dir ?? './snapshots';
-  const resolvedSnapshotDir = path.resolve(snapshotDirOption);
+  const resolvedSnapshotDir = options.snapshots
+    ? path.resolve(options.snapshots)
+    : (config.snapshots?.dir ?? path.resolve('./snapshots'));
 
   const outputPath = await generateMigration(
     schemaFiles.tables,

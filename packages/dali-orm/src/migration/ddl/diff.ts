@@ -863,13 +863,12 @@ function generateCreateTable(stmt: CreateTableStatement): string {
     if (col.kind === 'record' && col.recordTable) {
       typeStr = `record<${col.recordTable}>`;
     }
-    // FLEXIBLE before TYPE — SurrealDB requires FLEXIBLE TYPE, not TYPE FLEXIBLE
-    if (col.flex) line += ' FLEXIBLE';
-
     // Use option<T> syntax for optional fields (SurrealDB syntax)
     // FLEXIBLE only pairs with plain TYPE object, not option<object>
     if (col.optional && !(col.flex && col.kind === 'object')) line += ` TYPE option<${typeStr}>`;
     else line += ` TYPE ${typeStr}`;
+    // FLEXIBLE must be specified after TYPE in SurrealDB
+    if (col.flex) line += ' FLEXIBLE';
     if (col.readonly) line += ' READONLY';
     if (col.default !== undefined) line += ` DEFAULT ${formatDefaultForSql(col.default)}`;
     if (col.assert) line += ` ASSERT ${col.assert}`;

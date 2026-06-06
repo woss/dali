@@ -78,6 +78,21 @@ export async function migrateUp(options: MigrateOptions, driver?: SurrealDriver)
         console.log(`    ○ ${m.version} — ${m.name}`);
       }
     }
+
+    // Apply pending migrations
+    if (status.pending.length > 0) {
+      console.log(`\n  Applying ${status.pending.length} pending migration(s)...`);
+      const result = await runner.up(options.to);
+      console.log(`\n  ✔ Applied ${result.applied.length} migration(s):`);
+      for (const name of result.applied) {
+        console.log(`    ✓ ${name}`);
+      }
+      if (result.skipped.length > 0) {
+        console.log(`\n  ○ Skipped ${result.skipped.length} migration(s) (beyond target)`);
+      }
+    } else {
+      console.log('\n  No pending migrations to apply.');
+    }
   } catch (error) {
     console.error('migrateUp error:', error);
   } finally {
