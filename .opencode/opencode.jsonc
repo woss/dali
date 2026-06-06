@@ -1,43 +1,25 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "instructions": [
-    "../AGENTS.md",
-    "./tools/philosophy.md"
-  ],
+  "instructions": ["../AGENTS.md", "./tools/philosophy.md"],
   "lsp": true,
   "mcp": {
     "backlog": {
       "type": "local",
       "enabled": true,
-      "command": [
-        "backlog-new",
-        "mcp",
-        "start"
-      ],
+      "command": ["backlog-new", "mcp", "start"],
     },
     "mcp-fetch-server": {
       "type": "local",
-      "command": [
-        "npx",
-        "mcp-fetch-server"
-      ],
+      "command": ["npx", "mcp-fetch-server"],
       "enabled": true,
     },
     "sequential-thinking": {
-      "command": [
-        "npx",
-        "-y",
-        "@modelcontextprotocol/server-sequential-thinking"
-      ],
+      "command": ["npx", "-y", "@modelcontextprotocol/server-sequential-thinking"],
       "type": "local",
       "enabled": true,
     },
     "code-review-graph": {
-      "command": [
-        "uvx",
-        "code-review-graph",
-        "serve"
-      ],
+      "command": ["uvx", "code-review-graph", "serve"],
       "type": "local",
     },
     "context7": {

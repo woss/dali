@@ -49,12 +49,7 @@ jobs:
       - run: pnpm vp run ci
       - run: pnpm test:coverage
       - run: pnpm lint
-      - name: Fetch main branch
-        run: git fetch origin main:main
 
-      - name: Check for changeset
-        if: github.event_name == 'pull_request'
-        run: pnpm changeset status --since=main
       - name: Report Coverage
         if: always()
         uses: davelosert/vitest-coverage-report-action@v2

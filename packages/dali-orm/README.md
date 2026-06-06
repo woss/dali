@@ -119,58 +119,62 @@ await orm.disconnect();
 ### Tables
 
 ```typescript
+import { defineTable, defineRelationTable, createOrmSchema, index } from '@woss/dali-orm';
 import {
-  defineTable,
-  defineRelationTable,
-  createOrmSchema,
-  index,
-} from "@woss/dali-orm";
-import { string, int, bool, datetime, duration, decimal, array, object } from "@woss/dali-orm/sdk/schema/column/simple-builders";
-import { record } from "@woss/dali-orm/sdk/schema/column/record";
+  string,
+  int,
+  bool,
+  datetime,
+  duration,
+  decimal,
+  array,
+  object,
+} from '@woss/dali-orm/sdk/schema/column/simple-builders';
+import { record } from '@woss/dali-orm/sdk/schema/column/record';
 
 // Basic table
-const userTable = defineTable("user", {
-  name: string("name"),
-  email: string("email"),
-  age: int("age"),
+const userTable = defineTable('user', {
+  name: string('name'),
+  email: string('email'),
+  age: int('age'),
 });
 
 // Table with options
 const articleTable = defineTable(
-  "article",
+  'article',
   {
-    created_at: datetime("created_at").defaultNow(),
-    title: string("title"),
-    content: string("content"),
-    published_at: datetime("published_at").optional(),
-    author: string("author"),
+    created_at: datetime('created_at').defaultNow(),
+    title: string('title'),
+    content: string('content'),
+    published_at: datetime('published_at').optional(),
+    author: string('author'),
   },
   {
-    schema: "full", // 'full' or 'less'
-    type: "normal", // 'normal' or 'relation'
+    schema: 'full', // 'full' or 'less'
+    type: 'normal', // 'normal' or 'relation'
     permissions: {
-      select: "WHERE true",
-      create: "WHERE true",
-      update: "WHERE true",
-      delete: "WHERE true",
+      select: 'WHERE true',
+      create: 'WHERE true',
+      update: 'WHERE true',
+      delete: 'WHERE true',
     },
     indexes: [
-      index("email_idx").on("email").unique(),
-      index("title_search").on("title").fulltext(),
-      index("embedding_idx").on("embedding").hnsw(1536, { distance: "cosine" }),
+      index('email_idx').on('email').unique(),
+      index('title_search').on('title').fulltext(),
+      index('embedding_idx').on('embedding').hnsw(1536, { distance: 'cosine' }),
     ],
   },
 );
 
 // Relation table
 const wroteTable = defineRelationTable(
-  "wrote",
+  'wrote',
   {
-    created_at: datetime("created_at").defaultNow(),
+    created_at: datetime('created_at').defaultNow(),
   },
   {
-    in: "user",
-    out: "article",
+    in: 'user',
+    out: 'article',
     enforced: true,
   },
 );
@@ -200,8 +204,8 @@ const schema = createOrmSchema({ tables: { users: userTable, articles: articleTa
 ```typescript
 string()
   .optional() // Allow NULL values
-  .default("value") // Set default value
-  .assert("condition") // Add validation assertion
+  .default('value') // Set default value
+  .assert('condition') // Add validation assertion
   .readonly() // Mark as read-only
   .flexible() // Allow flexible schema
   .unique(); // Create unique index
@@ -212,27 +216,27 @@ string()
 ### SELECT
 
 ```typescript
-import { select, eq, and, or, not, like, contains, isNull } from "@woss/dali-orm/query";
+import { select, eq, and, or, not, like, contains, isNull } from '@woss/dali-orm/query';
 
 const driver = orm.getDriver();
 
 select(driver, userTable)
-  .where(eq("name", "John"))           // WHERE clause
-  .where((w) => w.eq("age", 18))       // Typed WHERE builder
-  .orderBy("name", "ASC")              // ORDER BY
-  .limit(10)                           // LIMIT
-  .start(20)                           // OFFSET/START
-  .groupBy("status")                   // GROUP BY
-  .fetch("posts")                      // FETCH related records
-  .parallel()                          // PARALLEL
-  .timeout(5)                          // TIMEOUT (seconds)
+  .where(eq('name', 'John')) // WHERE clause
+  .where((w) => w.eq('age', 18)) // Typed WHERE builder
+  .orderBy('name', 'ASC') // ORDER BY
+  .limit(10) // LIMIT
+  .start(20) // OFFSET/START
+  .groupBy('status') // GROUP BY
+  .fetch('posts') // FETCH related records
+  .parallel() // PARALLEL
+  .timeout(5) // TIMEOUT (seconds)
   .execute();
 ```
 
 ### INSERT
 
 ```typescript
-import { insert } from "@woss/dali-orm/query";
+import { insert } from '@woss/dali-orm/query';
 
 // Single record
 const [result] = await insert(driver, userTable)
@@ -243,10 +247,10 @@ const [result] = await insert(driver, userTable)
 ### UPDATE
 
 ```typescript
-import { update } from "@woss/dali-orm/query";
+import { update } from '@woss/dali-orm/query';
 
 const [result] = await update(driver, userTable)
-  .id("user:123")
+  .id('user:123')
   .data({ name: 'Jane', email: 'jane@example.com' })
   .execute();
 ```
@@ -254,26 +258,26 @@ const [result] = await update(driver, userTable)
 ### DELETE
 
 ```typescript
-import { delete_ } from "@woss/dali-orm/query";
+import { delete_ } from '@woss/dali-orm/query';
 
 // Delete by ID
-const [result] = await delete_(driver, userTable).id("user:123").execute();
+const [result] = await delete_(driver, userTable).id('user:123').execute();
 
 // Delete with condition
-const [result] = await delete_(driver, userTable).where(eq("active", false)).execute();
+const [result] = await delete_(driver, userTable).where(eq('active', false)).execute();
 ```
 
 ### RELATE
 
 ```typescript
-import { relate } from "@woss/dali-orm/query";
-import { defineRelationTable } from "@woss/dali-orm";
+import { relate } from '@woss/dali-orm/query';
+import { defineRelationTable } from '@woss/dali-orm';
 
-const wroteSchema = defineRelationTable("wrote", {}, { in: "user", out: "article" });
+const wroteSchema = defineRelationTable('wrote', {}, { in: 'user', out: 'article' });
 
 const [result] = await relate(driver, wroteSchema)
-  .from("user:123")
-  .to("article:456")
+  .from('user:123')
+  .to('article:456')
   .set({ created_at: new Date().toISOString() })
   .execute();
 ```
@@ -283,48 +287,48 @@ const [result] = await relate(driver, wroteSchema)
 ### Comparison Operators
 
 ```typescript
-import { eq, ne, gt, gte, lt, lte } from "@woss/dali-orm/query";
+import { eq, ne, gt, gte, lt, lte } from '@woss/dali-orm/query';
 
-eq("age", 18); // age = 18
-ne("status", "active"); // status != 'active'
-gt("price", 100); // price > 100
-gte("age", 18); // age >= 18
-lt("price", 100); // price < 100
-lte("age", 18); // age <= 18
+eq('age', 18); // age = 18
+ne('status', 'active'); // status != 'active'
+gt('price', 100); // price > 100
+gte('age', 18); // age >= 18
+lt('price', 100); // price < 100
+lte('age', 18); // age <= 18
 ```
 
 ### String Operators
 
 ```typescript
-import { like, contains, startsWith, endsWith } from "@woss/dali-orm/query";
+import { like, contains, startsWith, endsWith } from '@woss/dali-orm/query';
 
-like("name", "J%"); // name LIKE 'J%'
-contains("name", "ohn"); // string::contains(name, 'ohn')
-startsWith("name", "Jo"); // string::startsWith(name, 'Jo')
-endsWith("name", "hn"); // string::endsWith(name, 'hn')
+like('name', 'J%'); // name LIKE 'J%'
+contains('name', 'ohn'); // string::contains(name, 'ohn')
+startsWith('name', 'Jo'); // string::startsWith(name, 'Jo')
+endsWith('name', 'hn'); // string::endsWith(name, 'hn')
 ```
 
 ### Null & Array Checks
 
 ```typescript
-import { isNull, isNotNull, inside, notInside, all, any } from "@woss/dali-orm/query";
+import { isNull, isNotNull, inside, notInside, all, any } from '@woss/dali-orm/query';
 
-isNull("email"); // email = NONE
-isNotNull("email"); // email != NONE
-inside("status", ["active", "pending"]); // status IN [...]
-notInside("status", ["banned"]); // status NOT IN [...]
-all("tags", ["featured", "new"]); // CONTAINSALL
-any("tags", ["sale", "new"]); // CONTAINSANY
+isNull('email'); // email = NONE
+isNotNull('email'); // email != NONE
+inside('status', ['active', 'pending']); // status IN [...]
+notInside('status', ['banned']); // status NOT IN [...]
+all('tags', ['featured', 'new']); // CONTAINSALL
+any('tags', ['sale', 'new']); // CONTAINSANY
 ```
 
 ### Combinators
 
 ```typescript
-import { and, or, not } from "@woss/dali-orm/query";
+import { and, or, not } from '@woss/dali-orm/query';
 
-and(eq("age", 18), eq("active", true));
-or(eq("status", "active"), eq("status", "pending"));
-not(eq("active", false));
+and(eq('age', 18), eq('active', true));
+or(eq('status', 'active'), eq('status', 'pending'));
+not(eq('active', false));
 ```
 
 ## Typed Conditions
@@ -332,31 +336,28 @@ not(eq("active", false));
 For full TypeScript type safety, use conditions with typed columns from table definitions:
 
 ```typescript
-import { defineTable, string, int, array } from "@woss/dali-orm";
-import { select, eq, gt, and, or, like, contains, inside } from "@woss/dali-orm/query";
+import { defineTable, string, int, array } from '@woss/dali-orm';
+import { select, eq, gt, and, or, like, contains, inside } from '@woss/dali-orm/query';
 
 // Define schema with typed columns
-const users = defineTable("user", {
-  id: string("id"),
-  name: string("name"),
-  email: string("email"),
-  age: int("age"),
-  status: string("status"),
-  tags: array("tags"),
+const users = defineTable('user', {
+  id: string('id'),
+  name: string('name'),
+  email: string('email'),
+  age: int('age'),
+  status: string('status'),
+  tags: array('tags'),
 });
 
 // Type-safe conditions with typed columns
 select(driver, users).where((w) => w.eq(users.name, 'John')); // name = 'John'
 select(driver, users).where((w) => w.gt(users.age, 18)); // age > 18
-select(driver, users).where((w) => w.and(
-  w.eq(users.status, "active"),
-  w.gt(users.age, 18),
-));
-select(driver, users).where((w) => w.inside(users.status, ["active", "pending"]));
-select(driver, users).where((w) => w.contains(users.tags, "featured"));
+select(driver, users).where((w) => w.and(w.eq(users.status, 'active'), w.gt(users.age, 18)));
+select(driver, users).where((w) => w.inside(users.status, ['active', 'pending']));
+select(driver, users).where((w) => w.contains(users.tags, 'featured'));
 
 // String conditions
-select(driver, users).where((w) => w.like(users.name, "J%"));
+select(driver, users).where((w) => w.like(users.name, 'J%'));
 ```
 
 ### Backwards Compatibility
@@ -364,7 +365,7 @@ select(driver, users).where((w) => w.like(users.name, "J%"));
 Conditions also accept string column names for backwards compatibility:
 
 ```typescript
-select(driver, users).where(eq("name", "John")); // Still works
+select(driver, users).where(eq('name', 'John')); // Still works
 ```
 
 ### SDK Integration
@@ -381,32 +382,53 @@ Type-safe TypeScript wrappers for all SurrealDB built-in functions. Import from 
 
 ```typescript
 import {
-  stringConcat, stringLowercase, stringIsEmail, stringDistance, stringHtmlEncode,
-  mathRound, mathMax, mathSqrt,
-  cryptoSha256, cryptoBlake3, cryptoArgon2Generate, cryptoBcryptCompare, cryptoUuidV4,
-  vectorDistance, vectorSimilarity,
-  geoDistance, geoHashEncode,
-  timeNow, timeFormat,
-  typeInt, typeThing, typeIsArray,
-  arrayPush, arrayFilter,
-  objectKeys, objectEntries,
-  httpGet, httpDelete,
+  stringConcat,
+  stringLowercase,
+  stringIsEmail,
+  stringDistance,
+  stringHtmlEncode,
+  mathRound,
+  mathMax,
+  mathSqrt,
+  cryptoSha256,
+  cryptoBlake3,
+  cryptoArgon2Generate,
+  cryptoBcryptCompare,
+  cryptoUuidV4,
+  vectorDistance,
+  vectorSimilarity,
+  geoDistance,
+  geoHashEncode,
+  timeNow,
+  timeFormat,
+  typeInt,
+  typeThing,
+  typeIsArray,
+  arrayPush,
+  arrayFilter,
+  objectKeys,
+  objectEntries,
+  httpGet,
+  httpDelete,
   randInt,
   sequenceNext,
   sleep,
   count,
-  $, as_, col, expr,
-} from "@woss/dali-orm/sdk/functions";
+  $,
+  as_,
+  col,
+  expr,
+} from '@woss/dali-orm/sdk/functions';
 ```
 
 ### String & Math
 
 ```typescript
-stringConcat("a", "b"); // string::concat('a', 'b')
-stringLowercase("HELLO"); // string::lowercase('HELLO')
-stringIsEmail("a@b.com"); // string::is_email('a@b.com')
-stringHtmlEncode("<br>"); // string::html::encode('<br>')
-stringDistance("a", "b"); // string::distance('a', 'b')
+stringConcat('a', 'b'); // string::concat('a', 'b')
+stringLowercase('HELLO'); // string::lowercase('HELLO')
+stringIsEmail('a@b.com'); // string::is_email('a@b.com')
+stringHtmlEncode('<br>'); // string::html::encode('<br>')
+stringDistance('a', 'b'); // string::distance('a', 'b')
 
 mathRound(4.7); // math::round(4.7)
 mathMax(1, 2, 3); // math::max([1, 2, 3])
@@ -416,10 +438,10 @@ mathSqrt(9); // math::sqrt(9)
 ### Crypto
 
 ```typescript
-cryptoSha256("data"); // crypto::sha256('data')
-cryptoBlake3("data"); // crypto::blake3('data')
-cryptoArgon2Generate("pw"); // crypto::argon2::generate('pw')
-cryptoBcryptCompare("pw", "h"); // crypto::bcrypt::compare('pw', 'h')
+cryptoSha256('data'); // crypto::sha256('data')
+cryptoBlake3('data'); // crypto::blake3('data')
+cryptoArgon2Generate('pw'); // crypto::argon2::generate('pw')
+cryptoBcryptCompare('pw', 'h'); // crypto::bcrypt::compare('pw', 'h')
 cryptoUuidV4(); // crypto::uuid::v4()
 ```
 
@@ -437,16 +459,16 @@ geoHashEncode(lng, lat); // geo::hash::encode(lng, lat)
 
 ```typescript
 timeNow(); // time::now()
-timeFormat(date, "%Y-%m-%d"); // time::format(date, '%Y-%m-%d')
-typeInt("42"); // type::int('42')
-typeThing("user", "abc"); // type::thing('user', 'abc')
+timeFormat(date, '%Y-%m-%d'); // time::format(date, '%Y-%m-%d')
+typeInt('42'); // type::int('42')
+typeThing('user', 'abc'); // type::thing('user', 'abc')
 typeIsArray(val); // type::is_array(val)
 ```
 
 ### Array & Object
 
 ```typescript
-arrayPush(["a"], "b"); // array::push(['a'], 'b')
+arrayPush(['a'], 'b'); // array::push(['a'], 'b')
 arrayFilter(arr, pred); // array::filter(arr, pred)
 objectKeys({ a: 1 }); // object::keys({a: 1})
 objectEntries({ a: 1 }); // object::entries({a: 1})
@@ -455,28 +477,28 @@ objectEntries({ a: 1 }); // object::entries({a: 1})
 ### HTTP, Rand, Sequence & More
 
 ```typescript
-httpGet("https://api.example.com"); // http::get(...)
+httpGet('https://api.example.com'); // http::get(...)
 randInt(1, 100); // rand::int(1, 100)
-sequenceNext("my_seq"); // sequence::next(my_seq)
-sleep("1s"); // sleep(1s)
-count("*"); // count(*)
+sequenceNext('my_seq'); // sequence::next(my_seq)
+sleep('1s'); // sleep(1s)
+count('*'); // count(*)
 ```
 
 ### SQL Expression Helpers
 
 ```typescript
-$("age"); // Column reference: age
-as_(count(), "total"); // Alias: count() AS total
-col("name"); // Column reference
-expr`${$("age")} + 1`; // Raw expression: age + 1
+$('age'); // Column reference: age
+as_(count(), 'total'); // Alias: count() AS total
+col('name'); // Column reference
+expr`${$('age')} + 1`; // Raw expression: age + 1
 ```
 
 Functions compose naturally in query builders:
 
 ```typescript
 const result = await select(driver, users)
-  .fields(as_(mathRound($("score")), "rounded"))
-  .where((w) => w.eq("name", "Alice"))
+  .fields(as_(mathRound($('score')), 'rounded'))
+  .where((w) => w.eq('name', 'Alice'))
   .execute();
 ```
 
@@ -485,7 +507,7 @@ const result = await select(driver, users)
 ### NodeDriver (Remote)
 
 ```typescript
-import { DaliORM } from "@woss/dali-orm";
+import { DaliORM } from '@woss/dali-orm';
 
 const orm = await DaliORM.connect({
   nodeDriver: { driver: 'node', url: 'ws://localhost:10101', namespace: 'test', database: 'test' },
@@ -506,7 +528,7 @@ const orm = await DaliORM.connect({
 ### Embedded Modes
 
 ```typescript
-import { DaliORM } from "@woss/dali-orm";
+import { DaliORM } from '@woss/dali-orm';
 
 // Memory mode
 const orm = await DaliORM.connect({
@@ -525,11 +547,11 @@ const orm = await DaliORM.connect({
 
 ```typescript
 // Execute raw SQL with parameters
-const result = await orm.query("SELECT * FROM user WHERE age > $age", { age: 18 });
+const result = await orm.query('SELECT * FROM user WHERE age > $age', { age: 18 });
 
 // Query builder — execute directly
 const driver = orm.getDriver();
-const users = await select(driver, userTable).where(eq("active", true)).execute();
+const users = await select(driver, userTable).where(eq('active', true)).execute();
 
 // Get driver for query builders
 const driver = orm.getDriver();
@@ -538,7 +560,7 @@ const driver = orm.getDriver();
 const connected = orm.isConnected();
 
 // Switch namespace/database
-await orm.use("new_namespace", "new_database");
+await orm.use('new_namespace', 'new_database');
 
 // Close connection
 await orm.disconnect();
@@ -574,11 +596,11 @@ Create `.dali-orm.json` in your project root:
 ### Usage
 
 ```typescript
-import { DaliORM } from "@woss/dali-orm";
+import { DaliORM } from '@woss/dali-orm';
 
 // Load from config file
 const orm = await DaliORM.connect({
-  config: "./dali-orm.json",
+  config: './dali-orm.json',
 });
 
 // Auto-discover config
@@ -588,21 +610,21 @@ const orm = await DaliORM.connect({
 
 // Explicit options override config
 const orm = await DaliORM.connect({
-  config: "./dali-orm.json",
+  config: './dali-orm.json',
   nodeDriver: {
-    url: "ws://custom:8000", // Takes precedence
+    url: 'ws://custom:8000', // Takes precedence
   },
 });
 ```
 
 ### Authentication Types
 
-| Type        | Required Fields                                        |
-| ----------- | ------------------------------------------------------ |
-| `root`      | `username`, `password`                                 |
-| `namespace` | `username`, `password`, `namespace`                    |
-| `database`  | `username`, `password`, `namespace`, `database`        |
-| `record`    | `table`                                                |
+| Type        | Required Fields                                 |
+| ----------- | ----------------------------------------------- |
+| `root`      | `username`, `password`                          |
+| `namespace` | `username`, `password`, `namespace`             |
+| `database`  | `username`, `password`, `namespace`, `database` |
+| `record`    | `table`                                         |
 
 ### Shadow Database
 
@@ -663,13 +685,13 @@ Add `shadow` to your `dali-orm.config.ts`:
 
 ```typescript
 export default defineConfig({
-  url: "ws://localhost:10101",
-  namespace: "myapp",
-  database: "mydb",
+  url: 'ws://localhost:10101',
+  namespace: 'myapp',
+  database: 'mydb',
   // ...
   shadow: {
-    namespace: "myapp_shadow", // Must differ from target namespace
-    database: "shadow_db", // Destroyed after each validation run
+    namespace: 'myapp_shadow', // Must differ from target namespace
+    database: 'shadow_db', // Destroyed after each validation run
   },
 });
 ```
@@ -679,8 +701,8 @@ export default defineConfig({
 ### Programmatic API
 
 ```typescript
-import { MigrationRunner, SurrealQLGenerator } from "@woss/dali-orm/migration/api";
-import { DaliORM } from "@woss/dali-orm";
+import { MigrationRunner, SurrealQLGenerator } from '@woss/dali-orm/migration/api';
+import { DaliORM } from '@woss/dali-orm';
 
 // Connect
 const orm = await DaliORM.connect({
@@ -734,14 +756,14 @@ The demo includes:
 ## TypeScript Types
 
 ```typescript
-import { defineTable, string, int } from "@woss/dali-orm";
-import { InferSelectResult, InferInsertInput } from "@woss/dali-orm/query/types";
+import { defineTable, string, int } from '@woss/dali-orm';
+import { InferSelectResult, InferInsertInput } from '@woss/dali-orm/query/types';
 
-const userSchema = defineTable("user", {
-  id: string("id"),
-  name: string("name"),
-  email: string("email"),
-  age: int("age"),
+const userSchema = defineTable('user', {
+  id: string('id'),
+  name: string('name'),
+  email: string('email'),
+  age: int('age'),
 });
 
 // Type for SELECT results
