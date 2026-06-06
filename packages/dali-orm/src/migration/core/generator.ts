@@ -322,7 +322,7 @@ export class SurrealQLGenerator {
         parts.push(`TYPE ${sqlType}`);
       }
       if (index.distance) {
-        parts.push(`DISTANCE ${index.distance}`);
+        parts.push(`DIST ${index.distance}`);
       }
     }
 
