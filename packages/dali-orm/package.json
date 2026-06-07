@@ -1,6 +1,6 @@
 {
   "name": "@woss/dali-orm",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Type-safe ORM for SurrealDB with migration support",
   "keywords": [
     "migrations",
