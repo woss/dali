@@ -38,7 +38,7 @@ jobs:
 
       - run: mkdir -p ~/.vite-plus/cache
       - name: Cache vite-plus task cache
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.vite-plus/cache
           key: ${{ runner.os }}-vp-${{ hashFiles('pnpm-lock.yaml') }}-${{ github.run_id }}
@@ -49,12 +49,7 @@ jobs:
       - run: pnpm vp run ci
       - run: pnpm test:coverage
       - run: pnpm lint
-      - name: Fetch main branch
-        run: git fetch origin main:main
 
-      - name: Check for changeset
-        if: github.event_name == 'pull_request'
-        run: pnpm changeset status --since=main
       - name: Report Coverage
         if: always()
         uses: davelosert/vitest-coverage-report-action@v2

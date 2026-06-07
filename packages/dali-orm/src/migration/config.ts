@@ -103,6 +103,10 @@ export function processConfigObject(
     parsed.snapshots.dir = path.resolve(configDir, parsed.snapshots.dir);
   }
 
+  if (!parsed.snapshots) {
+    parsed.snapshots = { dir: path.join(configDir, 'snapshots') };
+  }
+
   log('Loaded successfully from:', resolvedPath);
   return parsed;
 }

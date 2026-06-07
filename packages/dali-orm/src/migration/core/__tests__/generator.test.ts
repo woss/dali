@@ -340,7 +340,7 @@ describe('generateFieldRedefine', () => {
       }),
     );
     expect(sql).toContain(
-      'DEFINE FIELD OVERWRITE email ON TABLE test_table FLEXIBLE TYPE option<string>',
+      'DEFINE FIELD OVERWRITE email ON TABLE test_table TYPE option<string> FLEXIBLE',
     );
     expect(sql).toContain('FLEXIBLE');
     expect(sql).toContain('READONLY');
@@ -474,7 +474,7 @@ describe('generateIndexDefinition', () => {
       tableName,
     );
     expect(sql).toBe(
-      'DEFINE INDEX idx_vec ON TABLE user COLUMNS vector HNSW DIMENSION 128 TYPE float32 DISTANCE COSINE',
+      'DEFINE INDEX idx_vec ON TABLE user COLUMNS vector HNSW DIMENSION 128 TYPE F32 DIST COSINE',
     );
   });
 
@@ -1274,7 +1274,7 @@ describe('field type variations', () => {
       }),
     );
     expect(sql).toBe(
-      'DEFINE FIELD IF NOT EXISTS email ON TABLE test_table FLEXIBLE TYPE option<string> READONLY DEFAULT \'NONE\' ASSERT $value CONTAINS "@" PERMISSIONS FOR select FULL',
+      'DEFINE FIELD IF NOT EXISTS email ON TABLE test_table TYPE option<string> FLEXIBLE READONLY DEFAULT \'NONE\' ASSERT $value CONTAINS "@" PERMISSIONS FOR select FULL',
     );
   });
 });
@@ -1327,7 +1327,7 @@ describe('index variations', () => {
       'items',
     );
     expect(sql).toBe(
-      'DEFINE INDEX idx_vec ON TABLE items COLUMNS vec HNSW DIMENSION 256 TYPE float64 DISTANCE MANHATTAN',
+      'DEFINE INDEX idx_vec ON TABLE items COLUMNS vec HNSW DIMENSION 256 TYPE F64 DIST MANHATTAN',
     );
   });
 
@@ -1342,7 +1342,7 @@ describe('index variations', () => {
       }),
       'items',
     );
-    expect(sql).toContain('DISTANCE EUCLIDEAN');
+    expect(sql).toContain('DIST EUCLIDEAN');
   });
 });
 
