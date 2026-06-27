@@ -1,5 +1,5 @@
 import type { AccessConfig, EventConfig, FunctionConfig } from './schema.js';
-import type { TableDefinition } from './table.js';
+import type { AnalyzerDefinition, TableDefinition } from './table.js';
 
 /**
  * Configuration options for creating an OrmSchema
@@ -15,6 +15,8 @@ export interface OrmSchemaConfig {
   variables?: Record<string, string>;
   /** User-defined SurrealDB functions (DEFINE FUNCTION fn() { ... }) */
   functions?: FunctionConfig[];
+  /** Analyzer definitions (DEFINE ANALYZER) */
+  analyzers?: AnalyzerDefinition[];
 }
 
 /**
@@ -42,12 +44,16 @@ export class OrmSchema {
   /** Function definitions (DEFINE FUNCTION) */
   readonly functions: FunctionConfig[];
 
+  /** Analyzer definitions (DEFINE ANALYZER) */
+  readonly analyzers: AnalyzerDefinition[];
+
   constructor(config: OrmSchemaConfig) {
     this.tableDefinitions = { ...config.tables };
     this.tables = new Map(Object.entries(config.tables));
     this.access = config.access ?? [];
     this.events = config.events ?? [];
     this.variables = { ...config.variables };
+    this.analyzers = config.analyzers ? [...config.analyzers] : [];
     this.functions = config.functions ? [...config.functions] : [];
   }
 
@@ -84,6 +90,13 @@ export class OrmSchema {
    */
   getEvents(): EventConfig[] {
     return [...this.events];
+  }
+
+  /**
+   * Get all analyzer definitions
+   */
+  getAnalyzers(): AnalyzerDefinition[] {
+    return [...this.analyzers];
   }
 
   /**

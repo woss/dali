@@ -20,4 +20,4 @@ export { defineFunction } from './sdk/schema/function-builder.js';
 // Access config types
 // Function definition types
 export type { AccessConfig, AccessType, FunctionConfig } from './sdk/schema.js';
-export type { IndexDefinition, TableDefinition } from './sdk/table.js';
+export type { AnalyzerDefinition, IndexDefinition, TableDefinition } from './sdk/table.js';

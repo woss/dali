@@ -12,6 +12,14 @@ export interface TableConfig {
   changefeed?: string; // e.g., '7d', '24h', '1w'
 }
 
+export interface AnalyzerDefinition {
+  name: string;
+  /** Tokenizers for text analysis (e.g., 'class', 'blank', 'punctuation'). Can be a single string or array. */
+  tokenizers: string | string[];
+  /** Filters to apply after tokenization (e.g., 'lowercase', 'snowball'). Optional. */
+  filters?: string | string[];
+}
+
 export interface IndexDefinition {
   name: string;
   fields: string[];
