@@ -1,0 +1,5 @@
+{
+  // Paths are relative to project root
+  "dataDir": "data",
+  "logDir": "logs",
+}
