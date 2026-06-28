@@ -1,4 +1,5 @@
 import { select, insert, update, delete_ } from '@woss/dali-orm/query';
+import { RecordId } from 'surrealdb';
 import type { InferSelectResult } from '@woss/dali-orm/query/types';
 import { getDB } from '../db/connection';
 import { memoriesTable } from '../db/schema';
@@ -50,10 +51,13 @@ export class MemoryService {
     const db = getDB();
     const driver = db.getDriver();
 
-    const result = await select(driver, memoriesTable)
-      .where((w) => w.eq('id', id))
-      .execute();
+    // Normalize: RecordId object → string; plain key → qualified
+    const idStr = typeof id === 'object' ? (id as any).toString() : id;
+    const qualified = idStr.includes(':') ? idStr : `memories:${idStr}`;
 
+    // Use native driver.select() which handles RecordId via the SDK
+    // instead of parameterized WHERE which can't match record-typed id columns.
+    const result = await driver.select(qualified);
     return (result[0] as unknown as MemoryRecord) ?? null;
   }
 
@@ -83,7 +87,10 @@ export class MemoryService {
       }
     }
 
-    const result = await update(driver, memoriesTable).id(id).data(updateData).execute();
+    // UpdateBuilder.id() needs just the key (xxx), not full RecordId (memories:xxx)
+    const idStr = typeof id === 'object' ? (id as any).toString() : id;
+    const recordKey = idStr.includes(':') ? idStr.split(':')[1] : idStr;
+    const result = await update(driver, memoriesTable).id(recordKey).data(updateData).execute();
 
     return result[0] as unknown as MemoryRecord;
   }
@@ -91,12 +98,19 @@ export class MemoryService {
   async deleteMemory(id: string): Promise<void> {
     const db = getDB();
 
-    // Delete memory_tags relations first
-    await db.query('DELETE memory_tags WHERE in = $id', { id });
+    // Normalize to string, then extract key for RecordId object
+    const idStr = typeof id === 'object' ? (id as any).toString() : id;
+    const [tableName, key] = idStr.includes(':') ? idStr.split(':') : [memoriesTable.name, idStr];
 
-    // Delete the memory record
+    // Delete memory_tags relations first — use RecordId object so the embedded
+    // engine matches the record-typed `in` column (string params don't coerce).
+    await db.query('DELETE memory_tags WHERE in = $memId', {
+      memId: new RecordId(tableName, key),
+    });
+
+    // Delete the memory record — DeleteBuilder handles full RecordId strings
     const driver = db.getDriver();
-    await delete_(driver, memoriesTable).id(id).execute();
+    await delete_(driver, memoriesTable).id(idStr).execute();
   }
 
   async listMemories(
