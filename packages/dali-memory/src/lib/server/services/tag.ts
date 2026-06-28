@@ -1,5 +1,6 @@
 import type { InferSelectResult } from '@woss/dali-orm/query/types';
 import { select, insert, delete_ } from '@woss/dali-orm/query';
+import { RecordId } from 'surrealdb';
 import { relate } from '@woss/dali-orm/query/relate';
 import { getDB } from '../db/connection';
 import { tagsTable, memoryTagsTable } from '../db/schema';
@@ -77,9 +78,10 @@ export class TagService {
     const memId = memoryId.includes(':') ? memoryId : `memories:${rawId(memoryId)}`;
     const tagIdFormatted = tagId.includes(':') ? tagId : `tags:${rawId(tagId)}`;
 
+    // Use RecordId objects so the embedded engine matches record-typed columns
     await db.query('DELETE FROM memory_tags WHERE in = $memId AND out = $tagId', {
-      memId,
-      tagId: tagIdFormatted,
+      memId: new RecordId('memories', rawId(memId)),
+      tagId: new RecordId('tags', rawId(tagIdFormatted)),
     });
   }
 
@@ -87,9 +89,12 @@ export class TagService {
     const db = getDB();
 
     const memId = memoryId.includes(':') ? memoryId : `memories:${rawId(memoryId)}`;
+    const [table, key] = memId.includes(':') ? memId.split(':') : ['memories', memId];
 
+    // Use RecordId object so the embedded engine matches graph edge traversal
+    // from the correct record (string param in FROM doesn't resolve record edges).
     const result = await db.query<TagRecord>('SELECT ->memory_tags->tags.* AS tags FROM $memId', {
-      memId,
+      memId: new RecordId(table, key),
     });
 
     // Extract tags from the nested structure
@@ -119,23 +124,21 @@ export class TagService {
 
     const db = getDB();
 
-    // First resolve tag names to IDs
-    const tagResult = await db.query<{ id: string }>(
-      'SELECT id FROM tags WHERE name INSIDE $tagNames',
-      { tagNames },
-    );
-    const tagIds = tagResult.map((t) => t.id);
-    if (tagIds.length === 0) return [];
-    if (tagIds.length < tagNames.length) {
-      // Some tags not found — intersection with missing tags is empty
-      return [];
-    }
+    // Use graph traversal entirely in SurrealQL to avoid passing
+    // array-of-RecordId parameters through the embedded engine.
+    // Each memory must have edges to ALL requested tags.
+    const conditions = tagNames
+      .map((_, i) => `->memory_tags->tags.name CONTAINS $tagName${i}`)
+      .join(' AND ');
 
-    const tagCount = tagIds.length;
+    const params: Record<string, string> = {};
+    tagNames.forEach((name, i) => {
+      params[`tagName${i}`] = name;
+    });
 
     const result = await db.query<MemoryRecord>(
-      `SELECT * FROM memories WHERE (SELECT count() FROM memory_tags WHERE in = memories.id AND out INSIDE $tagIds) = $tagCount`,
-      { tagIds, tagCount },
+      `SELECT * FROM memories WHERE ${conditions}`,
+      params,
     );
 
     return result as unknown as MemoryRecord[];
