@@ -59,7 +59,7 @@ A TypeScript ORM for SurrealDB with schema definitions, fluent query builders, a
 ## Features
 
 - **TypeScript-First** - Full type inference for schema, queries, and results
-- **Schema Builder** - Define tables, columns, indexes, and relations programmatically
+- **Schema Builder** - Define tables, columns, indexes, analyzers, and relations programmatically
 - **Query Builders** - Fluent API for SELECT, INSERT, UPDATE, DELETE, and RELATE queries
 - **Migrations** - Generate and run database migrations with shadow DB pre-validation
 - **Multiple Drivers** - Support for remote (WebSocket) and embedded modes (memory, file, rocksdb)
