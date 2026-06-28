@@ -1,0 +1,57 @@
+import { getLog } from '../logger';
+import { getConfig } from '../config';
+import { getDB } from '../db/connection';
+import { select, update } from '@woss/dali-orm/query';
+import { apiKeysTable } from '../db/schema';
+
+export async function hashApiKey(key: string): Promise<string> {
+  const data = new TextEncoder().encode(key + getConfig().DALI_MEMORY_SECRET);
+  const buf = await crypto.subtle.digest('SHA-256', data);
+  const hash = Array.from(new Uint8Array(buf))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
+  return hash;
+}
+
+export async function validateApiKey(key: string | null | undefined): Promise<boolean> {
+  if (!key) return false;
+  if (!getConfig().DALI_MEMORY_AUTH_ENABLED) return true;
+
+  const driver = getDB().getDriver();
+  const hash = await hashApiKey(key);
+
+  const results = await select(driver, apiKeysTable)
+    .where((w) => w.eq('key_hash', hash))
+    .execute();
+
+  if (results.length === 0) {
+    getLog(['dali-memory', 'auth']).warn('Invalid API key attempt');
+    return false;
+  }
+
+  getLog(['dali-memory', 'auth']).debug('API key validated successfully');
+
+  // Fire-and-forget: touch last_used_at (non-blocking)
+  const record = results[0] as { id: unknown };
+  const rawId = record.id;
+  const shortId =
+    typeof rawId === 'string'
+      ? rawId.includes(':')
+        ? rawId.split(':').pop()
+        : rawId
+      : rawId && typeof rawId === 'object'
+        ? (rawId as { id?: string }).id
+        : undefined;
+
+  if (shortId) {
+    update(driver, apiKeysTable)
+      .id(shortId)
+      .set('last_used_at', new Date().toISOString())
+      .execute()
+      .catch(() => {
+        // Best-effort — failure to touch last_used_at is non-critical
+      });
+  }
+
+  return true;
+}

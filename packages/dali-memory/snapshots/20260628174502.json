@@ -1,0 +1,389 @@
+{
+  "version": "20260628174502",
+  "name": "init",
+  "createdAt": "2026-06-28T15:45:02.092Z",
+  "tables": [
+    {
+      "name": "workspaces",
+      "columns": [
+        {
+          "name": "name",
+          "tableName": "workspaces",
+          "config": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "description",
+          "tableName": "workspaces",
+          "config": {
+            "type": "string",
+            "optional": true
+          }
+        },
+        {
+          "name": "is_personal",
+          "tableName": "workspaces",
+          "config": {
+            "type": "bool",
+            "default": "false"
+          }
+        },
+        {
+          "name": "created_at",
+          "tableName": "workspaces",
+          "config": {
+            "type": "datetime",
+            "default": "time::now()"
+          }
+        }
+      ],
+      "config": {
+        "schema": "full",
+        "type": "normal",
+        "indexes": [
+          {
+            "name": "idx_workspaces_name",
+            "fields": ["name"],
+            "type": "unique"
+          }
+        ]
+      }
+    },
+    {
+      "name": "memories",
+      "columns": [
+        {
+          "name": "name",
+          "tableName": "memories",
+          "config": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "content",
+          "tableName": "memories",
+          "config": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "memory_type",
+          "tableName": "memories",
+          "config": {
+            "type": "string",
+            "default": "fact"
+          }
+        },
+        {
+          "name": "metadata",
+          "tableName": "memories",
+          "config": {
+            "type": "object",
+            "optional": true
+          }
+        },
+        {
+          "name": "workspace_id",
+          "tableName": "memories",
+          "config": {
+            "type": "record"
+          }
+        },
+        {
+          "name": "created_at",
+          "tableName": "memories",
+          "config": {
+            "type": "datetime",
+            "default": "time::now()"
+          }
+        }
+      ],
+      "config": {
+        "schema": "full",
+        "type": "normal",
+        "indexes": [
+          {
+            "name": "idx_memories_name_ws",
+            "fields": ["name", "workspace_id"],
+            "type": "unique"
+          },
+          {
+            "name": "idx_memories_content_ws",
+            "fields": ["content", "workspace_id"],
+            "type": "unique"
+          },
+          {
+            "name": "idx_memories_content_ft",
+            "fields": ["content"],
+            "type": "fulltext",
+            "analyzer": "fts_ascii"
+          }
+        ]
+      }
+    },
+    {
+      "name": "embeddings",
+      "columns": [
+        {
+          "name": "vector",
+          "tableName": "embeddings",
+          "config": {
+            "type": "array"
+          }
+        },
+        {
+          "name": "model",
+          "tableName": "embeddings",
+          "config": {
+            "type": "record"
+          }
+        },
+        {
+          "name": "dimensions",
+          "tableName": "embeddings",
+          "config": {
+            "type": "int"
+          }
+        },
+        {
+          "name": "created_at",
+          "tableName": "embeddings",
+          "config": {
+            "type": "datetime",
+            "default": "time::now()"
+          }
+        }
+      ],
+      "config": {
+        "schema": "full",
+        "type": "normal"
+      }
+    },
+    {
+      "name": "models",
+      "columns": [
+        {
+          "name": "provider_id",
+          "tableName": "models",
+          "config": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "model_id",
+          "tableName": "models",
+          "config": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "variant",
+          "tableName": "models",
+          "config": {
+            "type": "string",
+            "optional": true
+          }
+        },
+        {
+          "name": "dimensions",
+          "tableName": "models",
+          "config": {
+            "type": "int"
+          }
+        },
+        {
+          "name": "created_at",
+          "tableName": "models",
+          "config": {
+            "type": "datetime",
+            "default": "time::now()"
+          }
+        }
+      ],
+      "config": {
+        "schema": "full",
+        "type": "normal",
+        "indexes": [
+          {
+            "name": "idx_models_provider_model",
+            "fields": ["provider_id", "model_id"],
+            "type": "unique"
+          }
+        ]
+      }
+    },
+    {
+      "name": "has_embedding",
+      "columns": [],
+      "config": {
+        "schema": "full",
+        "type": "relation",
+        "in": "embeddings",
+        "out": "memories"
+      }
+    },
+    {
+      "name": "tags",
+      "columns": [
+        {
+          "name": "name",
+          "tableName": "tags",
+          "config": {
+            "type": "string"
+          }
+        }
+      ],
+      "config": {
+        "schema": "full",
+        "type": "normal",
+        "indexes": [
+          {
+            "name": "idx_tags_name",
+            "fields": ["name"],
+            "type": "unique"
+          }
+        ]
+      }
+    },
+    {
+      "name": "memory_tags",
+      "columns": [
+        {
+          "name": "in",
+          "tableName": "memory_tags",
+          "config": {
+            "type": "record"
+          }
+        },
+        {
+          "name": "out",
+          "tableName": "memory_tags",
+          "config": {
+            "type": "record"
+          }
+        }
+      ],
+      "config": {
+        "schema": "full",
+        "type": "relation",
+        "in": "memories",
+        "out": "tags",
+        "indexes": [
+          {
+            "name": "idx_memory_tags_pair",
+            "fields": ["in", "out"],
+            "type": "unique"
+          }
+        ]
+      }
+    },
+    {
+      "name": "api_keys",
+      "columns": [
+        {
+          "name": "key_hash",
+          "tableName": "api_keys",
+          "config": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "name",
+          "tableName": "api_keys",
+          "config": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "created_at",
+          "tableName": "api_keys",
+          "config": {
+            "type": "datetime",
+            "default": "time::now()"
+          }
+        },
+        {
+          "name": "last_used_at",
+          "tableName": "api_keys",
+          "config": {
+            "type": "datetime",
+            "optional": true
+          }
+        },
+        {
+          "name": "user_id",
+          "tableName": "api_keys",
+          "config": {
+            "type": "record",
+            "optional": true
+          }
+        }
+      ],
+      "config": {
+        "schema": "full",
+        "type": "normal",
+        "indexes": [
+          {
+            "name": "idx_api_keys_hash",
+            "fields": ["key_hash"],
+            "type": "unique"
+          }
+        ]
+      }
+    },
+    {
+      "name": "users",
+      "columns": [
+        {
+          "name": "email",
+          "tableName": "users",
+          "config": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "pass",
+          "tableName": "users",
+          "config": {
+            "type": "string"
+          }
+        },
+        {
+          "name": "created_at",
+          "tableName": "users",
+          "config": {
+            "type": "datetime",
+            "default": "time::now()"
+          }
+        }
+      ],
+      "config": {
+        "schema": "full",
+        "type": "normal",
+        "indexes": [
+          {
+            "name": "idx_users_email",
+            "fields": ["email"],
+            "type": "unique"
+          }
+        ]
+      }
+    }
+  ],
+  "access": [
+    {
+      "name": "user_access",
+      "type": "RECORD"
+    }
+  ],
+  "events": [],
+  "functions": [],
+  "analyzers": [
+    {
+      "name": "fts_ascii",
+      "tokenizers": "class",
+      "filters": "ascii, lowercase"
+    }
+  ]
+}
