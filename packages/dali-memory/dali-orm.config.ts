@@ -9,6 +9,10 @@ const config: OrmConfig = {
     username: 'admin',
     password: 'admin',
   },
+  schema: {
+    dir: './src/lib/server/db',
+    pattern: 'schema.ts',
+  },
 };
 
 export default config;

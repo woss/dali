@@ -1,17 +1,9 @@
-import { defineConfig } from 'vite-plus';
+import { sveltekit } from '@sveltejs/kit/vite';
+import tailwindcss from '@tailwindcss/vite';
+import { defineConfig } from 'vite';
 
 export default defineConfig({
-  pack: {
-    entry: ['src/**/*.ts', '!src/**/__tests__/**/*.ts', '!src/**/*.spec.ts'],
-    unbundle: true,
-    exports: true,
-    clean: true,
-    dts: true,
-    sourcemap: true,
-    target: 'ES2022',
-    format: 'esm',
-    deps: {
-      skipNodeModulesBundle: true,
-    },
-  },
+  plugins: [tailwindcss(), sveltekit()],
+  server: { port: 7777, host: true },
+  ssr: { external: ['@woss/dali-orm'] },
 });

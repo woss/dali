@@ -1,5 +1,15 @@
 # @woss/dali-memory
 
+## [Unreleased]
+
+### Changed
+
+- Redesigned all 6 UI pages with glass morphism cards, gradient mesh background, amber/cyan/purple dark theme
+- Added Google Fonts (Space Grotesk headings + DM Sans body)
+- Added CSS animations (fadeIn, slideUp, slideDown, scaleIn) with stagger delays
+- Added glass navbar with mobile hamburger menu
+- Added prefers-reduced-motion support for all animations
+
 ## 0.1.0
 
 ### Minor Changes
