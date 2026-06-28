@@ -4,7 +4,7 @@ import { connect } from '../../sdk/driver/orm-connection.js';
 import type { EmbeddedConfig, SurrealDriver } from '../../sdk/driver/types.js';
 import type { ColumnConfig, SurrealColumnType } from '../../sdk/schema/column/types.js';
 import type { AccessConfig } from '../../sdk/schema.js';
-import type { TableDefinition } from '../../sdk/table.js';
+import type { AnalyzerDefinition, TableDefinition } from '../../sdk/table.js';
 import type { Config } from '../config.js';
 import { SurrealQLGenerator } from '../core/generator.js';
 import { MigrationRunner } from '../core/runner.js';
@@ -155,18 +155,23 @@ async function generateAndApplyMigration(
   // Generate full migration SQL for ALL tables (no diff, no driver)
   const generator = new SurrealQLGenerator();
 
-  // Get access definitions: prefer DB introspection, fall back to schema files
+  // Get access/analyzer definitions: prefer DB introspection, fall back to schema files
   let accessForMigration: AccessConfig[] = [];
+  let analyzersForMigration: AnalyzerDefinition[] = [];
   if (accessSQL.length === 0) {
     const pattern = config.schema?.pattern ?? '**/*.ts';
     const schemaFiles = await loadSchemaFiles(schemaDir, pattern);
     accessForMigration = schemaFiles.access ?? [];
+    analyzersForMigration = schemaFiles.analyzers ?? [];
   }
 
   const { upStatements, downStatements } = generateFullMigration(
     tablesAsTableDef,
     generator,
     accessForMigration,
+    undefined,
+    undefined,
+    analyzersForMigration,
   );
 
   // Inject raw access SQL from DB introspection if available

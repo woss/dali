@@ -12,7 +12,7 @@ import { join } from 'node:path';
 import { createDebug as debug } from 'obug';
 import type { ColumnDefinition, SurrealColumnType } from '../../sdk/schema/column/types.js';
 import type { EventConfig, FunctionConfig } from '../../sdk/schema.js';
-import type { IndexDefinition, TableDefinition } from '../../sdk/table.js';
+import type { AnalyzerDefinition, IndexDefinition, TableDefinition } from '../../sdk/table.js';
 
 const log = debug('dali-orm:migrations:snapshot');
 
@@ -35,6 +35,8 @@ export interface SchemaSnapshot {
   events: SerializedEvent[];
   /** Serialized function definitions */
   functions: SerializedFunction[];
+  /** Serialized analyzer definitions */
+  analyzers: SerializedAnalyzer[];
 }
 
 /**
@@ -72,6 +74,15 @@ export interface SerializedFunction {
   body: string;
   comment?: string;
   permissions?: string;
+}
+
+/**
+ * Serializable analyzer definition
+ */
+export interface SerializedAnalyzer {
+  name: string;
+  tokenizers?: string;
+  filters?: string;
 }
 
 /**
@@ -249,6 +260,7 @@ export class SnapshotManager {
     access?: any[],
     events?: EventConfig[],
     functions?: FunctionConfig[],
+    analyzers?: AnalyzerDefinition[],
   ): SchemaSnapshot {
     return {
       version,
@@ -258,6 +270,7 @@ export class SnapshotManager {
       access: serializeAccess(access),
       events: serializeEvent(events),
       functions: serializeFunction(functions),
+      analyzers: serializeAnalyzer(analyzers),
     };
   }
 
@@ -266,6 +279,13 @@ export class SnapshotManager {
    */
   restoreAccess(snapshot: SchemaSnapshot): SerializedAccess[] {
     return snapshot.access ?? [];
+  }
+
+  /**
+   * Convert SchemaSnapshot to SerializedAnalyzer[]
+   */
+  restoreAnalyzer(snapshot: SchemaSnapshot): SerializedAnalyzer[] {
+    return snapshot.analyzers ?? [];
   }
 
   /**
@@ -389,6 +409,17 @@ function serializeFunction(functions: FunctionConfig[] | undefined): SerializedF
     body: f.body,
     comment: f.comment,
     permissions: f.permissions,
+  }));
+}
+
+/**
+ * Serialize analyzer definitions from AnalyzerDefinition objects
+ */
+function serializeAnalyzer(analyzers: AnalyzerDefinition[] | undefined): SerializedAnalyzer[] {
+  return (analyzers ?? []).map((a) => ({
+    name: a.name,
+    tokenizers: Array.isArray(a.tokenizers) ? a.tokenizers.join(', ') : a.tokenizers,
+    filters: a.filters ? (Array.isArray(a.filters) ? a.filters.join(', ') : a.filters) : undefined,
   }));
 }
 

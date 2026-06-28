@@ -529,7 +529,48 @@ describe('generateFunctionDefinition (integration)', () => {
 });
 
 // ============================================================================
-// 8. Alter operations
+// 8. Analyzer definitions
+// ============================================================================
+
+describe('generateAnalyzerDefinition (integration)', () => {
+  it('validates DEFINE ANALYZER with tokenizers and filters', async () => {
+    const sql = gen.generateAnalyzerDefinition({
+      name: 'test_analyzer_int',
+      tokenizers: ['class'],
+      filters: ['ascii', 'lowercase'],
+    });
+    await expect(driver.query(sql)).resolves.toBeDefined();
+    await driver.query('REMOVE ANALYZER IF EXISTS test_analyzer_int');
+  });
+
+  it('validates DEFINE ANALYZER with only tokenizers', async () => {
+    const sql = gen.generateAnalyzerDefinition({
+      name: 'test_analyzer_tok',
+      tokenizers: 'class',
+    });
+    await expect(driver.query(sql)).resolves.toBeDefined();
+    await driver.query('REMOVE ANALYZER IF EXISTS test_analyzer_tok');
+  });
+
+  it('validates DEFINE ANALYZER with single string tokenizers and filters', async () => {
+    const sql = gen.generateAnalyzerDefinition({
+      name: 'test_analyzer_str',
+      tokenizers: 'class',
+      filters: 'lowercase',
+    });
+    await expect(driver.query(sql)).resolves.toBeDefined();
+    await driver.query('REMOVE ANALYZER IF EXISTS test_analyzer_str');
+  });
+
+  it('validates REMOVE ANALYZER IF EXISTS for non-existent analyzer', async () => {
+    await expect(
+      driver.query('REMOVE ANALYZER IF EXISTS nonexistent_analyzer'),
+    ).resolves.toBeDefined();
+  });
+});
+
+// ============================================================================
+// 9. Alter operations
 // ============================================================================
 
 describe('Alter operations (integration)', () => {

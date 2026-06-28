@@ -180,8 +180,48 @@ const wroteTable = defineRelationTable(
 );
 
 // Wrap in OrmSchema for DaliORM.connect
-const schema = createOrmSchema({ tables: { users: userTable, articles: articleTable } });
+const schema = createOrmSchema({
+  tables: { users: userTable, articles: articleTable },
+});
 ```
+
+### Analyzers
+
+Define custom text analyzers for `FULLTEXT` indexes:
+
+```typescript
+import { createOrmSchema } from '@woss/dali-orm';
+
+// Define analyzer with tokenizers and optional filters
+const myAnalyzer = {
+  name: 'my_analyzer',
+  tokenizers: ['class', 'punctuation'],
+  filters: ['lowercase', 'snowball'],
+};
+
+// Minimum viable analyzer (only tokenizers)
+const simpleAnalyzer = {
+  name: 'simple_analyzer',
+  tokenizers: 'class',
+};
+
+// Pass analyzers through OrmSchema for migration generation
+const schema = createOrmSchema({
+  tables: { articles: articleTable },
+  analyzers: [myAnalyzer, simpleAnalyzer],
+});
+
+// Reference analyzer in fulltext index
+const articleTable = defineTable(
+  'article',
+  { title: string('title'), content: string('content') },
+  {
+    indexes: [index('title_search').on('title').fulltext('my_analyzer')],
+  },
+);
+```
+
+Analyzers are emitted **before** tables in UP migrations (indexes depend on their analyzer), and **after** tables in DOWN migrations (remove analyzer only after all referencing indexes are gone).
 
 ### Column Types
 
@@ -712,6 +752,15 @@ const orm = await DaliORM.connect({
 // Generate SQL from schema
 const generator = new SurrealQLGenerator();
 const sql = generator.generateMigration([userTable]);
+
+// With analyzers (emitted before tables in UP, after in DOWN)
+const analyzers = [
+  { name: 'my_analyzer', tokenizers: ['class', 'punctuation'], filters: ['lowercase'] },
+];
+const sqlWithAnalyzers = generator.generateMigration([userTable], 'up', analyzers);
+
+// Generate full migration file with analyzers
+const migrationFile = generator.generateMigrationFile([userTable], '001', 'init', analyzers);
 
 // Get driver from ORM
 const driver = orm.getDriver();

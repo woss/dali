@@ -7,7 +7,7 @@
 
 import { beforeEach, describe, expect, it } from 'vite-plus/test';
 import type { ColumnDefinition } from '../../../sdk/schema/column/types.js';
-import type { IndexDefinition, TableDefinition } from '../../../sdk/table.js';
+import type { AnalyzerDefinition, IndexDefinition, TableDefinition } from '../../../sdk/table.js';
 import type { SurrealEvent, SurrealFunction } from '../../ddl/ddl.js';
 import { SurrealQLGenerator } from '../generator.js';
 
@@ -1203,6 +1203,79 @@ describe('generateMigrationFile', () => {
     expect(result.up.filter((s) => s.trim() !== '')).toEqual(result.up);
     // down: REMOVE TABLE
     expect(result.down).toEqual(['REMOVE TABLE user']);
+  });
+});
+
+// ===========================================================================
+// generateAnalyzerDefinition
+// ===========================================================================
+describe('generateAnalyzerDefinition', () => {
+  it('generates with array tokenizers and filters', () => {
+    const analyzer: AnalyzerDefinition = {
+      name: 'fts_ascii',
+      tokenizers: ['class'],
+      filters: ['ascii', 'lowercase'],
+    };
+    const sql = gen.generateAnalyzerDefinition(analyzer);
+    expect(sql).toBe(
+      'DEFINE ANALYZER IF NOT EXISTS fts_ascii TOKENIZERS class FILTERS ascii, lowercase',
+    );
+  });
+
+  it('generates with string tokenizers and string filters', () => {
+    const analyzer: AnalyzerDefinition = {
+      name: 'simple',
+      tokenizers: 'class',
+      filters: 'lowercase',
+    };
+    const sql = gen.generateAnalyzerDefinition(analyzer);
+    expect(sql).toBe('DEFINE ANALYZER IF NOT EXISTS simple TOKENIZERS class FILTERS lowercase');
+  });
+
+  it('generates without filters when filters is undefined', () => {
+    const analyzer: AnalyzerDefinition = {
+      name: 'basic',
+      tokenizers: 'class',
+    };
+    const sql = gen.generateAnalyzerDefinition(analyzer);
+    expect(sql).toBe('DEFINE ANALYZER IF NOT EXISTS basic TOKENIZERS class');
+  });
+
+  it('omits TOKENIZERS clause when tokenizers is empty string', () => {
+    const analyzer: AnalyzerDefinition = {
+      name: 'empty',
+      tokenizers: '',
+    };
+    const sql = gen.generateAnalyzerDefinition(analyzer);
+    expect(sql).toBe('DEFINE ANALYZER IF NOT EXISTS empty');
+  });
+
+  it('generates with multiple tokenizers and filters', () => {
+    const analyzer: AnalyzerDefinition = {
+      name: 'multi',
+      tokenizers: ['blank', 'class', 'punctuation'],
+      filters: ['lowercase', 'snowball'],
+    };
+    const sql = gen.generateAnalyzerDefinition(analyzer);
+    expect(sql).toBe(
+      'DEFINE ANALYZER IF NOT EXISTS multi TOKENIZERS blank, class, punctuation FILTERS lowercase, snowball',
+    );
+  });
+});
+
+// ===========================================================================
+// generateRemoveAnalyzer
+// ===========================================================================
+describe('generateRemoveAnalyzer', () => {
+  it('generates REMOVE ANALYZER for a named analyzer', () => {
+    const sql = gen.generateRemoveAnalyzer('fts_ascii');
+    expect(sql).toBe('REMOVE ANALYZER IF EXISTS fts_ascii');
+  });
+
+  it('throws for empty name', () => {
+    expect(() => gen.generateRemoveAnalyzer('')).toThrow(
+      'Analyzer name is required for REMOVE ANALYZER',
+    );
   });
 });
 

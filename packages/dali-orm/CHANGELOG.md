@@ -1,5 +1,17 @@
 # @woss/dali-orm
 
+## [Unreleased]
+
+### Added
+
+- `AnalyzerDefinition` interface for defining SurrealDB text analyzers (tokenizers + filters)
+- `analyzers` field on `OrmSchemaConfig` / `OrmSchema` for declaring analyzers alongside tables
+- `generateAnalyzerDefinition()` and `generateRemoveAnalyzer()` methods on `SurrealQLGenerator`
+- `SerializedAnalyzer` type, `serializeAnalyzer()` and `restoreAnalyzer()` in snapshot module
+- Analyzer support in all migration generation paths: `generateMigration`, `fullMigration`, `snapshotMigration`, `liveMigration`
+- Analyzers emitted UP before tables, DOWN after tables (correct ordering since indexes depend on analyzers)
+- Section separators (`-- ---- Analyzers ----`) in generated migration files
+
 ## 0.1.0
 
 ### Minor Changes

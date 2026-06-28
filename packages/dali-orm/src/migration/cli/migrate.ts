@@ -324,6 +324,7 @@ export async function migrateDev(
     schemaFiles.access,
     undefined,
     schemaFiles.functions,
+    schemaFiles.analyzers,
   );
 
   // Clean up driver connection if used

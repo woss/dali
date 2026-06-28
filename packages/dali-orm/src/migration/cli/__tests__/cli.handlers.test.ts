@@ -78,6 +78,7 @@ const {
       ],
       access: [],
       functions: [],
+      analyzers: [],
     }),
     mockGenerateMigration: vi
       .fn()
@@ -163,6 +164,7 @@ const EMPTY_SCHEMA = {
   tables: [],
   access: [],
   functions: [],
+  analyzers: [],
 };
 
 // ============================================================================
@@ -348,6 +350,7 @@ describe('main', () => {
         expect.anything(),
         undefined,
         expect.anything(),
+        expect.anything(),
       );
     });
 
@@ -364,6 +367,7 @@ describe('main', () => {
         expect.anything(),
         undefined,
         expect.anything(),
+        expect.anything(),
       );
     });
 
@@ -374,6 +378,7 @@ describe('main', () => {
         expect.objectContaining({ name: 'explicit_name' }),
         expect.anything(),
         undefined,
+        expect.anything(),
         expect.anything(),
       );
     });
@@ -427,6 +432,7 @@ describe('main', () => {
         expect.anything(),
         undefined,
         expect.anything(),
+        expect.anything(),
       );
     });
 
@@ -437,6 +443,7 @@ describe('main', () => {
         expect.objectContaining({ fullMigration: true }),
         expect.anything(),
         undefined,
+        expect.anything(),
         expect.anything(),
       );
     });
@@ -449,6 +456,7 @@ describe('main', () => {
         expect.anything(),
         undefined,
         expect.anything(),
+        expect.anything(),
       );
     });
 
@@ -459,6 +467,7 @@ describe('main', () => {
         expect.objectContaining({ version: '20250101000000' }),
         expect.anything(),
         undefined,
+        expect.anything(),
         expect.anything(),
       );
     });

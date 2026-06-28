@@ -11,7 +11,7 @@ import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import type { EmbeddedConfig, SurrealDriver } from '../sdk/driver/types.js';
 import type { AccessConfig, EventConfig, FunctionConfig } from '../sdk/schema.js';
-import type { TableDefinition } from '../sdk/table.js';
+import type { AnalyzerDefinition, TableDefinition } from '../sdk/table.js';
 import type { GenerateOptions } from './cli/generate.js';
 import { generateFullMigration, generateMigration, generateMigrationFile } from './cli/generate.js';
 import { generateColumnDefinition } from './cli/pull.js';
@@ -65,6 +65,8 @@ export interface GenerateAndApplyOptions {
   events?: EventConfig[];
   /** Function definitions to include in migration */
   functions?: FunctionConfig[];
+  /** Analyzer definitions to include in migration */
+  analyzers?: AnalyzerDefinition[];
 }
 
 /**
@@ -437,6 +439,7 @@ export async function generateAndApplyMigration(
     options.access,
     options.events,
     options.functions,
+    options.analyzers,
   );
 
   // Guard: no changes detected

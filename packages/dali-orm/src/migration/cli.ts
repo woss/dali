@@ -375,6 +375,7 @@ async function handleGenerate(args: string[], options: CLIOptions, config: Confi
     schemaFiles.access,
     undefined,
     schemaFiles.functions,
+    schemaFiles.analyzers,
   );
 
   // Clean up connection

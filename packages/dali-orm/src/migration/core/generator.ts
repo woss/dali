@@ -5,7 +5,12 @@
  */
 
 import type { ColumnDefinition } from '../../sdk/schema/column/types.js';
-import type { IndexDefinition, TableConfig, TableDefinition } from '../../sdk/table.js';
+import type {
+  AnalyzerDefinition,
+  IndexDefinition,
+  TableConfig,
+  TableDefinition,
+} from '../../sdk/table.js';
 import type { SurrealAccess, SurrealEvent, SurrealFunction, SurrealView } from '../ddl/ddl.js';
 import { getSurrealQLType } from '../ddl/types.js';
 import { formatDefaultValue, validateChangefeed } from '../utils/format.js';
@@ -774,13 +779,84 @@ export class SurrealQLGenerator {
   }
 
   /**
+   * Generate DEFINE ANALYZER statement
+   *
+   * SurrealDB 3.0 syntax:
+   *   DEFINE ANALYZER [IF NOT EXISTS] @name [TOKENIZERS @t1 [,@tN]] [FILTERS @f1 [,@fN]]
+   */
+  generateAnalyzerDefinition(analyzer: AnalyzerDefinition): string {
+    if (!analyzer.name) {
+      throw new Error('Analyzer name is required for DEFINE ANALYZER');
+    }
+
+    const parts: string[] = [`DEFINE ANALYZER IF NOT EXISTS ${analyzer.name}`];
+
+    if (analyzer.tokenizers) {
+      const tokenizers = Array.isArray(analyzer.tokenizers)
+        ? analyzer.tokenizers.join(', ')
+        : analyzer.tokenizers;
+      if (tokenizers === '') {
+        throw new Error(
+          'Tokenizers list is empty for DEFINE ANALYZER — provide at least one tokenizer',
+        );
+      }
+      parts.push(`TOKENIZERS ${tokenizers}`);
+    }
+
+    if (analyzer.filters) {
+      const filters = Array.isArray(analyzer.filters)
+        ? analyzer.filters.join(', ')
+        : analyzer.filters;
+      if (filters === '') {
+        throw new Error('Filters list is empty for DEFINE ANALYZER — provide at least one filter');
+      }
+      parts.push(`FILTERS ${filters}`);
+    }
+
+    return parts.join(' ');
+  }
+
+  /**
+   * Generate REMOVE ANALYZER statement
+   */
+  generateRemoveAnalyzer(analyzerName: string): string {
+    if (!analyzerName) {
+      throw new Error('Analyzer name is required for REMOVE ANALYZER');
+    }
+    return `REMOVE ANALYZER IF EXISTS ${analyzerName}`;
+  }
+
+  /**
    * Generate migration from multiple tables
    */
-  generateMigration(tables: TableDefinition[], direction: 'up' | 'down' = 'up'): string[] {
+  generateMigration(
+    tables: TableDefinition[],
+    direction: 'up' | 'down' = 'up',
+    analyzers?: AnalyzerDefinition[],
+  ): string[] {
     const statements: string[] = [];
 
-    for (const table of tables) {
-      statements.push(...this.generateTableMigration(table, direction));
+    // Emit analyzers before tables for UP, after tables for DOWN
+    if (direction === 'up') {
+      // UP: define analyzers first, then tables
+      if (analyzers) {
+        for (const analyzer of analyzers) {
+          statements.push(this.generateAnalyzerDefinition(analyzer));
+        }
+      }
+      for (const table of tables) {
+        statements.push(...this.generateTableMigration(table, direction));
+      }
+    } else {
+      // DOWN: remove tables first, then analyzers
+      for (const table of tables) {
+        statements.push(...this.generateTableMigration(table, direction));
+      }
+      if (analyzers) {
+        for (const analyzer of analyzers) {
+          statements.push(this.generateRemoveAnalyzer(analyzer.name));
+        }
+      }
     }
 
     // Filter out empty statements (e.g., from id field which returns empty string)
@@ -797,13 +873,14 @@ export class SurrealQLGenerator {
     tables: TableDefinition[],
     _version: string,
     _name: string,
+    analyzers?: AnalyzerDefinition[],
   ): { up: string[]; down: string[] } {
     // Generate up migration (apply changes)
-    const upStatements = this.generateMigration(tables, 'up');
+    const upStatements = this.generateMigration(tables, 'up', analyzers);
     const up = upStatements.filter((s) => s.trim() !== '');
 
     // Generate down migration (rollback)
-    const downStatements = this.generateMigration(tables, 'down');
+    const downStatements = this.generateMigration(tables, 'down', analyzers);
     const down = downStatements.filter((s) => s.trim() !== '');
 
     return { up, down };
