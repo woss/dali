@@ -20,6 +20,10 @@
     "directory": "packages/dali-memory"
   },
   "type": "module",
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
   "scripts": {
     "dev": "vite dev",
     "build": "vite build",
