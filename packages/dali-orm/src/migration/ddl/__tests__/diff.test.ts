@@ -859,14 +859,15 @@ describe('statementToSql', () => {
       expect(sql).toContain('TYPE option<string>');
     });
 
-    it('adds OPTIONAL keyword when making optional without type change', () => {
+    it('adds TYPE option when making optional without type change', () => {
       const sql = statementToSql({
         type: 'alter_column',
         table: 'user',
         column: 'name',
         change: { optional: true },
+        before: { type: 'string' },
       });
-      expect(sql).toContain('OPTIONAL');
+      expect(sql).toContain('TYPE option<string>');
     });
 
     it('handles readonly change', () => {
@@ -890,7 +891,7 @@ describe('statementToSql', () => {
         before: { type: 'string', optional: false, readonly: true },
         after: { type: 'string', optional: false, readonly: false },
       });
-      expect(sql).toContain('NOT READONLY');
+      expect(sql).toContain('DROP READONLY');
     });
 
     it('handles default change', () => {

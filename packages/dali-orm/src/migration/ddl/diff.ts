@@ -906,14 +906,20 @@ function generateAlterColumn(stmt: AlterColumnStatement): string {
     parts.push(`TYPE ${typeStr}`);
   }
 
-  // Add explicit OPTIONAL keyword when making field optional but no type change
+  // When making optional without explicit type change, use before.type to wrap in option<>
   if (stmt.change.optional === true && !stmt.change.type) {
-    parts.push('OPTIONAL');
+    const baseType = stmt.before?.type;
+    if (baseType) {
+      const isRecord = baseType === 'record' && stmt.before?.recordTable;
+      const targetType = isRecord ? `record<${stmt.before!.recordTable}>` : baseType;
+      parts.push(`TYPE option<${targetType}>`);
+    }
+    // else: skip — can't express optional toggle without knowing the type
   }
 
   // Handle readonly
   if (stmt.change.readonly !== undefined) {
-    parts.push(stmt.change.readonly ? 'READONLY' : 'NOT READONLY');
+    parts.push(stmt.change.readonly ? 'READONLY' : 'DROP READONLY');
   }
 
   // Handle default
