@@ -6,10 +6,22 @@ import { getDB } from '../db/connection';
 import { tagsTable, memoryTagsTable } from '../db/schema';
 import type { TagRecord, MemoryRecord } from './types';
 
+/** Strip SurrealQL angle-bracket escaping from RecordId.toString() */
+function stripBrackets(s: string): string {
+  return s.replace(/[⟨⟩]/g, '');
+}
+
 /** Strip SurrealDB table prefix from record ID (table:abc → abc) */
 function rawId(id: string): string {
-  const idx = id.indexOf(':');
-  return idx >= 0 ? id.slice(idx + 1) : id;
+  const clean = stripBrackets(id);
+  const idx = clean.indexOf(':');
+  return idx >= 0 ? clean.slice(idx + 1) : clean;
+}
+
+/** Normalize record ID to "table:key" format, stripping SurrealQL escaping */
+function normalizeId(id: string): string {
+  const clean = stripBrackets(id);
+  return clean.includes(':') ? clean : `memories:${clean}`;
 }
 
 export class TagService {
@@ -65,9 +77,10 @@ export class TagService {
     const db = getDB();
     const driver = db.getDriver();
 
-    // Format record IDs for RELATE
-    const memId = memoryId.includes(':') ? memoryId : `memories:${rawId(memoryId)}`;
-    const tagIdFormatted = tagId.includes(':') ? tagId : `tags:${rawId(tagId)}`;
+    // Format record IDs for RELATE — strip any SurrealQL escaping
+    const memId = normalizeId(memoryId);
+    const tagNorm = stripBrackets(tagId);
+    const tagIdFormatted = tagNorm.includes(':') ? tagNorm : `tags:${rawId(tagNorm)}`;
 
     await relate(driver, memoryTagsTable).from(memId).to(tagIdFormatted).execute();
   }
@@ -75,8 +88,9 @@ export class TagService {
   async removeTagFromMemory(memoryId: string, tagId: string): Promise<void> {
     const db = getDB();
 
-    const memId = memoryId.includes(':') ? memoryId : `memories:${rawId(memoryId)}`;
-    const tagIdFormatted = tagId.includes(':') ? tagId : `tags:${rawId(tagId)}`;
+    const memId = normalizeId(memoryId);
+    const tagNorm = stripBrackets(tagId);
+    const tagIdFormatted = tagNorm.includes(':') ? tagNorm : `tags:${rawId(tagNorm)}`;
 
     // Use RecordId objects so the embedded engine matches record-typed columns
     await db.query('DELETE FROM memory_tags WHERE in = $memId AND out = $tagId', {
@@ -88,7 +102,7 @@ export class TagService {
   async getMemoryTags(memoryId: string): Promise<TagRecord[]> {
     const db = getDB();
 
-    const memId = memoryId.includes(':') ? memoryId : `memories:${rawId(memoryId)}`;
+    const memId = normalizeId(memoryId);
     const [table, key] = memId.includes(':') ? memId.split(':') : ['memories', memId];
 
     // Use RecordId object so the embedded engine matches graph edge traversal

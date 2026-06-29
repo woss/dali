@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Added
+
+- Profile settings section on /settings page — name/email update form with validation, email uniqueness check, DB update, and session cookie resign on email change
+
 ### Changed
 
 - Redesigned all 6 UI pages with glass morphism cards, gradient mesh background, amber/cyan/purple dark theme

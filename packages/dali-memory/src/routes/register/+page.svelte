@@ -11,6 +11,17 @@
 
         <form method="POST" class="space-y-4 animate-fade-in" style="animation-delay: 150ms">
           <div>
+            <label for="name" class="mb-1 block text-sm font-medium">Name</label>
+            <input
+              id="name"
+              name="name"
+              type="text"
+              required
+              class="input input-bordered w-full"
+              placeholder="Your display name"
+            />
+          </div>
+          <div>
             <label for="email" class="mb-1 block text-sm font-medium">Email</label>
             <input
               id="email"

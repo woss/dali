@@ -54,7 +54,7 @@ dali-memory/
 │   │   ├── logout/             # Clears cookie, redirects to /login
 │   │   ├── memories/           # Workspace switcher + memory CRUD (create, list, delete)
 │   │   ├── workspaces/         # Workspace CRUD with glass cards
-│   │   ├── settings/           # Config display + API key management (generate/delete)
+│   │   ├── settings/           # Config display + API key management (generate/delete) + profile section (name/email update)
 │   │   └── api/mcp/+server.ts  # MCP SSE endpoint (GET → SSE stream, POST → JSON-RPC)
 │   └── lib/utils/serialization.ts  # toPlain() helper
 ├── vite.config.ts               # SvelteKit + Tailwind v4 + SSR external for @woss/dali-orm
@@ -100,7 +100,7 @@ All config via environment variables, validated by Zod.
 | models     | TABLE | provider_id, model_id, variant (optional), dimensions, created_at. Unique index on (provider_id, model_id).                                                                                   |
 | tags       | TABLE | name (unique)                                                                                                                                                                                 |
 | api_keys   | TABLE | key_hash (unique), name, created_at, last_used_at (optional), user_id → users (optional)                                                                                                      |
-| users      | TABLE | email (unique), pass, created_at                                                                                                                                                              |
+| users      | TABLE | email (unique), pass, name, created_at                                                                                       |
 
 ### Relations
 
@@ -200,19 +200,19 @@ SvelteKit with Tailwind v4 + daisyUI, hard-coded dark theme (`data-theme="dark"`
 
 ### Pages
 
-| Route       | Description                                                                                          |
-| ----------- | ---------------------------------------------------------------------------------------------------- |
-| /           | Home hero with gradient heading glow + 3 stat cards (memories, workspaces, tags)                     |
-| /login      | Glass card with email/password form → HMAC-signed cookie, 30-day expiry                              |
-| /register   | Glass card with email/password/confirm → CREATE users with crypto::argon2                            |
-| /logout     | Clears dali_session cookie, redirects to /login                                                      |
-| /memories   | Workspace dropdown selector + inline create form + staggered memory glass cards, content dedup       |
-| /workspaces | Create form + staggered workspace glass cards, link to memories per workspace                        |
-| /settings   | Read-only config display + API key management (generate / delete), user_id linkage via session email |
+| Route       | Description                                                                                                                       |
+| ----------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| /           | Home hero with gradient heading glow + 3 stat cards (memories, workspaces, tags)                                                  |
+| /login      | Glass card with email/password form → HMAC-signed cookie, 30-day expiry                                                           |
+| /register   | Glass card with name/email/password/confirm → CREATE users with crypto::argon2 + name, auto sign-in on success                    |
+| /logout     | Clears dali_session cookie, redirects to /login                                                                                   |
+| /memories   | Workspace dropdown selector + inline create form + staggered memory glass cards, content dedup                                    |
+| /workspaces | Create form + staggered workspace glass cards, link to memories per workspace                                                     |
+| /settings   | Read-only config display + API key management (generate / delete) + profile section (name/email update), user_id linkage via session email |
 
 ### Navbar
 
-Fixed-top glass navbar with "dali-memory" brand link, center nav links (Memories, Workspaces, Settings), and mobile hamburger dropdown.
+Fixed-top glass navbar with "dali-memory" brand link, center nav links (Memories, Workspaces, Settings), user name (or email fallback) when authenticated, Sign In/Register when not, and mobile hamburger dropdown.
 
 ### Auth Flow
 
@@ -221,8 +221,12 @@ Fixed-top glass navbar with "dali-memory" brand link, center nav links (Memories
 3. Reads `dali_session` cookie → HMAC-SHA256 verify → extracts email
 4. Constant-time comparison prevents timing attacks
 5. On failure: 303 redirect to `/login`
-6. Login route validates email+password against `users` table via `crypto::argon2::compare()`
-7. Sets signed session cookie (`HMAC(email, secret)`)
+6. `+layout.server.ts` loads user name from DB (via `SELECT name FROM users WHERE email = $email`) and passes it to all pages as `data.name`
+7. Navbar displays `data.name ?? data.userEmail` — graceful fallback if DB unavailable
+8. Login route validates email+password against `users` table via `crypto::argon2::compare()`
+9. Sets signed session cookie (`HMAC(email, secret)`)
+10. Registration creates user with `name`, `email`, and `pass` fields, then auto-signs in
+11. Settings page provides a **Profile** section (auth-gated) to update name/email — validates format, checks email uniqueness, updates DB, and resigns the session cookie on email change
 
 ## API Key Auth (MCP)
 
@@ -241,7 +245,7 @@ Located co-located with their source modules (`.test.ts` suffix or `__tests__/` 
 | src/hooks.server.test.ts                          | Auth handle flow — cookie verification, protected routes, public paths, constant-time comparison, tamper detection |
 | src/routes/login/**tests**/page.server.test.ts    | Login form validation, auth logic                                                                                  |
 | src/routes/register/**tests**/page.server.test.ts | Registration validation                                                                                            |
-| src/routes/settings/**tests**/page.server.test.ts | API key management                                                                                                 |
+| src/routes/settings/**tests**/page.server.test.ts | API key management + profile update (name/email validation, uniqueness, cookie resign)                             |
 | src/lib/server/db/**tests**/connection.test.ts    | DB connection lifecycle, connect/disconnect, migration                                                             |
 
 Run: `pnpm test` (vitest), `pnpm test:integration` (no parallelism, all integration tests)

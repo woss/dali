@@ -59,11 +59,13 @@ function createRegisterRequest(
   email?: string,
   password?: string,
   confirmPassword?: string,
+  name?: string,
 ): Request {
   const form = new FormData();
   if (email !== undefined) form.set('email', email);
   if (password !== undefined) form.set('password', password);
   if (confirmPassword !== undefined) form.set('confirm_password', confirmPassword);
+  if (name !== undefined) form.set('name', name);
   return new Request('http://localhost:7777/register', { method: 'POST', body: form });
 }
 
@@ -111,7 +113,7 @@ describe('register actions.default — signSession and cookie creation', () => {
 
   test('short password (< 8 chars): returns fail 400', async () => {
     const result = await actions.default({
-      request: createRegisterRequest('user@example.com', '1234567', '1234567'),
+      request: createRegisterRequest('user@example.com', '1234567', '1234567', 'Test User'),
       cookies: mockCookies,
     } as any);
 
@@ -124,7 +126,7 @@ describe('register actions.default — signSession and cookie creation', () => {
 
   test('password mismatch: returns fail 400', async () => {
     const result = await actions.default({
-      request: createRegisterRequest('user@example.com', 'password123', 'different'),
+      request: createRegisterRequest('user@example.com', 'password123', 'different', 'Test User'),
       cookies: mockCookies,
     } as any);
 
@@ -137,7 +139,7 @@ describe('register actions.default — signSession and cookie creation', () => {
     );
 
     const result = await actions.default({
-      request: createRegisterRequest('existing@example.com', 'password123', 'password123'),
+      request: createRegisterRequest('existing@example.com', 'password123', 'password123', 'Test User'),
       cookies: mockCookies,
     } as any);
 
@@ -155,7 +157,7 @@ describe('register actions.default — signSession and cookie creation', () => {
     );
 
     const result = await actions.default({
-      request: createRegisterRequest('existing@example.com', 'password123', 'password123'),
+      request: createRegisterRequest('existing@example.com', 'password123', 'password123', 'Test User'),
       cookies: mockCookies,
     } as any);
 
@@ -167,7 +169,7 @@ describe('register actions.default — signSession and cookie creation', () => {
 
     try {
       await actions.default({
-        request: createRegisterRequest('newuser@example.com', 'password123', 'password123'),
+        request: createRegisterRequest('newuser@example.com', 'password123', 'password123', 'New User'),
         cookies: mockCookies,
       } as any);
       expect.unreachable('Expected redirect to be thrown');
@@ -179,7 +181,7 @@ describe('register actions.default — signSession and cookie creation', () => {
     const queryCall = (mockGetDB().getDriver() as any).query.mock.calls[0];
     expect(queryCall[0]).toContain('CREATE users');
     expect(queryCall[0]).toContain('crypto::argon2::generate');
-    expect(queryCall[1]).toEqual({ email: 'newuser@example.com', pass: 'password123' });
+    expect(queryCall[1]).toEqual({ email: 'newuser@example.com', pass: 'password123', name: 'New User' });
 
     // Verify cookie was set with signed email
     expect(mockCookies.set).toHaveBeenCalledTimes(1);
@@ -195,7 +197,7 @@ describe('register actions.default — signSession and cookie creation', () => {
 
     try {
       await actions.default({
-        request: createRegisterRequest('newuser@example.com', 'password123', 'password123'),
+        request: createRegisterRequest('newuser@example.com', 'password123', 'password123', 'New User'),
         cookies: mockCookies,
       } as any);
       expect.unreachable('Expected redirect to be thrown');
@@ -211,7 +213,7 @@ describe('register actions.default — signSession and cookie creation', () => {
     );
 
     const result = await actions.default({
-      request: createRegisterRequest('user@example.com', 'password123', 'password123'),
+      request: createRegisterRequest('user@example.com', 'password123', 'password123', 'Test User'),
       cookies: mockCookies,
     } as any);
 

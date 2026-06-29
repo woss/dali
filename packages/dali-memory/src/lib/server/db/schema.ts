@@ -143,6 +143,7 @@ export const usersTable = defineTable(
   {
     email: string('email'),
     pass: string('pass'),
+    name: string('name').optional(),
     created_at: datetime('created_at').defaultNow(),
   },
   {

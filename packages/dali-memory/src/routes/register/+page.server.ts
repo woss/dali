@@ -28,11 +28,12 @@ async function signSession(sessionId: string, secret: string): Promise<string> {
 export const actions: Actions = {
   default: async ({ request, cookies }) => {
     const data = await request.formData();
+    const name = data.get('name')?.toString();
     const email = data.get('email')?.toString();
     const password = data.get('password')?.toString();
     const confirmPassword = data.get('confirm_password')?.toString();
 
-    if (!email || !password || !confirmPassword) {
+    if (!name || !email || !password || !confirmPassword) {
       return fail(400, { error: 'All fields are required', missing: true });
     }
 
@@ -48,8 +49,8 @@ export const actions: Actions = {
     try {
       const driver = getDB().getDriver();
       await driver.query(
-        'CREATE users SET email = $email, pass = crypto::argon2::generate($pass)',
-        { email, pass: password },
+        'CREATE users SET name = $name, email = $email, pass = crypto::argon2::generate($pass)',
+        { name, email, pass: password },
       );
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);

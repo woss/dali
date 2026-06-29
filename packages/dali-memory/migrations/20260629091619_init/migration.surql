@@ -1,5 +1,5 @@
 -- Migration: init
--- Version: 20260628174502
+-- Version: 20260629091619
 
 -- UP
 -- ---- Analyzers ----

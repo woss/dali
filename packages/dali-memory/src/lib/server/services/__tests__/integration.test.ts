@@ -51,12 +51,19 @@ function rid(id: any): string {
   return typeof id === 'string' ? id : id.toString();
 }
 
-async function seedMemory(service: MemoryService, content: string, workspaceId: string, name?: string) {
+async function seedMemory(
+  service: MemoryService,
+  content: string,
+  workspaceId: string,
+  name?: string,
+  slug?: string,
+) {
   return service.createMemory({
     name: name ?? `mem-${Date.now()}`,
     content,
     workspace_id: workspaceId,
     metadata: { source: 'integration-test' },
+    slug,
   });
 }
 
@@ -107,7 +114,9 @@ describe('MemoryService', () => {
   let service: MemoryService;
 
   beforeAll(async () => {
-    service = new MemoryService(new (await vi.importMock('../../embedder/index').then((m: any) => m.EmbedderService))());
+    service = new MemoryService(
+      new (await vi.importMock('../../embedder/index').then((m: any) => m.EmbedderService))(),
+    );
   });
 
   test('creates a memory and returns full record', async () => {
@@ -135,7 +144,12 @@ describe('MemoryService', () => {
     const ws2: string = r.id;
 
     const m1: any = await seedMemory(service, content, wsId);
-    const m2: any = await service.createMemory({ name: 'other', content, workspace_id: ws2 });
+    const m2: any = await service.createMemory({
+      name: 'other',
+      content,
+      workspace_id: ws2,
+      slug: 'other',
+    });
     expect(m1.id).not.toBe(m2.id);
   });
 
@@ -214,7 +228,9 @@ describe('TagService', () => {
 
   beforeAll(async () => {
     tagService = new TagService();
-    memoryService = new MemoryService(new (await vi.importMock('../../embedder/index').then((m: any) => m.EmbedderService))());
+    memoryService = new MemoryService(
+      new (await vi.importMock('../../embedder/index').then((m: any) => m.EmbedderService))(),
+    );
   });
 
   test('createTag creates and is idempotent', async () => {
@@ -286,8 +302,12 @@ describe('HybridSearch', () => {
   let memoryService: MemoryService;
 
   beforeAll(async () => {
-    hybridSearch = new HybridSearch(new (await vi.importMock('../../embedder/index').then((m: any) => m.EmbedderService))());
-    memoryService = new MemoryService(new (await vi.importMock('../../embedder/index').then((m: any) => m.EmbedderService))());
+    hybridSearch = new HybridSearch(
+      new (await vi.importMock('../../embedder/index').then((m: any) => m.EmbedderService))(),
+    );
+    memoryService = new MemoryService(
+      new (await vi.importMock('../../embedder/index').then((m: any) => m.EmbedderService))(),
+    );
   });
 
   // NOTE: The @@@ (BM25 fulltext) operator is a SurrealDB server engine feature.
