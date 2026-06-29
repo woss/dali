@@ -28,13 +28,18 @@ const TOOL_TAGS_REMOVE = 'tags_remove';
 // ---------------------------------------------------------------------------
 // Zod v4 input schemas
 // ---------------------------------------------------------------------------
-const MemoriesStoreSchema = z.object({
-  name: z.string(),
-  content: z.string(),
-  memory_type: z.string().optional(),
-  workspace_id: z.string(),
-  metadata: z.record(z.string(), z.unknown()).optional(),
-});
+const MemoriesStoreSchema = z
+  .object({
+    name: z.string().optional(),
+    content: z.string(),
+    memory_type: z.string().optional(),
+    workspace_id: z.string(),
+    metadata: z.record(z.string(), z.unknown()).optional(),
+    slug: z.string().optional(),
+  })
+  .refine((data) => data.slug !== undefined || data.name !== undefined, {
+    message: 'Either slug or name must be provided',
+  });
 
 const MemoriesSearchSchema = z.object({
   query: z.string(),
@@ -44,12 +49,12 @@ const MemoriesSearchSchema = z.object({
 });
 
 const TagsAddSchema = z.object({
-  memory_id: z.string(),
+  memory_slug: z.string(),
   tag_name: z.string(),
 });
 
 const TagsRemoveSchema = z.object({
-  memory_id: z.string(),
+  memory_slug: z.string(),
   tag_name: z.string(),
 });
 
@@ -64,8 +69,9 @@ const MEMORIES_STORE_INPUT_SCHEMA = {
     memory_type: { type: 'string' as const },
     workspace_id: { type: 'string' as const },
     metadata: { type: 'object' as const },
+    slug: { type: 'string' as const },
   },
-  required: ['name', 'content', 'workspace_id'],
+  required: ['content', 'workspace_id'],
 };
 
 const MEMORIES_SEARCH_INPUT_SCHEMA = {
@@ -82,19 +88,19 @@ const MEMORIES_SEARCH_INPUT_SCHEMA = {
 const TAGS_ADD_INPUT_SCHEMA = {
   type: 'object' as const,
   properties: {
-    memory_id: { type: 'string' as const },
+    memory_slug: { type: 'string' as const },
     tag_name: { type: 'string' as const },
   },
-  required: ['memory_id', 'tag_name'],
+  required: ['memory_slug', 'tag_name'],
 };
 
 const TAGS_REMOVE_INPUT_SCHEMA = {
   type: 'object' as const,
   properties: {
-    memory_id: { type: 'string' as const },
+    memory_slug: { type: 'string' as const },
     tag_name: { type: 'string' as const },
   },
-  required: ['memory_id', 'tag_name'],
+  required: ['memory_slug', 'tag_name'],
 };
 
 // ---------------------------------------------------------------------------
@@ -206,19 +212,40 @@ export async function runMCPServer(): Promise<void> {
 
 async function handleMemoriesStore(
   rawArgs: Record<string, unknown>,
-): Promise<{ content: { type: 'text'; text: string }[] }> {
+): Promise<{ content: { type: 'text'; text: string }[]; isError?: boolean }> {
   const args = MemoriesStoreSchema.parse(rawArgs);
+
+  // Generate slug from name if not provided
+  const slug =
+    args.slug ??
+    (args.name
+      ? args.name
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-+|-+$/g, '')
+      : undefined);
+
+  // Use name falling back to slug if needed
+  const name = args.name ?? slug;
+
+  if (!name || !slug) {
+    return {
+      content: [{ type: 'text', text: 'Either slug or name must be provided' }],
+      isError: true,
+    };
+  }
 
   const embedder = new EmbedderService();
   await embedder.initialize();
   const memoryService = new MemoryService(embedder);
 
   const record = await memoryService.createMemory({
-    name: args.name,
+    name,
     content: args.content,
     memory_type: args.memory_type,
     workspace_id: args.workspace_id,
     metadata: args.metadata,
+    slug,
   });
 
   return {
@@ -254,7 +281,10 @@ async function handleTagsAdd(
 
   const tagService = new TagService();
   const tag = await tagService.createTag(args.tag_name);
-  await tagService.addTagToMemory(args.memory_id, tag.id);
+
+  // Construct full memory ID from slug
+  const memoryId = `memories:${args.memory_slug}`;
+  await tagService.addTagToMemory(memoryId, tag.id);
 
   return {
     content: [{ type: 'text', text: JSON.stringify({ tag_id: tag.id }) }],
@@ -280,7 +310,9 @@ async function handleTagsRemove(
     };
   }
 
-  await tagService.removeTagFromMemory(args.memory_id, tag.id);
+  // Construct full memory ID from slug
+  const memoryId = `memories:${args.memory_slug}`;
+  await tagService.removeTagFromMemory(memoryId, tag.id);
 
   return {
     content: [{ type: 'text', text: JSON.stringify({ removed: true }) }],

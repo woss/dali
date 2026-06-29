@@ -28,6 +28,22 @@ export const load: PageServerLoad = async () => {
   return { config: safeConfig, apiKeys: toPlain(apiKeys) };
 };
 
+async function signSession(sessionId: string, secret: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const cryptoKey = await crypto.subtle.importKey(
+    'raw',
+    encoder.encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign'],
+  );
+  const signature = await crypto.subtle.sign('HMAC', cryptoKey, encoder.encode(sessionId));
+  const hex = Array.from(new Uint8Array(signature))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
+  return `${hex}.${sessionId}`;
+}
+
 export const actions: Actions = {
   'generate-key': async ({ request, locals }) => {
     await connect();
@@ -82,5 +98,58 @@ export const actions: Actions = {
       const msg = e instanceof Error ? e.message : 'Failed to delete API key';
       return fail(400, { error: msg });
     }
+  },
+
+  'update-profile': async ({ request, locals, cookies }) => {
+    if (!locals.authenticated || !locals.userEmail) {
+      return fail(401, { error: 'Not authenticated' });
+    }
+
+    const data = await request.formData();
+    const name = data.get('name')?.toString();
+    const email = data.get('email')?.toString();
+
+    if (!name || !email) {
+      return fail(400, { error: 'Name and email are required' });
+    }
+
+    if (!email.includes('@')) {
+      return fail(400, { error: 'Invalid email address' });
+    }
+
+    await connect();
+
+    if (email !== locals.userEmail) {
+      const existing = await getDB().query<{ id: string }[]>(
+        'SELECT id FROM users WHERE email = $email',
+        { email },
+      );
+      if (existing?.[0]?.length > 0) {
+        return fail(409, { error: 'This email is already in use' });
+      }
+    }
+
+    try {
+      const driver = getDB().getDriver();
+      await driver.query(
+        'UPDATE users SET name = $name, email = $email WHERE email = $currentEmail',
+        { name, email, currentEmail: locals.userEmail },
+      );
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Failed to update profile';
+      return fail(500, { error: msg });
+    }
+
+    if (email !== locals.userEmail) {
+      const signed = await signSession(email, getConfig().DALI_MEMORY_SECRET);
+      cookies.set('dali_session', signed, {
+        path: '/',
+        httpOnly: true,
+        sameSite: 'strict',
+        maxAge: 60 * 60 * 24 * 30,
+      });
+    }
+
+    return { success: true };
   },
 };

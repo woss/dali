@@ -391,3 +391,132 @@ describe('settings actions.delete-key', () => {
     expect(result).toEqual({ status: 400, data: { error: 'Record not found' } });
   });
 });
+
+// =============================================================================
+// Helpers — update-profile
+// =============================================================================
+
+function createUpdateProfileRequest(name?: string, email?: string): Request {
+  const form = new FormData();
+  if (name !== undefined) form.set('name', name);
+  if (email !== undefined) form.set('email', email);
+  return new Request('http://localhost:7777/settings', { method: 'POST', body: form });
+}
+
+// =============================================================================
+// Tests — settings actions.update-profile
+// =============================================================================
+
+describe('settings actions.update-profile', () => {
+  const mockProfileCookies = { set: vi.fn() };
+
+  test('unauthenticated: returns fail 401', async () => {
+    const result = await actions['update-profile']({
+      request: createUpdateProfileRequest('Test', 'test@test.com'),
+      locals: { authenticated: false },
+      cookies: mockProfileCookies,
+    } as any);
+
+    expect(mockFail).toHaveBeenCalledWith(401, { error: 'Not authenticated' });
+    expect(result).toEqual({ status: 401, data: { error: 'Not authenticated' } });
+  });
+
+  test('missing fields: returns fail 400', async () => {
+    const result = await actions['update-profile']({
+      request: createUpdateProfileRequest(),
+      locals: { userEmail: 'test@test.com', authenticated: true },
+      cookies: mockProfileCookies,
+    } as any);
+
+    expect(mockFail).toHaveBeenCalledWith(400, { error: 'Name and email are required' });
+    expect(result).toEqual({ status: 400, data: { error: 'Name and email are required' } });
+  });
+
+  test('invalid email format: returns fail 400', async () => {
+    const result = await actions['update-profile']({
+      request: createUpdateProfileRequest('Test', 'notanemail'),
+      locals: { userEmail: 'test@test.com', authenticated: true },
+      cookies: mockProfileCookies,
+    } as any);
+
+    expect(mockFail).toHaveBeenCalledWith(400, { error: 'Invalid email address' });
+    expect(result).toEqual({ status: 400, data: { error: 'Invalid email address' } });
+  });
+
+  test('same email, no change: updates name only, no cookie re-sign', async () => {
+    const driverQuery = mockDB.getDriver().query;
+    driverQuery.mockResolvedValueOnce(undefined);
+
+    const result = await actions['update-profile']({
+      request: createUpdateProfileRequest('Test User', 'test@test.com'),
+      locals: { userEmail: 'test@test.com', authenticated: true },
+      cookies: mockProfileCookies,
+    } as any);
+
+    expect(driverQuery).toHaveBeenCalledWith(
+      'UPDATE users SET name = $name, email = $email WHERE email = $currentEmail',
+      { name: 'Test User', email: 'test@test.com', currentEmail: 'test@test.com' },
+    );
+    expect(mockProfileCookies.set).not.toHaveBeenCalled();
+    expect(result).toEqual({ success: true });
+  });
+
+  test('new email taken: returns fail 409', async () => {
+    mockDB.query.mockResolvedValueOnce([[{ id: 'users:existing' }]]);
+
+    const result = await actions['update-profile']({
+      request: createUpdateProfileRequest('Test', 'taken@test.com'),
+      locals: { userEmail: 'old@test.com', authenticated: true },
+      cookies: mockProfileCookies,
+    } as any);
+
+    expect(mockDB.query).toHaveBeenCalledWith(
+      'SELECT id FROM users WHERE email = $email',
+      { email: 'taken@test.com' },
+    );
+    expect(mockFail).toHaveBeenCalledWith(409, { error: 'This email is already in use' });
+    expect(result).toEqual({ status: 409, data: { error: 'This email is already in use' } });
+  });
+
+  test('new email + DB error: returns fail 500', async () => {
+    mockDB.query.mockResolvedValueOnce([[]]);
+    const driverQuery = mockDB.getDriver().query;
+    driverQuery.mockRejectedValueOnce(new Error('DB connection failed'));
+
+    const result = await actions['update-profile']({
+      request: createUpdateProfileRequest('Test', 'new@test.com'),
+      locals: { userEmail: 'old@test.com', authenticated: true },
+      cookies: mockProfileCookies,
+    } as any);
+
+    expect(mockFail).toHaveBeenCalledWith(500, { error: 'DB connection failed' });
+    expect(result).toEqual({ status: 500, data: { error: 'DB connection failed' } });
+  });
+
+  test('full profile update with email change: updates DB, signs cookie, returns success', async () => {
+    mockDB.query.mockResolvedValueOnce([[]]);
+    const driverQuery = mockDB.getDriver().query;
+    driverQuery.mockResolvedValueOnce(undefined);
+
+    const result = await actions['update-profile']({
+      request: createUpdateProfileRequest('New Name', 'new@test.com'),
+      locals: { userEmail: 'old@test.com', authenticated: true },
+      cookies: mockProfileCookies,
+    } as any);
+
+    expect(driverQuery).toHaveBeenCalledWith(
+      'UPDATE users SET name = $name, email = $email WHERE email = $currentEmail',
+      { name: 'New Name', email: 'new@test.com', currentEmail: 'old@test.com' },
+    );
+    expect(mockProfileCookies.set).toHaveBeenCalledWith(
+      'dali_session',
+      expect.stringMatching(/^[0-9a-f]+\.new@test\.com$/),
+      expect.objectContaining({
+        path: '/',
+        httpOnly: true,
+        sameSite: 'strict',
+      }),
+    );
+    expect(result).toEqual({ success: true });
+  });
+});

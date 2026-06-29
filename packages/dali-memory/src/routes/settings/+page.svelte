@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { page } from '$app/stores';
+
   let { data, form } = $props();
   let config = $derived(data.config || {});
   let apiKeys = $derived(data.apiKeys || []);
@@ -30,6 +32,36 @@
   {#if form?.error}
     <div role="alert" class="alert alert-error">
       <span>{form.error}</span>
+    </div>
+  {/if}
+
+  <!-- Profile section -->
+  {#if $page.data.authenticated}
+    <div class="glass rounded-2xl animate-fade-in animate-slide-up p-6">
+      <div class="space-y-4">
+        <h2 class="text-lg font-bold">Profile</h2>
+        <form method="POST" action="?/update-profile" class="space-y-3">
+          <div>
+            <label for="name" class="mb-1 block text-sm font-medium">Name</label>
+            <input name="name" id="name" type="text" value={$page.data.name ?? ''} required class="input input-bordered w-full" />
+          </div>
+          <div>
+            <label for="email" class="mb-1 block text-sm font-medium">Email</label>
+            <input name="email" id="email" type="email" value={$page.data.userEmail ?? ''} required class="input input-bordered w-full" />
+          </div>
+          <button type="submit" class="btn btn-primary">Save</button>
+        </form>
+        {#if form?.success}
+          <div role="alert" class="alert alert-success">
+            <span>Profile updated.</span>
+          </div>
+        {/if}
+        {#if form?.error}
+          <div role="alert" class="alert alert-error">
+            <span>{form.error}</span>
+          </div>
+        {/if}
+      </div>
     </div>
   {/if}
 

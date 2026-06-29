@@ -1,5 +1,6 @@
 export interface MemoryRecord {
   id: string;
+  slug: string;
   name: string;
   content: string;
   memory_type: string;
