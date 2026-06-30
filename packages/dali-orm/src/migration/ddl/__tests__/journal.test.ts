@@ -312,35 +312,6 @@ describe('MigrationJournalManager', () => {
   });
 
   // ---------------------------------------------------------------------------
-  // getLastMigration
-  // ---------------------------------------------------------------------------
-  describe('getLastMigration', () => {
-    it('returns last entry when entries exist', async () => {
-      mockReadFile.mockResolvedValueOnce(
-        JSON.stringify(
-          makeJournal({
-            entries: [makeEntry({ idx: 1, tag: 'init' }), makeEntry({ idx: 2, tag: 'last_one' })],
-          }),
-        ),
-      );
-
-      const last = await manager.getLastMigration();
-
-      expect(last).not.toBeNull();
-      expect(last?.idx).toBe(2);
-      expect(last?.tag).toBe('last_one');
-    });
-
-    it('returns null when no entries', async () => {
-      mockReadFile.mockResolvedValueOnce(JSON.stringify(makeJournal()));
-
-      const last = await manager.getLastMigration();
-
-      expect(last).toBeNull();
-    });
-  });
-
-  // ---------------------------------------------------------------------------
   // isApplied
   // ---------------------------------------------------------------------------
   describe('isApplied', () => {

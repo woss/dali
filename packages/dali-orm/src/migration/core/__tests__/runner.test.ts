@@ -81,7 +81,6 @@ const { mockStat, mockReaddir, mockReadFile, mockDirs, mockFiles } = vi.hoisted(
 
 const mockJournal = vi.hoisted(() => ({
   getAppliedMigrations: vi.fn(),
-  getLastMigration: vi.fn(),
   getPartialMigration: vi.fn(),
   read: vi.fn(),
   write: vi.fn(),
@@ -182,7 +181,6 @@ function defaultBeforeEach() {
 
   // Default journal behaviors
   mockJournal.getAppliedMigrations.mockResolvedValue([]);
-  mockJournal.getLastMigration.mockResolvedValue(null);
   mockJournal.getPartialMigration.mockResolvedValue(null);
   mockJournal.read.mockResolvedValue(journalWithEntries());
   mockJournal.write.mockResolvedValue(undefined);
