@@ -5,7 +5,6 @@ export interface MemoryRecord {
   content: string;
   memory_type: string;
   metadata?: Record<string, unknown>;
-  embedding?: number[];
   workspace_id: string;
   created_at: string;
 }

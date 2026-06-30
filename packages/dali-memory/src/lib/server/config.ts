@@ -3,10 +3,10 @@ import { env } from '$env/dynamic/private';
 
 const envSchema = z.object({
   // Embedding
-  DALI_MEMORY_EMBEDDING_PROVIDER: z.enum(['local', 'remote']).default('remote'),
-  DALI_MEMORY_EMBEDDING_MODEL: z.string().default('all-MiniLM-L6-v2'),
+  DALI_MEMORY_EMBEDDING_PROVIDER: z.enum(['local', 'remote']).default('local'),
+  DALI_MEMORY_EMBEDDING_MODEL: z.string().default('Xenova/all-MiniLM-L6-v2'),
   DALI_MEMORY_EMBEDDING_DIMENSION: z.coerce.number().int().positive().default(384),
-  DALI_MEMORY_EMBEDDING_ENDPOINT: z.string().url().default('http://localhost:1234/v1'),
+  DALI_MEMORY_EMBEDDING_ENDPOINT: z.string().default('http://localhost:1234/v1'),
   DALI_MEMORY_EMBEDDING_API_KEY: z.string().optional(),
   DALI_MEMORY_EMBEDDING_CACHE_DIR: z.string().default('./models'),
 
@@ -22,7 +22,7 @@ const envSchema = z.object({
   DALI_MEMORY_AUTH_ENABLED: z.coerce.boolean().default(true),
 
   // SurrealDB
-  DALI_MEMORY_SURREAL_URL: z.string().url().default('ws://localhost:10101'),
+  DALI_MEMORY_SURREAL_URL: z.string().default('ws://localhost:10101'),
   DALI_MEMORY_SURREAL_NS: z.string().default('memory'),
   DALI_MEMORY_SURREAL_DB: z.string().default('memory'),
   DALI_MEMORY_SURREAL_USER: z.string().default('root'),
@@ -32,11 +32,11 @@ const envSchema = z.object({
   DALI_MEMORY_LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
 });
 
-export type MemlordConfig = z.infer<typeof envSchema>;
+export type DaliMemoryConfig = z.infer<typeof envSchema>;
 
-let cached: MemlordConfig | null = null;
+let cached: DaliMemoryConfig | null = null;
 
-export function getConfig(): MemlordConfig {
+export function getConfig(): DaliMemoryConfig {
   if (cached) return cached;
   const result = envSchema.safeParse(env);
   if (!result.success) {

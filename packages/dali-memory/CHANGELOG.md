@@ -6,6 +6,11 @@
 
 - Profile settings section on /settings page — name/email update form with validation, email uniqueness check, DB update, and session cookie resign on email change
 
+### Removed
+
+- Dead `embedding` column from `memoriesTable` schema — embeddings are stored in the separate `embeddingsTable` linked via `has_embedding` edge relation
+- Removed `embedding?: number[]` from `MemoryRecord` type in service types
+
 ### Changed
 
 - Redesigned all 6 UI pages with glass morphism cards, gradient mesh background, amber/cyan/purple dark theme

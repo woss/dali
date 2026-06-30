@@ -139,7 +139,12 @@ describe('register actions.default — signSession and cookie creation', () => {
     );
 
     const result = await actions.default({
-      request: createRegisterRequest('existing@example.com', 'password123', 'password123', 'Test User'),
+      request: createRegisterRequest(
+        'existing@example.com',
+        'password123',
+        'password123',
+        'Test User',
+      ),
       cookies: mockCookies,
     } as any);
 
@@ -157,7 +162,12 @@ describe('register actions.default — signSession and cookie creation', () => {
     );
 
     const result = await actions.default({
-      request: createRegisterRequest('existing@example.com', 'password123', 'password123', 'Test User'),
+      request: createRegisterRequest(
+        'existing@example.com',
+        'password123',
+        'password123',
+        'Test User',
+      ),
       cookies: mockCookies,
     } as any);
 
@@ -169,7 +179,12 @@ describe('register actions.default — signSession and cookie creation', () => {
 
     try {
       await actions.default({
-        request: createRegisterRequest('newuser@example.com', 'password123', 'password123', 'New User'),
+        request: createRegisterRequest(
+          'newuser@example.com',
+          'password123',
+          'password123',
+          'New User',
+        ),
         cookies: mockCookies,
       } as any);
       expect.unreachable('Expected redirect to be thrown');
@@ -181,7 +196,11 @@ describe('register actions.default — signSession and cookie creation', () => {
     const queryCall = (mockGetDB().getDriver() as any).query.mock.calls[0];
     expect(queryCall[0]).toContain('CREATE users');
     expect(queryCall[0]).toContain('crypto::argon2::generate');
-    expect(queryCall[1]).toEqual({ email: 'newuser@example.com', pass: 'password123', name: 'New User' });
+    expect(queryCall[1]).toEqual({
+      email: 'newuser@example.com',
+      pass: 'password123',
+      name: 'New User',
+    });
 
     // Verify cookie was set with signed email
     expect(mockCookies.set).toHaveBeenCalledTimes(1);
@@ -197,7 +216,12 @@ describe('register actions.default — signSession and cookie creation', () => {
 
     try {
       await actions.default({
-        request: createRegisterRequest('newuser@example.com', 'password123', 'password123', 'New User'),
+        request: createRegisterRequest(
+          'newuser@example.com',
+          'password123',
+          'password123',
+          'New User',
+        ),
         cookies: mockCookies,
       } as any);
       expect.unreachable('Expected redirect to be thrown');

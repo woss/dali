@@ -11,7 +11,7 @@ import { z } from 'zod';
 import { MemoryService } from './services/memory';
 import { TagService } from './services/tag';
 import { HybridSearch } from './services/hybrid-search';
-import { EmbedderService } from './embedder/index';
+import { EmbedderService, getEmbedder } from './embedder/index';
 import { validateApiKey } from './auth/api-keys';
 import { getDB } from './db/connection';
 import { getLog } from './logger';
@@ -235,8 +235,17 @@ async function handleMemoriesStore(
     };
   }
 
-  const embedder = new EmbedderService();
-  await embedder.initialize();
+  let embedder: EmbedderService;
+  try {
+    embedder = getEmbedder();
+  } catch {
+    return {
+      content: [
+        { type: 'text', text: 'Embedding service unavailable. Service may still be starting up.' },
+      ],
+      isError: true,
+    };
+  }
   const memoryService = new MemoryService(embedder);
 
   const record = await memoryService.createMemory({
@@ -249,17 +258,27 @@ async function handleMemoriesStore(
   });
 
   return {
-    content: [{ type: 'text', text: JSON.stringify({ id: record.id }) }],
+    content: [{ type: 'text', text: JSON.stringify({ id: String(record.id) }) }],
   };
 }
 
 async function handleMemoriesSearch(
   rawArgs: Record<string, unknown>,
-): Promise<{ content: { type: 'text'; text: string }[] }> {
+): Promise<{ content: { type: 'text'; text: string }[]; isError?: boolean }> {
   const args = MemoriesSearchSchema.parse(rawArgs);
 
-  const embedder = new EmbedderService();
-  await embedder.initialize();
+  let embedder: EmbedderService;
+  try {
+    embedder = getEmbedder();
+  } catch {
+    return {
+      content: [
+        { type: 'text', text: 'Embedding service unavailable. Service may still be starting up.' },
+      ],
+      isError: true,
+    };
+  }
+
   const hybridSearch = new HybridSearch(embedder);
 
   const options: SearchOptions = {};
@@ -267,11 +286,18 @@ async function handleMemoriesSearch(
   if (args.limit !== undefined) options.limit = args.limit;
   if (args.threshold !== undefined) options.threshold = args.threshold;
 
-  const results = await hybridSearch.search(args.query, options);
-
-  return {
-    content: [{ type: 'text', text: JSON.stringify(results) }],
-  };
+  try {
+    const results = await hybridSearch.search(args.query, options);
+    return {
+      content: [{ type: 'text', text: JSON.stringify(results) }],
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    return {
+      content: [{ type: 'text', text: `Search failed: ${message}` }],
+      isError: true,
+    };
+  }
 }
 
 async function handleTagsAdd(
@@ -281,13 +307,14 @@ async function handleTagsAdd(
 
   const tagService = new TagService();
   const tag = await tagService.createTag(args.tag_name);
+  const tagId = String(tag.id); // SurrealDB returns RecordId; convert to string
 
   // Construct full memory ID from slug
   const memoryId = `memories:${args.memory_slug}`;
-  await tagService.addTagToMemory(memoryId, tag.id);
+  await tagService.addTagToMemory(memoryId, tagId);
 
   return {
-    content: [{ type: 'text', text: JSON.stringify({ tag_id: tag.id }) }],
+    content: [{ type: 'text', text: JSON.stringify({ tag_id: tagId }) }],
   };
 }
 
@@ -310,9 +337,11 @@ async function handleTagsRemove(
     };
   }
 
+  const tagId = String(tag.id); // SurrealDB returns RecordId; convert to string
+
   // Construct full memory ID from slug
   const memoryId = `memories:${args.memory_slug}`;
-  await tagService.removeTagFromMemory(memoryId, tag.id);
+  await tagService.removeTagFromMemory(memoryId, tagId);
 
   return {
     content: [{ type: 'text', text: JSON.stringify({ removed: true }) }],

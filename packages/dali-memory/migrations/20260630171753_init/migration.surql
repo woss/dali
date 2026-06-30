@@ -1,5 +1,5 @@
 -- Migration: init
--- Version: 20260629091619
+-- Version: 20260630171753
 
 -- UP
 -- ---- Analyzers ----
@@ -51,23 +51,8 @@ DEFINE INDEX idx_api_keys_hash ON TABLE api_keys COLUMNS key_hash UNIQUE;
 DEFINE TABLE IF NOT EXISTS users SCHEMAFULL;
 DEFINE FIELD IF NOT EXISTS email ON TABLE users TYPE string;
 DEFINE FIELD IF NOT EXISTS pass ON TABLE users TYPE string;
+DEFINE FIELD IF NOT EXISTS name ON TABLE users TYPE option<string>;
 DEFINE FIELD IF NOT EXISTS created_at ON TABLE users TYPE datetime DEFAULT time::now();
 DEFINE INDEX idx_users_email ON TABLE users COLUMNS email UNIQUE;
 -- ---- Access ----
 DEFINE ACCESS user_access ON DATABASE TYPE RECORD SIGNUP (CREATE users SET email = $email, pass = crypto::argon2::generate($pass)) SIGNIN (SELECT * FROM users WHERE email = $email AND crypto::argon2::compare(pass, $pass)) DURATION FOR TOKEN 1h, FOR SESSION 30d;
-
--- DOWN
--- ---- Tables ----
-REMOVE TABLE workspaces;
-REMOVE TABLE memories;
-REMOVE TABLE embeddings;
-REMOVE TABLE models;
-REMOVE TABLE has_embedding;
-REMOVE TABLE tags;
-REMOVE TABLE memory_tags;
-REMOVE TABLE api_keys;
-REMOVE TABLE users;
--- ---- Access ----
-REMOVE ACCESS IF EXISTS user_access ON DATABASE;
--- ---- Analyzers ----
-REMOVE ANALYZER IF EXISTS fts_ascii;

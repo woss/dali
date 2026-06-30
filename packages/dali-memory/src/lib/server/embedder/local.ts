@@ -18,7 +18,9 @@ export class LocalEmbedder implements EmbedderProvider {
   }
 
   async embed(text: string): Promise<EmbedderResult> {
-    if (!this.pipeline) await this.init();
+    if (!this.pipeline) {
+      await this.init();
+    }
     const result = await this.pipeline!(text, { pooling: 'mean', normalize: true });
     const embedding = Array.from(result.data) as number[];
     return { embedding, model: this.modelId, dimensions: this.dims };

@@ -56,7 +56,7 @@ export const actions: Actions = {
         memory_type,
         workspace_id,
       });
-      return { success: true, memory };
+      return { success: true, memory: toPlain(memory) };
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Failed to create memory';
       return fail(400, { error: msg });

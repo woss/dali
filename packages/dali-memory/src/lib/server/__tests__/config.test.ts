@@ -66,7 +66,7 @@ describe('getConfig()', () => {
       const cfg = getConfig();
 
       // Embedding defaults
-      expect(cfg.DALI_MEMORY_EMBEDDING_PROVIDER).toBe('remote');
+      expect(cfg.DALI_MEMORY_EMBEDDING_PROVIDER).toBe('local');
       expect(cfg.DALI_MEMORY_EMBEDDING_MODEL).toBe('all-MiniLM-L6-v2');
       expect(cfg.DALI_MEMORY_EMBEDDING_DIMENSION).toBe(384);
       expect(cfg.DALI_MEMORY_EMBEDDING_ENDPOINT).toBe('http://localhost:1234/v1');
