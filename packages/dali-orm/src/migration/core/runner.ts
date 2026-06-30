@@ -23,8 +23,6 @@ export interface MigrationFile {
   name: string;
   /** SQL statements for applying */
   up: string[];
-  /** SQL statements for rollback */
-  down: string[];
   /** Hash of content for verification */
   checksum: string;
   /** Full file path */
@@ -37,7 +35,6 @@ export interface MigrationFile {
 export interface MigrationResult {
   applied: string[];
   skipped: string[];
-  rolledBack: string[];
   warnings?: string[];
 }
 
@@ -174,7 +171,7 @@ export class MigrationRunner {
     const files = await this.loadMigrationFiles();
     if (files.length === 0) {
       log('No migration files found');
-      return { applied: [], skipped: [], rolledBack: [], warnings };
+      return { applied: [], skipped: [], warnings };
     }
 
     // Get DB state (source of truth)
@@ -225,101 +222,7 @@ export class MigrationRunner {
       skipped.length,
       warnings.length,
     );
-    return { applied, skipped, rolledBack: [], warnings };
-  }
-
-  /**
-   * Rollback migrations by number of steps
-   */
-  async down(steps: number = 1): Promise<MigrationResult> {
-    log('Starting migration down (steps: %d)', steps);
-
-    // Guard: validate steps parameter
-    if (steps < 1) {
-      throw new Error('Steps must be a positive number');
-    }
-
-    const rolledBack: string[] = [];
-
-    for (let i = 0; i < steps; i++) {
-      const lastMigration = await this.journal.getLastMigration();
-      if (!lastMigration) {
-        log('No migrations to rollback');
-        break;
-      }
-
-      // Find migration file
-      const files = await this.loadMigrationFiles();
-      const migration = files.find((f) => f.name === lastMigration.tag);
-
-      if (!migration) {
-        log('Warning: migration file not found for %s', lastMigration.tag);
-        await this.journal.rollback();
-        continue;
-      }
-
-      // Execute rollback (direct queries - DDL may not support transactions)
-      for (const sql of migration.down) {
-        await this.driver.query(sql);
-      }
-
-      // Remove from journal
-      await this.journal.rollback();
-
-      // Remove from database tracking table
-      try {
-        await this.driver.query(`DELETE FROM ${this.migrationsTable} WHERE name = $name`, {
-          name: lastMigration.tag,
-        });
-      } catch (cleanupError) {
-        log('Failed to clean up DB migration entry (non-fatal): %O', cleanupError);
-      }
-
-      rolledBack.push(lastMigration.tag);
-
-      log('Rolled back: %s', lastMigration.tag);
-    }
-
-    return { applied: [], skipped: [], rolledBack };
-  }
-
-  /**
-   * Reset all migrations
-   */
-  async reset(options?: { force?: boolean }): Promise<void> {
-    log('Starting migration reset');
-
-    // Get all applied migrations
-    const appliedTags = await this.journal.getAppliedMigrations();
-    const files = await this.loadMigrationFiles();
-
-    // Rollback in reverse order, skip SQL errors in force mode
-    for (const tag of appliedTags.reverse()) {
-      const migration = files.find((f) => f.name === tag);
-      if (migration) {
-        for (const sql of migration.down) {
-          try {
-            await this.driver.query(sql);
-          } catch (error) {
-            if (options?.force) {
-              log('Force mode: ignoring SQL error: %s', (error as Error).message);
-            } else {
-              throw error;
-            }
-          }
-        }
-      }
-      await this.journal.rollback();
-    }
-
-    // Clear database tracking table (ignore if doesn't exist)
-    try {
-      await this.driver.query(`DELETE FROM ${this.migrationsTable}`);
-    } catch (error) {
-      log('Migration table does not exist or could not be cleared: %s', (error as Error).message);
-    }
-
-    log('Migration reset complete');
+    return { applied, skipped, warnings };
   }
 
   /**
@@ -426,7 +329,6 @@ export class MigrationRunner {
           version,
           name,
           up: parsed.up,
-          down: parsed.down,
           checksum,
           path: migrationFilePath,
         });
@@ -449,14 +351,11 @@ export class MigrationRunner {
   /**
    * Parse migration file content
    */
-  private parseMigrationFileContent(content: string): { up: string[]; down: string[] } {
+  private parseMigrationFileContent(content: string): { up: string[] } {
     const upMatch = content.match(/--\s*UP\s*\n([\s\S]*?)(?:--\s*DOWN|$)/i);
     const upStatements = upMatch ? this.parseStatements(upMatch[1]) : [];
 
-    const downMatch = content.match(/--\s*DOWN\s*\n([\s\S]*?)$/i);
-    const downStatements = downMatch ? this.parseStatements(downMatch[1]) : [];
-
-    return { up: upStatements, down: downStatements };
+    return { up: upStatements };
   }
 
   /**
@@ -582,26 +481,9 @@ export class MigrationRunner {
       }
 
       log('Migration fully applied: %s', migration.name);
-      return { applied: [migration.name], skipped: [], rolledBack: [] };
+      return { applied: [migration.name], skipped: [] };
     } catch (error) {
       log('Migration failed at statement %d: %s', currentIdx, (error as Error).message);
-
-      // Handle partial rollback - run the DOWN statement for failed statement
-      if (currentIdx > 0 && migration.down.length > 0) {
-        log('Attempting partial rollback for: %s', migration.name);
-        try {
-          // Rollback the statements that succeeded (in reverse order)
-          // Using direct queries since DDL may not support transactions
-          for (let i = currentIdx - 1; i >= 0; i--) {
-            if (migration.down[i]) {
-              await this.driver.query(migration.down[i]);
-            }
-          }
-          log('Partial rollback completed for: %s', migration.name);
-        } catch (rollbackError) {
-          log('Partial rollback failed: %O', rollbackError);
-        }
-      }
 
       // Mark migration as failed (breakpoints show partial state)
       try {
@@ -707,23 +589,9 @@ export class MigrationRunner {
       }
 
       log('Migration fully applied after resume: %s', migrationFile.name);
-      return { applied: [migrationFile.name], skipped: [], rolledBack: [] };
+      return { applied: [migrationFile.name], skipped: [] };
     } catch (error) {
       log('Resume failed at statement %d: %s', currentIdx, (error as Error).message);
-
-      // Partial rollback on failure
-      if (currentIdx > 0 && migrationFile.down.length > 0) {
-        log('Attempting partial rollback after resume failure: %s', migrationFile.name);
-        try {
-          for (let i = currentIdx - 1; i >= 0; i--) {
-            if (migrationFile.down[i]) {
-              await this.driver.query(migrationFile.down[i]);
-            }
-          }
-        } catch (rollbackError) {
-          log('Partial rollback after resume failed: %O', rollbackError);
-        }
-      }
 
       try {
         await this.journal.updateBreakpoints(migrationFile.name, breakpoints);

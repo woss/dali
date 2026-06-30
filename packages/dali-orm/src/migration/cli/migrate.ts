@@ -12,7 +12,6 @@ import { generateMigration, loadSchemaFiles } from './generate.js';
 
 export interface MigrateOptions {
   to?: string; // Target version
-  steps?: number; // Number of steps to migrate down
   dryRun?: boolean; // Show what would be executed
   force?: boolean; // Force operation
   config: Config;

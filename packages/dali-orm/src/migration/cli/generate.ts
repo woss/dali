@@ -250,7 +250,6 @@ export async function generateMigration(
   const generator = new SurrealQLGenerator();
 
   let upStatements: string[];
-  let downStatements: string[];
 
   console.log('Generating migration: %s', options);
 
@@ -259,7 +258,7 @@ export async function generateMigration(
   if (options.fullMigration) {
     // Force full migration generation
     log('Generating full migration (fullMigration=true)');
-    ({ upStatements, downStatements } = generateFullMigration(
+    ({ upStatements } = generateFullMigration(
       tables,
       generator,
       access,
@@ -271,7 +270,7 @@ export async function generateMigration(
     // Use snapshot-based incremental migration (preferred over live comparison)
     // loadLatestSnapshot() handles missing snapshots: compares against empty DB
     log('Using snapshot-based incremental migration');
-    ({ upStatements, downStatements } = await generateSnapshotMigration(
+    ({ upStatements } = await generateSnapshotMigration(
       tables,
       options.snapshotDir,
       generator,
@@ -286,7 +285,7 @@ export async function generateMigration(
     const coLocated = await findCoLocatedSnapshot(options.outputDir!);
     if (coLocated) {
       log('Using co-located snapshot for comparison (from migration directory)');
-      ({ upStatements, downStatements } = await generateSnapshotMigration(
+      ({ upStatements } = await generateSnapshotMigration(
         tables,
         coLocated,
         generator,
@@ -299,7 +298,7 @@ export async function generateMigration(
     } else if (options.driver) {
       // Use live database comparison - fallback when no snapshots configured
       log('Using live database comparison');
-      ({ upStatements, downStatements } = await generateLiveMigration(
+      ({ upStatements } = await generateLiveMigration(
         tables,
         options.driver,
         generator,
@@ -311,7 +310,7 @@ export async function generateMigration(
     } else {
       // Fall back to full generation
       log('No comparison strategy specified, generating full migration');
-      ({ upStatements, downStatements } = generateFullMigration(
+      ({ upStatements } = generateFullMigration(
         tables,
         generator,
         access,
@@ -324,7 +323,6 @@ export async function generateMigration(
 
   // Combine table statements (access handled by inner migration functions)
   const allUpStatements = [...upStatements];
-  const allDownStatements = [...downStatements];
 
   // If no changes, return early
   if (allUpStatements.length === 0) {
@@ -350,7 +348,6 @@ export async function generateMigration(
   // Create migration content
   const content = generateMigrationFile(timestamp, safeName, {
     up: allUpStatements,
-    down: allDownStatements,
   });
 
   // Compute hash of new migration content for duplicate detection
@@ -434,7 +431,7 @@ export async function generateSnapshotMigration(
   events?: EventConfig[],
   functions?: FunctionConfig[],
   analyzers?: AnalyzerDefinition[],
-): Promise<{ upStatements: string[]; downStatements: string[] }> {
+): Promise<{ upStatements: string[] }> {
   let baseTables: TableDefinition[];
   let lastAccess: SerializedAccess[] = [];
   let lastEvents: SerializedEvent[] = [];
@@ -523,7 +520,6 @@ export async function generateSnapshotMigration(
   // User explicitly defined the schema — match database to schema definition.
 
   const upStatements: string[] = [];
-  const downStatements: string[] = [];
 
   // Handle analyzer definitions (UP) — must come before tables/indexes that reference them
   const lastAnalyzerNames = new Set(lastAnalyzers.map((a) => a.name));
@@ -541,8 +537,7 @@ export async function generateSnapshotMigration(
 
   // Add new tables (tables that don't exist in DB)
   for (const table of diff.added.tables) {
-    upStatements.push(...generator.generateTableMigration(table, 'up'));
-    downStatements.push(generator.generateRemoveTable(table.name));
+    upStatements.push(...generator.generateTableMigration(table));
   }
 
   // Add new fields to existing tables (fields that don't exist in DB)
@@ -552,17 +547,11 @@ export async function generateSnapshotMigration(
       tableName: fieldChange.table,
     };
     upStatements.push(generator.generateFieldDefinition(column));
-
-    // DOWN: Skip REMOVE FIELD entirely
-    // REMOVE TABLE handles new tables (removes whole table with fields)
-    // REMOVE FIELD for existing tables is dangerous for incremental migrations
-    // Users can manually handle field removal if needed
   }
 
   // Add new indexes
   for (const indexChange of diff.added.indexes) {
     upStatements.push(generator.generateIndexDefinition(indexChange.index, indexChange.table));
-    downStatements.push(generator.generateRemoveIndex(indexChange.index.name, indexChange.table));
   }
 
   // Handle removed fields — emit REMOVE FIELD for fields no longer in schema
@@ -650,9 +639,6 @@ export async function generateSnapshotMigration(
       if (sql) {
         upStatements.push(sql);
       }
-      if (accessName) {
-        downStatements.push(generator.generateRemoveAccess(accessName));
-      }
     }
   }
 
@@ -665,7 +651,6 @@ export async function generateSnapshotMigration(
       try {
         const sql = eventToSQL(evt);
         if (sql) upStatements.push(sql);
-        downStatements.push(generator.generateRemoveEvent(evt.name, evt.on));
       } catch {
         // Skip invalid event configs
       }
@@ -680,22 +665,8 @@ export async function generateSnapshotMigration(
       try {
         const sql = functionToSQL(fn);
         if (sql) upStatements.push(sql);
-        downStatements.push(generator.generateRemoveFunction(fn.name));
       } catch {
         // Skip invalid function configs
-      }
-    }
-  }
-
-  // Handle analyzer removal (DOWN only) — must come after table/index removals
-  const lastAnalyzerDownNames = new Set(lastAnalyzers.map((a) => a.name));
-
-  for (const a of analyzers ?? []) {
-    if (a.name && !lastAnalyzerDownNames.has(a.name)) {
-      try {
-        downStatements.push(generator.generateRemoveAnalyzer(a.name));
-      } catch {
-        // Skip invalid analyzer configs
       }
     }
   }
@@ -717,7 +688,6 @@ export async function generateSnapshotMigration(
   // Filter out empty strings before returning (e.g., from id field which returns empty)
   return {
     upStatements: upStatements.filter((s) => s.trim().length > 0),
-    downStatements: downStatements.filter((s) => s.trim().length > 0),
   };
 }
 
@@ -729,7 +699,7 @@ export async function generateLiveMigration(
   events?: EventConfig[],
   functions?: FunctionConfig[],
   analyzers?: AnalyzerDefinition[],
-): Promise<{ upStatements: string[]; downStatements: string[] }> {
+): Promise<{ upStatements: string[] }> {
   // Non-table change counters for summary
   const nonTableCounts = { added: 0, removed: 0 };
 
@@ -791,8 +761,6 @@ export async function generateLiveMigration(
   // changes or removals if needed.
 
   const upStatements: string[] = [];
-  const downStatements: string[] = [];
-  const newAnalyzerNames: string[] = [];
 
   // Handle analyzer definitions (UP) — must come before indexes that reference them
   if (analyzers && analyzers.length > 0) {
@@ -816,7 +784,6 @@ export async function generateLiveMigration(
 
     for (const a of analyzers ?? []) {
       if (a.name && !existingAnalyzerSet.has(a.name)) {
-        newAnalyzerNames.push(a.name);
         nonTableCounts.added++;
         try {
           const sql = generator.generateAnalyzerDefinition(a);
@@ -849,8 +816,7 @@ export async function generateLiveMigration(
 
   // Add full table definition for new/schemaless tables
   for (const table of newTables) {
-    upStatements.push(...generator.generateTableMigration(table, 'up'));
-    downStatements.push(generator.generateRemoveTable(table.name));
+    upStatements.push(...generator.generateTableMigration(table));
   }
 
   // Add new fields: for tables already in live schema WITH columns (existing tables)
@@ -864,7 +830,6 @@ export async function generateLiveMigration(
       tableName: fieldChange.table,
     };
     upStatements.push(generator.generateFieldDefinition(column));
-    downStatements.push(generator.generateRemoveField(fieldChange.table, fieldChange.column.name));
   }
 
   // Add new indexes: for tables already in live schema WITH columns
@@ -873,7 +838,6 @@ export async function generateLiveMigration(
   );
   for (const indexChange of newIndexesForExistingTables) {
     upStatements.push(generator.generateIndexDefinition(indexChange.index, indexChange.table));
-    downStatements.push(generator.generateRemoveIndex(indexChange.index.name, indexChange.table));
   }
 
   // Handle removed fields — check for existing data before generating REMOVE FIELD
@@ -998,7 +962,6 @@ export async function generateLiveMigration(
         if (sql) {
           upStatements.push(sql);
         }
-        downStatements.push(generator.generateRemoveAccess(accessName));
       }
     }
   }
@@ -1029,7 +992,6 @@ export async function generateLiveMigration(
         try {
           const sql = functionToSQL(fn);
           if (sql) upStatements.push(sql);
-          downStatements.push(generator.generateRemoveFunction(fn.name));
         } catch {
           // Skip invalid function configs
         }
@@ -1066,20 +1028,10 @@ export async function generateLiveMigration(
           if (sql) {
             upStatements.push(sql);
           }
-          downStatements.push(generator.generateRemoveEvent(evt.name, evt.on));
         } catch {
           // Skip invalid event configs
         }
       }
-    }
-  }
-
-  // Handle analyzer removal (DOWN only) — must come after table/index removals
-  for (const name of newAnalyzerNames) {
-    try {
-      downStatements.push(generator.generateRemoveAnalyzer(name));
-    } catch {
-      // Skip invalid analyzer configs
     }
   }
 
@@ -1098,7 +1050,6 @@ export async function generateLiveMigration(
   // Filter out empty strings before returning (e.g., from id field which returns empty)
   return {
     upStatements: upStatements.filter((s) => s.trim().length > 0),
-    downStatements: downStatements.filter((s) => s.trim().length > 0),
   };
 }
 
@@ -1112,31 +1063,10 @@ export function generateFullMigration(
   events?: EventConfig[],
   functions?: FunctionConfig[],
   analyzers?: AnalyzerDefinition[],
-): { upStatements: string[]; downStatements: string[] } {
+): { upStatements: string[] } {
   log('Generating full migration for all tables');
 
-  const upStatements = generator.generateMigration(tables, 'up', analyzers);
-  const downStatements: string[] = [];
-
-  // DOWN: Remove indexes first (before tables), then tables
-  for (const table of tables) {
-    if (table.config.indexes) {
-      for (const index of table.config.indexes) {
-        downStatements.push(generator.generateRemoveIndex(index.name, table.name));
-      }
-    }
-  }
-  for (const table of tables) {
-    downStatements.push(...generator.generateTableMigration(table, 'down'));
-  }
-
-  // DOWN: Remove analyzers after tables (DEFINE ANALYZER must precede DEFINE INDEX,
-  // so REMOVE ANALYZER must come after tables)
-  if (analyzers) {
-    for (const analyzer of analyzers) {
-      downStatements.push(generator.generateRemoveAnalyzer(analyzer.name));
-    }
-  }
+  const upStatements = generator.generateMigration(tables, analyzers);
 
   for (const table of tables) {
     console.log(`  - ${table.name}: ${table.columns.length} columns`);
@@ -1164,9 +1094,6 @@ export function generateFullMigration(
     if (sql) {
       upStatements.push(sql);
     }
-    if (accessName) {
-      downStatements.push(generator.generateRemoveAccess(accessName));
-    }
   }
 
   // Generate EVENT statements for full migration
@@ -1180,7 +1107,6 @@ export function generateFullMigration(
       if (sql) {
         upStatements.push(sql);
       }
-      downStatements.push(generator.generateRemoveEvent(eventName, evt.on));
     } catch {
       // Skip invalid event configs
     }
@@ -1197,7 +1123,6 @@ export function generateFullMigration(
       if (sql) {
         upStatements.push(sql);
       }
-      downStatements.push(generator.generateRemoveFunction(fnName));
     } catch {
       // Skip invalid function configs
     }
@@ -1232,7 +1157,7 @@ export function generateFullMigration(
     }
   }
 
-  return { upStatements, downStatements };
+  return { upStatements };
 }
 
 /**
@@ -1435,29 +1360,23 @@ export function addSectionSeparators(statements: string[]): string[] {
 export function generateMigrationFile(
   version: string,
   name: string,
-  migration: { up: string[]; down: string[] },
+  migration: { up: string[] },
 ): string {
   // Filter out empty statements before joining
   const filteredUp = migration.up.filter((s) => s.trim() !== '');
-  const filteredDown = migration.down.filter((s) => s.trim() !== '');
 
   // Add section separators between statement categories
   const sectionedUp = addSectionSeparators(filteredUp);
-  const sectionedDown = addSectionSeparators(filteredDown);
 
   // Add semicolons between statements for proper parsing
   // Separator comments (-- ---- Section ----) are left as-is
   const upSection = sectionedUp.map((s) => (s.startsWith('--') ? s : `${s};`)).join('\n');
-  const downSection = sectionedDown.map((s) => (s.startsWith('--') ? s : `${s};`)).join('\n');
 
   return `-- Migration: ${name}
 -- Version: ${version}
 
 -- UP
 ${upSection}
-
--- DOWN
-${downSection}
 `;
 }
 

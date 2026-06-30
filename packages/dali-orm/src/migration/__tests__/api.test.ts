@@ -10,7 +10,6 @@ import {
   migrateToDatabase,
   pullAndMigrate,
   pushSchemaFromTableDefs,
-  rollbackMigrations,
   _setTestConfigDir,
 } from '../api.js';
 
@@ -186,57 +185,6 @@ describe('Migration API', () => {
       const result = await migrateToDatabase(driver);
 
       expect(result.applied).toHaveLength(2);
-    });
-  });
-
-  // ==========================================================================
-  // rollbackMigrations
-  // ==========================================================================
-
-  describe('rollbackMigrations', () => {
-    it('rolls back applied migrations', async () => {
-      await createMigrationFile(
-        testProject.migrationsDir,
-        'add_user_table',
-        ['DEFINE TABLE user SCHEMAFULL'],
-        ['REMOVE TABLE user'],
-      );
-
-      await migrateToDatabase(driver);
-      const result = await rollbackMigrations(driver, 1);
-
-      expect(result.rolledBack).toHaveLength(1);
-      expect(result.rolledBack[0]).toContain('add_user_table');
-    });
-
-    it('rolls back specified number of steps', async () => {
-      await createMigrationFile(
-        testProject.migrationsDir,
-        '001_create_user',
-        ['DEFINE TABLE user SCHEMAFULL'],
-        ['REMOVE TABLE user'],
-      );
-
-      await new Promise((r) => setTimeout(r, 10));
-
-      await createMigrationFile(
-        testProject.migrationsDir,
-        '002_add_email',
-        ['DEFINE FIELD email ON user TYPE string'],
-        ['REMOVE FIELD email ON user'],
-      );
-
-      await migrateToDatabase(driver);
-      const result = await rollbackMigrations(driver, 1);
-
-      expect(result.rolledBack).toHaveLength(1);
-      expect(result.rolledBack[0]).toContain('add_email');
-    });
-
-    it('handles rollback when no migrations applied', async () => {
-      const result = await rollbackMigrations(driver, 1);
-
-      expect(result.rolledBack).toHaveLength(0);
     });
   });
 

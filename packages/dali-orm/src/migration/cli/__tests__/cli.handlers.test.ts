@@ -2,7 +2,7 @@
  * Comprehensive tests for CLI handler functions in cli.ts
  *
  * Tests main() routing to all sub-handlers:
- * - handleMigrate (up, down, reset, status, sync, resume, dev, deploy)
+ * - handleMigrate (up, status, sync, resume, dev, deploy)
  * - handleGenerate (with name, offline, schema option, connection failure)
  * - handlePull, handleDiff, handleQuery
  * - printHelp, printMigrateHelp (via main routing)
@@ -44,8 +44,6 @@ const {
 
   const runner = {
     init: vi.fn().mockResolvedValue(undefined),
-    down: vi.fn().mockResolvedValue({ rolledBack: ['001_test'] }),
-    reset: vi.fn().mockResolvedValue(undefined),
     status: vi.fn().mockResolvedValue({
       applied: [
         { version: '001', name: 'initial', appliedAt: '2024-01-01T00:00:00Z' },
@@ -212,25 +210,6 @@ describe('main', () => {
       expect(mockMigrateUp).toHaveBeenCalledWith(expect.objectContaining({ to: '002' }));
     });
 
-    it('migrate down creates connection and calls runner.down', async () => {
-      await main(['migrate', 'down']);
-      expect(mockCreateConnection).toHaveBeenCalled();
-      expect(mockRunnerInstance.init).toHaveBeenCalled();
-      expect(mockRunnerInstance.down).toHaveBeenCalledWith(1);
-    });
-
-    it('migrate down --steps 3 passes steps param', async () => {
-      await main(['migrate', 'down', '--steps', '3']);
-      expect(mockRunnerInstance.down).toHaveBeenCalledWith(3);
-    });
-
-    it('migrate reset creates connection and calls runner.reset', async () => {
-      await main(['migrate', 'reset']);
-      expect(mockCreateConnection).toHaveBeenCalled();
-      expect(mockRunnerInstance.init).toHaveBeenCalled();
-      expect(mockRunnerInstance.reset).toHaveBeenCalled();
-    });
-
     it('migrate status creates connection and calls runner.status', async () => {
       await main(['migrate', 'status']);
       expect(mockCreateConnection).toHaveBeenCalled();
@@ -323,17 +302,6 @@ describe('main', () => {
       expect(mockRunnerInstance.status).toHaveBeenCalled();
     });
 
-    it('migrate down handles connection failure', async () => {
-      mockCreateConnection.mockRejectedValueOnce(new Error('Connection failed'));
-      await expect(main(['migrate', 'down'])).rejects.toThrow('process.exit prevented in test');
-      expect(exitSpy).toHaveBeenCalledWith(1);
-    });
-
-    it('migrate reset handles connection failure', async () => {
-      mockCreateConnection.mockRejectedValueOnce(new Error('DB unreachable'));
-      await expect(main(['migrate', 'reset'])).rejects.toThrow('process.exit prevented in test');
-      expect(exitSpy).toHaveBeenCalledWith(1);
-    });
   });
 
   // ============================================================================

@@ -448,22 +448,16 @@ export class SurrealQLGenerator {
   }
 
   /**
-   * Generate access migration SQL for a given direction
+   * Generate access migration SQL
    *
-   * For 'up': generates DEFINE ACCESS statement
-   * For 'down': generates REMOVE ACCESS IF EXISTS statement
+   * Generates DEFINE ACCESS statement
    *
    * @param access - Structured access definition
-   * @param direction - Migration direction: 'up' to create, 'down' to remove
    * @returns Single SurrealQL statement
    */
-  generateAccessMigration(access: SurrealAccess, direction: 'up' | 'down'): string {
+  generateAccessMigration(access: SurrealAccess): string {
     if (!access.name) {
       throw new Error('Access name is required for migration');
-    }
-
-    if (direction === 'down') {
-      return this.generateRemoveAccess(access.name);
     }
 
     return this.generateAccessDefinition(access);
@@ -535,22 +529,16 @@ export class SurrealQLGenerator {
   }
 
   /**
-   * Generate event migration SQL for a given direction
+   * Generate event migration SQL
    *
-   * For 'up': generates DEFINE EVENT statement
-   * For 'down': generates REMOVE EVENT IF EXISTS statement
+   * Generates DEFINE EVENT statement
    *
    * @param event - Structured event definition (SurrealEvent type)
-   * @param direction - Migration direction: 'up' to create, 'down' to remove
    * @returns Single SurrealQL statement
    */
-  generateEventMigration(event: SurrealEvent, direction: 'up' | 'down'): string {
+  generateEventMigration(event: SurrealEvent): string {
     if (!event.name) {
       throw new Error('Event name is required for migration');
-    }
-
-    if (direction === 'down') {
-      return this.generateRemoveEvent(event.name, event.what);
     }
 
     return this.generateEventDefinition(event);
@@ -603,15 +591,11 @@ export class SurrealQLGenerator {
   }
 
   /**
-   * Generate function migration SQL for a given direction
+   * Generate function migration SQL
    */
-  generateFunctionMigration(func: SurrealFunction, direction: 'up' | 'down'): string {
+  generateFunctionMigration(func: SurrealFunction): string {
     if (!func.name) {
       throw new Error('Function name is required for migration');
-    }
-
-    if (direction === 'down') {
-      return this.generateRemoveFunction(func.name);
     }
 
     return this.generateFunctionDefinition(func);
@@ -648,15 +632,11 @@ export class SurrealQLGenerator {
   }
 
   /**
-   * Generate view migration SQL for a given direction
+   * Generate view migration SQL
    */
-  generateViewMigration(view: SurrealView, direction: 'up' | 'down'): string {
+  generateViewMigration(view: SurrealView): string {
     if (!view.name) {
       throw new Error('View name is required for migration');
-    }
-
-    if (direction === 'down') {
-      return this.generateRemoveView(view.name);
     }
 
     return this.generateViewDefinition(view);
@@ -750,12 +730,7 @@ export class SurrealQLGenerator {
   /**
    * Generate complete migration SQL for a table
    */
-  generateTableMigration(table: TableDefinition, direction: 'up' | 'down' = 'up'): string[] {
-    // Early exit for down direction
-    if (direction === 'down') {
-      return [this.generateRemoveTable(table.name)];
-    }
-
+  generateTableMigration(table: TableDefinition): string[] {
     const statements: string[] = [];
 
     // Table definition
@@ -831,32 +806,18 @@ export class SurrealQLGenerator {
    */
   generateMigration(
     tables: TableDefinition[],
-    direction: 'up' | 'down' = 'up',
     analyzers?: AnalyzerDefinition[],
   ): string[] {
     const statements: string[] = [];
 
-    // Emit analyzers before tables for UP, after tables for DOWN
-    if (direction === 'up') {
-      // UP: define analyzers first, then tables
-      if (analyzers) {
-        for (const analyzer of analyzers) {
-          statements.push(this.generateAnalyzerDefinition(analyzer));
-        }
+    // Emit analyzers before tables
+    if (analyzers) {
+      for (const analyzer of analyzers) {
+        statements.push(this.generateAnalyzerDefinition(analyzer));
       }
-      for (const table of tables) {
-        statements.push(...this.generateTableMigration(table, direction));
-      }
-    } else {
-      // DOWN: remove tables first, then analyzers
-      for (const table of tables) {
-        statements.push(...this.generateTableMigration(table, direction));
-      }
-      if (analyzers) {
-        for (const analyzer of analyzers) {
-          statements.push(this.generateRemoveAnalyzer(analyzer.name));
-        }
-      }
+    }
+    for (const table of tables) {
+      statements.push(...this.generateTableMigration(table));
     }
 
     // Filter out empty statements (e.g., from id field which returns empty string)
@@ -866,7 +827,7 @@ export class SurrealQLGenerator {
   /**
    * Generate a complete migration file structure
    *
-   * This creates both 'up' (apply) and 'down' (rollback) SQL statements
+   * This creates 'up' (apply) SQL statements
    * from table definitions, suitable for writing to a migration file.
    */
   generateMigrationFile(
@@ -874,16 +835,11 @@ export class SurrealQLGenerator {
     _version: string,
     _name: string,
     analyzers?: AnalyzerDefinition[],
-  ): { up: string[]; down: string[] } {
-    // Generate up migration (apply changes)
-    const upStatements = this.generateMigration(tables, 'up', analyzers);
+  ): { up: string[] } {
+    const upStatements = this.generateMigration(tables, analyzers);
     const up = upStatements.filter((s) => s.trim() !== '');
 
-    // Generate down migration (rollback)
-    const downStatements = this.generateMigration(tables, 'down', analyzers);
-    const down = downStatements.filter((s) => s.trim() !== '');
-
-    return { up, down };
+    return { up };
   }
 
   // Private helper methods

@@ -547,51 +547,7 @@ describe('MigrationRunner integration', () => {
     expect(tableNames).toContain('dryrun_test');
   });
 
-  it('rolls back migration via runner.down()', async () => {
-    await createMigrationFile(
-      migrationsDir,
-      'create_rollback',
-      ['DEFINE TABLE rollback_test SCHEMAFULL', 'DEFINE FIELD data ON rollback_test TYPE string'],
-      ['REMOVE TABLE rollback_test'],
-    );
 
-    runner = new MigrationRunner(driver, {
-      migrationsDir,
-      migrationsTable: '__test_rollback',
-      journalDir: path.join(tmpDir, 'meta'),
-    });
-    await runner.init();
-    await runner.up();
-
-    // Rollback
-    const downResult = await runner.down(1);
-    expect(downResult.rolledBack.length).toBe(1);
-
-    // Verify table is gone
-    const status = await runner.status();
-    expect(status.applied.length).toBe(0);
-  });
-
-  it('resets all migrations via runner.reset()', async () => {
-    await createMigrationFile(
-      migrationsDir,
-      'create_reset',
-      ['DEFINE TABLE reset_test SCHEMAFULL'],
-      ['REMOVE TABLE reset_test'],
-    );
-
-    runner = new MigrationRunner(driver, {
-      migrationsDir,
-      migrationsTable: '__test_reset',
-      journalDir: path.join(tmpDir, 'meta'),
-    });
-    await runner.init();
-    await runner.up();
-    await runner.reset();
-
-    const status = await runner.status();
-    expect(status.applied.length).toBe(0);
-  });
 });
 
 // ============================================================================

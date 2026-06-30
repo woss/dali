@@ -165,7 +165,7 @@ async function generateAndApplyMigration(
     analyzersForMigration = schemaFiles.analyzers ?? [];
   }
 
-  const { upStatements, downStatements } = generateFullMigration(
+  const { upStatements } = generateFullMigration(
     tablesAsTableDef,
     generator,
     accessForMigration,
@@ -178,11 +178,6 @@ async function generateAndApplyMigration(
   if (accessSQL.length > 0) {
     for (const sql of accessSQL) {
       upStatements.push(sql);
-      // Extract access name from SQL: "DEFINE ACCESS name ON DATABASE ..."
-      const match = /DEFINE ACCESS (\w+)/i.exec(sql);
-      if (match) {
-        downStatements.push(`REMOVE ACCESS IF EXISTS ${match[1]} ON DATABASE`);
-      }
     }
   }
 
@@ -205,7 +200,6 @@ async function generateAndApplyMigration(
   await fs.mkdir(migrationsDir, { recursive: true });
   const migrationContent = generateMigrationFile(timestamp, 'init_from_pull', {
     up: upStatements,
-    down: downStatements,
   });
   const migrationDir = path.join(migrationsDir, `${timestamp}_init_from_pull`);
   const migrationFilePath = path.join(migrationDir, 'migration.surql');

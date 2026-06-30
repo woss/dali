@@ -1,7 +1,7 @@
 /**
  * Comprehensive tests for MigrationRunner
  *
- * Covers: constructor, init, up, down, reset, status,
+ * Covers: constructor, init, up, status,
  * resume, findPartialMigrations, getMigrationProgress,
  * getPartialMigrationsProgress, getMigrationFiles,
  * syncJournalWithDb, parseMigrationFileContent,
@@ -86,8 +86,6 @@ const mockJournal = vi.hoisted(() => ({
   read: vi.fn(),
   write: vi.fn(),
   updateBreakpoints: vi.fn(),
-  rollback: vi.fn(),
-  reset: vi.fn(),
   isApplied: vi.fn(),
   getLastSuccessfulStatementIdx: vi.fn(),
 }));
@@ -195,14 +193,6 @@ function defaultBeforeEach() {
     hash: 'mock-hash',
     when: '',
   } as any);
-  mockJournal.rollback.mockResolvedValue({
-    idx: 1,
-    tag: 'mock',
-    breakpoints: [true],
-    hash: 'mock-hash',
-    when: '',
-  } as any);
-  mockJournal.reset.mockResolvedValue(undefined);
   mockJournal.isApplied.mockResolvedValue(false);
   mockJournal.getLastSuccessfulStatementIdx.mockResolvedValue(-1);
 }
@@ -323,7 +313,6 @@ describe('MigrationRunner', () => {
       expect(files[0].version).toBe('001');
       expect(files[0].name).toBe('init');
       expect(files[0].up).toEqual(['CREATE TABLE foo (id int)']);
-      expect(files[0].down).toEqual(['DROP TABLE foo']);
       expect(files[0].checksum).toBe('mock-hash');
     });
 
@@ -409,7 +398,7 @@ describe('MigrationRunner', () => {
   // parseMigrationFileContent / parseStatements (exercised via files)
   // ==========================================================================
   describe('parseMigrationFileContent', () => {
-    it('parses UP and DOWN sections', async () => {
+    it('parses UP section and returns empty down', async () => {
       const driver = createMockDriver();
       const runner = new MigrationRunner(driver, { migrationsDir });
       addMigrationDir('001', 'init', ['STEP ONE', 'STEP TWO'], ['DOWN ONE', 'DOWN TWO']);
@@ -417,7 +406,6 @@ describe('MigrationRunner', () => {
       const files = await runner.getMigrationFiles();
 
       expect(files[0].up).toEqual(['STEP ONE', 'STEP TWO']);
-      expect(files[0].down).toEqual(['DOWN ONE', 'DOWN TWO']);
     });
 
     it('parses only UP when no DOWN section', async () => {
@@ -432,7 +420,6 @@ describe('MigrationRunner', () => {
       const files = await runner.getMigrationFiles();
 
       expect(files[0].up).toEqual(['CREATE TABLE foo']);
-      expect(files[0].down).toEqual([]);
     });
 
     it('handles content with no recognizable sections', async () => {
@@ -447,7 +434,6 @@ describe('MigrationRunner', () => {
       const files = await runner.getMigrationFiles();
 
       expect(files[0].up).toEqual([]);
-      expect(files[0].down).toEqual([]);
     });
 
     it('filters inline comments from statements', async () => {
@@ -465,7 +451,6 @@ describe('MigrationRunner', () => {
       const files = await runner.getMigrationFiles();
 
       expect(files[0].up).toEqual(['CREATE TABLE foo', 'CREATE TABLE bar']);
-      expect(files[0].down).toEqual(['DROP TABLE foo', 'DROP TABLE bar']);
     });
   });
 
@@ -479,7 +464,6 @@ describe('MigrationRunner', () => {
       expect(await runner.up()).toEqual({
         applied: [],
         skipped: [],
-        rolledBack: [],
         warnings: [],
       });
     });
@@ -594,135 +578,9 @@ describe('MigrationRunner', () => {
     });
   });
 
-  // ==========================================================================
-  // down
-  // ==========================================================================
-  describe('down', () => {
-    it('throws when steps < 1', async () => {
-      const driver = createMockDriver();
-      const runner = new MigrationRunner(driver);
 
-      await expect(runner.down(0)).rejects.toThrow('Steps must be a positive number');
-      await expect(runner.down(-1)).rejects.toThrow('Steps must be a positive number');
-    });
 
-    it('returns empty when no migrations to rollback', async () => {
-      const driver = createMockDriver();
-      const runner = new MigrationRunner(driver);
-      mockJournal.getLastMigration.mockResolvedValue(null);
 
-      const result = await runner.down(1);
-
-      expect(result).toEqual({ applied: [], skipped: [], rolledBack: [] });
-    });
-
-    it('rolls back one migration', async () => {
-      const driver = createMockDriver();
-      const runner = new MigrationRunner(driver, { migrationsDir });
-      addMigrationDir('001', 'init', ['STEP ONE'], ['DOWN ONE']);
-
-      mockJournal.getLastMigration.mockResolvedValue({
-        idx: 1,
-        tag: 'init',
-        breakpoints: [true],
-        hash: 'mock-hash',
-        when: '',
-      });
-
-      const result = await runner.down(1);
-
-      expect(result.rolledBack).toEqual(['init']);
-      expect(driver.query).toHaveBeenCalledWith('DOWN ONE');
-      expect(mockJournal.rollback).toHaveBeenCalledTimes(1);
-    });
-
-    it('rolls back multiple migrations', async () => {
-      const driver = createMockDriver();
-      const runner = new MigrationRunner(driver, { migrationsDir });
-      addMigrationDir('001', 'init', ['STEP ONE'], ['DOWN ONE']);
-      addMigrationDir('002', 'add_bar', ['STEP ONE'], ['DOWN ONE']);
-
-      let callCount = 0;
-      mockJournal.getLastMigration.mockImplementation(async () => {
-        callCount++;
-        if (callCount === 1)
-          return { idx: 2, tag: 'add_bar', breakpoints: [true], hash: 'mock-hash', when: '' };
-        return { idx: 1, tag: 'init', breakpoints: [true], hash: 'mock-hash', when: '' };
-      });
-
-      const result = await runner.down(2);
-
-      expect(result.rolledBack).toEqual(['add_bar', 'init']);
-      // 2 migrations × 2 queries each (down SQL + DELETE FROM cleanup)
-      expect(driver.query).toHaveBeenCalledTimes(4);
-      expect(mockJournal.rollback).toHaveBeenCalledTimes(2);
-    });
-
-    it('handles missing migration file - logs and continues', async () => {
-      const driver = createMockDriver();
-      const runner = new MigrationRunner(driver, { migrationsDir });
-
-      mockJournal.getLastMigration.mockResolvedValue({
-        idx: 1,
-        tag: 'orphan_migration',
-        breakpoints: [true],
-        hash: 'mock-hash',
-        when: '',
-      });
-
-      const result = await runner.down(1);
-
-      // Code doesn't count migration as rolledBack when file is missing
-      // but it does roll back the journal entry
-      expect(result.rolledBack).toEqual([]);
-      expect(mockJournal.rollback).toHaveBeenCalledTimes(1);
-      // No driver query since no file found — just journal rollback
-      expect(driver.query).not.toHaveBeenCalled();
-    });
-  });
-
-  // ==========================================================================
-  // reset
-  // ==========================================================================
-  describe('reset', () => {
-    it('rolls back all migrations and clears DB table', async () => {
-      const driver = createMockDriver();
-      const runner = new MigrationRunner(driver, { migrationsDir });
-      addMigrationDir('001', 'init', ['STEP ONE'], ['DOWN ONE']);
-      addMigrationDir('002', 'add_bar', ['STEP ONE'], ['DOWN ONE']);
-
-      mockJournal.getAppliedMigrations.mockResolvedValue(['init', 'add_bar']);
-
-      await runner.reset();
-
-      // Rolled back 2 migrations in reverse order + DELETE TABLE
-      expect(driver.query).toHaveBeenCalledTimes(3);
-      expect(mockJournal.rollback).toHaveBeenCalledTimes(2);
-
-      const queryCalls = (driver.query as unknown as ReturnType<typeof vi.fn>).mock.calls;
-      const deleteCall = queryCalls.find(
-        (call: string[]) => call[0] === 'DELETE FROM __migrations',
-      );
-      expect(deleteCall).toBeTruthy();
-    });
-
-    it('handles non-existent migration table during clear', async () => {
-      const driver = createMockDriver();
-      const runner = new MigrationRunner(driver, { migrationsDir });
-      addMigrationDir('001', 'init', ['STEP ONE'], ['DOWN ONE']);
-
-      mockJournal.getAppliedMigrations.mockResolvedValue(['init']);
-      // Only DELETE FROM throws; down SQL succeeds
-      (driver.query as unknown as ReturnType<typeof vi.fn>).mockImplementation(
-        async (sql: string) => {
-          if (sql.startsWith('DELETE FROM')) throw new Error('Table not found');
-          return [];
-        },
-      );
-
-      await expect(runner.reset()).resolves.not.toThrow();
-    });
-  });
 
   // ==========================================================================
   // status
@@ -814,7 +672,6 @@ describe('MigrationRunner', () => {
         version: '001',
         name: 'init',
         up: ['STEP ONE', 'STEP TWO'],
-        down: ['DOWN ONE', 'DOWN TWO'],
         checksum: 'mock-hash',
         path: `${migrationsDir}/001_init/migration.surql`,
       };
@@ -891,7 +748,6 @@ describe('MigrationRunner', () => {
         version: '001',
         name: 'init',
         up: ['STEP ONE'],
-        down: ['DOWN ONE'],
         checksum: 'mock-hash',
         path: `${migrationsDir}/001_init/migration.surql`,
       };
@@ -913,43 +769,11 @@ describe('MigrationRunner', () => {
         version: '001',
         name: 'init',
         up: ['STEP ONE', 'STEP TWO'],
-        down: ['DOWN ONE', 'DOWN TWO'],
         checksum: 'different-checksum', // deliberately different from 'mock-hash'
         path: `${migrationsDir}/001_init/migration.surql`,
       };
 
       await expect(runner.resume(migFile)).rejects.toThrow('Checksum mismatch');
-    });
-
-    it('handles resume failure with partial rollback', async () => {
-      const driver = createMockDriver();
-      const runner = new MigrationRunner(driver, { migrationsDir });
-      addMigrationDir('001', 'init', ['STEP ONE', 'STEP TWO'], ['DOWN ONE', 'DOWN TWO']);
-
-      mockJournal.getLastSuccessfulStatementIdx.mockResolvedValue(0);
-      mockJournal.isApplied.mockResolvedValue(true);
-
-      // When resuming from idx 0, we execute statement 1 (index 1 = 'STEP TWO').
-      // Make it fail so partial rollback of down[0] is attempted.
-      let resumeQueryCount = 0;
-      (driver.query as unknown as ReturnType<typeof vi.fn>).mockImplementation(async () => {
-        resumeQueryCount++;
-        // First direct query (STEP TWO) fails; second (DOWN ONE rollback) succeeds
-        if (resumeQueryCount === 1) throw new Error('Statement failed');
-        return [];
-      });
-
-      const migFile: MigrationFile = {
-        version: '001',
-        name: 'init',
-        up: ['STEP ONE', 'STEP TWO'],
-        down: ['DOWN ONE', 'DOWN TWO'],
-        checksum: 'mock-hash',
-        path: `${migrationsDir}/001_init/migration.surql`,
-      };
-
-      await expect(runner.resume(migFile)).rejects.toThrow('Statement failed');
-      // Partial rollback should have been called (down for statement at index 0)
     });
 
     it('continues from start when no statements succeeded yet but entry exists', async () => {
@@ -964,7 +788,6 @@ describe('MigrationRunner', () => {
         version: '001',
         name: 'init',
         up: ['STEP ONE', 'STEP TWO'],
-        down: ['DOWN ONE', 'DOWN TWO'],
         checksum: 'mock-hash',
         path: `${migrationsDir}/001_init/migration.surql`,
       };
@@ -1170,40 +993,6 @@ describe('MigrationRunner', () => {
         .mockRejectedValueOnce(new Error('Final checkpoint failed'));
 
       await expect(runner.up()).rejects.toThrow('Migration completion checkpoint failed');
-    });
-
-    it('does partial rollback when statement fails', async () => {
-      const driver = createMockDriver();
-      const runner = new MigrationRunner(driver, { migrationsDir });
-      addMigrationDir('001', 'init', ['STEP ONE', 'STEP TWO'], ['DOWN ONE', 'DOWN TWO']);
-
-      let queryCount = 0;
-      (driver.query as unknown as ReturnType<typeof vi.fn>).mockImplementation(async () => {
-        queryCount++;
-        // query #1: SELECT name, #2: STEP ONE, #3: STEP TWO → fail
-        if (queryCount === 3) throw new Error('Exec failed');
-        return [];
-      });
-
-      await expect(runner.up()).rejects.toThrow('Exec failed');
-
-      // Calls: [1] SELECT name, [2] STEP ONE, [3] STEP TWO (fails), [4] DOWN ONE rollback
-      expect(driver.query).toHaveBeenCalledTimes(4);
-    });
-
-    it('does not partial rollback when first statement fails', async () => {
-      const driver = createMockDriver();
-      const runner = new MigrationRunner(driver, { migrationsDir });
-      addMigrationDir('001', 'init', ['STEP ONE'], ['DOWN ONE']);
-
-      (driver.query as unknown as ReturnType<typeof vi.fn>).mockRejectedValue(
-        new Error('Exec failed'),
-      );
-
-      await expect(runner.up()).rejects.toThrow('Exec failed');
-      // No rollback since currentIdx = 0
-      // Query calls: [1] SELECT name (caught), [2] STEP ONE (fails)
-      expect(driver.query).toHaveBeenCalledTimes(2);
     });
   });
 

@@ -370,60 +370,6 @@ describe('MigrationJournalManager', () => {
   });
 
   // ---------------------------------------------------------------------------
-  // rollback
-  // ---------------------------------------------------------------------------
-  describe('rollback', () => {
-    it('removes last entry and returns it', async () => {
-      mockReadFile.mockResolvedValueOnce(
-        JSON.stringify(
-          makeJournal({
-            entries: [makeEntry({ idx: 1, tag: 'keep' }), makeEntry({ idx: 2, tag: 'remove' })],
-          }),
-        ),
-      );
-
-      const removed = await manager.rollback();
-
-      expect(removed).not.toBeNull();
-      expect(removed?.tag).toBe('remove');
-      expect(removed?.idx).toBe(2);
-
-      const written = JSON.parse(mockWriteFile.mock.calls[0][1] as string);
-      expect(written.entries).toHaveLength(1);
-      expect(written.entries[0].tag).toBe('keep');
-    });
-
-    it('returns null when no entries to rollback', async () => {
-      mockReadFile.mockResolvedValueOnce(JSON.stringify(makeJournal()));
-
-      const result = await manager.rollback();
-
-      expect(result).toBeNull();
-    });
-  });
-
-  // ---------------------------------------------------------------------------
-  // reset
-  // ---------------------------------------------------------------------------
-  describe('reset', () => {
-    it('clears all entries', async () => {
-      mockReadFile.mockResolvedValueOnce(
-        JSON.stringify(
-          makeJournal({
-            entries: [makeEntry({ tag: 'init' }), makeEntry({ idx: 2, tag: 'second' })],
-          }),
-        ),
-      );
-
-      await manager.reset();
-
-      const written = JSON.parse(mockWriteFile.mock.calls[0][1] as string);
-      expect(written.entries).toEqual([]);
-      expect(written.version).toBe(1);
-    });
-  });
-
-  // ---------------------------------------------------------------------------
   // getStatus
   // ---------------------------------------------------------------------------
   describe('getStatus', () => {

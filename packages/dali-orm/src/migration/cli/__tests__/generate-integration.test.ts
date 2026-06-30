@@ -945,6 +945,11 @@ describe('generateSnapshotMigration', () => {
     // Should detect email as new field
     const allUp = result.upStatements.join(' ');
     expect(allUp).toContain('email');
+
+    // Should generate REMOVE FIELD in DOWN section for added field
+    const allDown = result.downStatements.join(' ');
+    expect(allDown).toContain('REMOVE FIELD');
+    expect(allDown).toContain('email');
   });
 
   it('detects new tables when compared against existing snapshot', async () => {
@@ -1081,6 +1086,11 @@ describe('generateSnapshotMigration', () => {
     // Should detect email as new field
     const allUp = result.upStatements.join(' ');
     expect(allUp).toContain('email');
+
+    // Should generate REMOVE FIELD in DOWN section for added field
+    const allDown = result.downStatements.join(' ');
+    expect(allDown).toContain('REMOVE FIELD');
+    expect(allDown).toContain('email');
   });
 
   it('generates access statements for new access definitions', async () => {

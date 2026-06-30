@@ -321,39 +321,6 @@ export async function migrateToDatabase(driver: SurrealDriver): Promise<Migratio
 }
 
 /**
- * Rollback applied migrations.
- *
- * @param driver - Connected SurrealDriver
- * @param options - Rollback configuration
- * @returns MigrationResult with rolled back migration names
- *
- * @example
- * ```ts
- * const result = await rollbackMigrations(driver, { steps: 2 });
- * console.log(`Rolled back: ${result.rolledBack.join(', ')}`);
- * ```
- */
-export async function rollbackMigrations(
-  driver: SurrealDriver,
-  steps: number = 1,
-): Promise<MigrationResult> {
-  // Guard: driver must be connected
-  if (!driver.isConnected()) {
-    await driver.connect();
-  }
-
-  const configDir = await resolveConfigDir();
-
-  const runner = new MigrationRunner(driver, {
-    migrationsDir: path.join(configDir, 'migrations'),
-    migrationsTable: '__migrations',
-    journalDir: path.join(configDir, 'meta'),
-  });
-
-  return runner.down(steps);
-}
-
-/**
  * Get migration status - applied and pending migrations.
  *
  * @param driver - Connected SurrealDriver
@@ -551,7 +518,7 @@ export async function pullAndMigrate(
     accessForMigration = [...ddl.access];
   }
 
-  const { upStatements, downStatements } = generateFullMigration(
+  const { upStatements } = generateFullMigration(
     tablesAsTableDef,
     generator,
     options.access,
@@ -561,10 +528,7 @@ export async function pullAndMigrate(
   if (accessForMigration.length > 0 && ddl.access.length > 0) {
     for (const sql of ddl.access) {
       upStatements.push(sql);
-      const match = /DEFINE ACCESS (\w+)/i.exec(sql);
-      if (match) {
-        downStatements.push(`REMOVE ACCESS IF EXISTS ${match[1]} ON DATABASE`);
-      }
+      // REMOVE ACCESS not generated — down migrations removed
     }
   }
 
@@ -588,7 +552,6 @@ export async function pullAndMigrate(
 
   const migrationContent = generateMigrationFile(timestamp, migrationName, {
     up: upStatements,
-    down: downStatements,
   });
 
   await fs.mkdir(migrationDir, { recursive: true });

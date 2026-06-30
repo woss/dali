@@ -26,7 +26,6 @@ interface CLIOptions {
   force?: boolean;
   offline?: boolean;
   to?: string;
-  steps?: number;
   output?: string;
   name?: string;
   schema?: string;
@@ -150,42 +149,6 @@ async function handleMigrate(args: string[], options: CLIOptions, config: Config
         dryRun: options.dryRun,
       });
       break;
-
-    case 'down': {
-      log('Running migrate down');
-      const downDriver = await createConnection(config);
-      try {
-        const downRunner = new MigrationRunner(downDriver, {
-          migrationsDir: config.migrations?.dir,
-          migrationsTable: config.migrations?.table ?? '__migrations',
-          journalDir: config.migrations?.journalDir,
-        });
-        await downRunner.init();
-        await downRunner.down(options.steps ?? 1);
-        console.log(`✓ Rolled back ${options.steps ?? 1} migration(s)`);
-      } finally {
-        await safeDisconnect(downDriver);
-      }
-      break;
-    }
-
-    case 'reset': {
-      log('Running migrate reset');
-      const resetDriver = await createConnection(config);
-      try {
-        const resetRunner = new MigrationRunner(resetDriver, {
-          migrationsDir: config.migrations?.dir,
-          migrationsTable: config.migrations?.table ?? '__migrations',
-          journalDir: config.migrations?.journalDir,
-        });
-        await resetRunner.init();
-        await resetRunner.reset({ force: options.force });
-        console.log('✓ All migrations rolled back');
-      } finally {
-        await safeDisconnect(resetDriver);
-      }
-      break;
-    }
 
     case 'status': {
       log('Running migrate status');
@@ -465,9 +428,6 @@ export function parseGlobalOptions(args: string[]): CLIOptions {
       case '--to':
         options.to = args[++i];
         break;
-      case '--steps':
-        options.steps = parseInt(args[++i], 10);
-        break;
       case '--output':
       case '-o':
         options.output = args[++i];
@@ -508,7 +468,7 @@ Usage:
   dali-orm <command> [options]
 
 Commands:
-  migrate [up|down|reset|status|sync|resume|dev|deploy]  Manage migrations
+  migrate [up|status|sync|resume|dev|deploy]  Manage migrations
   generate <name>                  Generate a new migration
   pull [table]                    Pull schema from database
   diff                            Show schema diff between DB and schema.ts
@@ -521,7 +481,6 @@ Options:
   -n, --dry-run          Show what would be done without executing
   -f, --force            Skip confirmation prompts
   --to <version>         Target migration version
-  --steps <n>            Number of migration steps
   -o, --output <path>    Output directory
   -m, --name <name>      Migration name (for generate, migrate dev)
   -s, --schema <path>    Schema file or directory (for generate)
@@ -537,7 +496,6 @@ Examples:
   dali-orm migrate dev add_users_table
   dali-orm migrate dev "add user table"
   dali-orm migrate deploy
-  dali-orm migrate down --steps 2
   dali-orm generate add_users_table
   dali-orm generate "create posts table"
   dali-orm generate --name create_posts --schema ./schema --output ./migrations
@@ -554,8 +512,6 @@ Usage:
 
 Commands:
   up                   Run pending migrations
-  down                 Revert migrations
-  reset                Revert all migrations
   status               Show migration status
   sync                 Sync journal from database state
   resume               Resume partial migrations
@@ -564,7 +520,6 @@ Commands:
 
 Options:
   --to <version>       Target migration version (for up)
-  --steps <n>          Number of migrations to revert (for down)
   -f, --force          Skip confirmation prompts
   --name <name>        Migration name (for dev)
 
@@ -572,8 +527,6 @@ Examples:
   dali-orm migrate up
   dali-orm migrate dev add_users_table
   dali-orm migrate deploy
-  dali-orm migrate down --steps 2
-  dali-orm migrate reset
   dali-orm migrate status
   `);
 }

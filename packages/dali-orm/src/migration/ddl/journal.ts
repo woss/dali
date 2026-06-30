@@ -219,17 +219,6 @@ export class MigrationJournalManager {
   }
 
   /**
-   * Get the last applied migration (for rollback)
-   */
-  async getLastMigration(): Promise<JournalEntry | null> {
-    const journal = await this.read();
-    if (journal.entries.length === 0) {
-      return null;
-    }
-    return journal.entries[journal.entries.length - 1];
-  }
-
-  /**
    * Check if a migration has been applied
    */
   async isApplied(tag: string): Promise<boolean> {
@@ -239,33 +228,6 @@ export class MigrationJournalManager {
     return journal.entries.some((e) => e.tag === tag && e.breakpoints.some((b) => b === true));
   }
 
-  /**
-   * Rollback - remove the last entry
-   */
-  async rollback(): Promise<JournalEntry | null> {
-    const journal = await this.read();
-    if (journal.entries.length === 0) {
-      return null;
-    }
-
-    const removed = journal.entries.pop();
-    if (!removed) {
-      return null;
-    }
-    await this.write(journal);
-    log('Rolled back migration: idx=%d, tag=%s', removed.idx, removed.tag);
-
-    return removed;
-  }
-
-  /**
-   * Reset - clear all entries
-   */
-  async reset(): Promise<void> {
-    const journal = this.createEmpty();
-    await this.write(journal);
-    log('Journal reset');
-  }
 
   /**
    * Get journal status
