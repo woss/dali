@@ -26,7 +26,6 @@ async function createMigrationFile(
   dir: string,
   name: string,
   upStatements: string[],
-  downStatements: string[],
 ): Promise<string> {
   const timestamp = Date.now().toString();
   const migrationDir = path.join(dir, `${timestamp}_${name}`);
@@ -39,9 +38,6 @@ async function createMigrationFile(
     '',
     '-- UP',
     ...upStatements.map((s) => `${s};`),
-    '',
-    '-- DOWN',
-    ...downStatements.map((s) => `${s};`),
   ].join('\n');
 
   await fs.writeFile(filePath, content, 'utf-8');
@@ -83,12 +79,10 @@ describe('Shadow DB Validation', () => {
       await driver.connect();
 
       try {
-        await createMigrationFile(
-          tmpDir,
-          'init',
-          ['DEFINE TABLE user SCHEMAFULL', 'DEFINE FIELD name ON user TYPE string'],
-          ['REMOVE TABLE user'],
-        );
+        await createMigrationFile(tmpDir, 'init', [
+          'DEFINE TABLE user SCHEMAFULL',
+          'DEFINE FIELD name ON user TYPE string',
+        ]);
 
         const result = await validateWithShadow(driver, {
           migrationsDir: tmpDir,
@@ -109,12 +103,7 @@ describe('Shadow DB Validation', () => {
       await driver.connect();
 
       try {
-        await createMigrationFile(
-          tmpDir,
-          'bad_migration',
-          ['THIS IS NOT VALID SURREALQL'],
-          ['REMOVE TABLE IF EXISTS doesnt_exist'],
-        );
+        await createMigrationFile(tmpDir, 'bad_migration', ['THIS IS NOT VALID SURREALQL']);
 
         const result = await validateWithShadow(driver, {
           migrationsDir: tmpDir,
@@ -157,21 +146,14 @@ describe('Shadow DB Validation', () => {
       await driver.connect();
 
       try {
-        await createMigrationFile(
-          tmpDir,
-          'first',
-          ['DEFINE TABLE user SCHEMAFULL', 'DEFINE FIELD name ON user TYPE string'],
-          ['REMOVE TABLE user'],
-        );
+        await createMigrationFile(tmpDir, 'first', [
+          'DEFINE TABLE user SCHEMAFULL',
+          'DEFINE FIELD name ON user TYPE string',
+        ]);
 
         await new Promise((r) => setTimeout(r, 10));
 
-        await createMigrationFile(
-          tmpDir,
-          'second',
-          ['DEFINE FIELD email ON user TYPE string'],
-          ['REMOVE FIELD email ON user'],
-        );
+        await createMigrationFile(tmpDir, 'second', ['DEFINE FIELD email ON user TYPE string']);
 
         const result = await validateWithShadow(driver, {
           migrationsDir: tmpDir,
@@ -191,21 +173,14 @@ describe('Shadow DB Validation', () => {
       await driver.connect();
 
       try {
-        await createMigrationFile(
-          tmpDir,
-          'first',
-          ['DEFINE TABLE user SCHEMAFULL', 'DEFINE FIELD name ON user TYPE string'],
-          ['REMOVE TABLE user'],
-        );
+        await createMigrationFile(tmpDir, 'first', [
+          'DEFINE TABLE user SCHEMAFULL',
+          'DEFINE FIELD name ON user TYPE string',
+        ]);
 
         await new Promise((r) => setTimeout(r, 10));
 
-        await createMigrationFile(
-          tmpDir,
-          'bad',
-          ['INVALID SQL STATEMENT'],
-          ['REMOVE TABLE IF EXISTS doesnt_exist'],
-        );
+        await createMigrationFile(tmpDir, 'bad', ['INVALID SQL STATEMENT']);
 
         const result = await validateWithShadow(driver, {
           migrationsDir: tmpDir,
@@ -225,12 +200,7 @@ describe('Shadow DB Validation', () => {
       await driver.connect();
 
       try {
-        await createMigrationFile(
-          tmpDir,
-          'init',
-          ['DEFINE TABLE test SCHEMAFULL'],
-          ['REMOVE TABLE test'],
-        );
+        await createMigrationFile(tmpDir, 'init', ['DEFINE TABLE test SCHEMAFULL']);
 
         const result = await validateWithShadow(driver, {
           migrationsDir: tmpDir,

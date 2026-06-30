@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+### Removed
+
+- `down()` and `reset()` methods from `MigrationRunner` — forward-only migrations (no rollback)
+- `rollback()` method from `MigrationJournalManager`
+- `-- DOWN` section parsing from `parseMigrationFileContent()` — now returns only `{ up: string[] }`
+- `migrate down` and `migrate reset` CLI commands removed
+
 ### Added
 
 - `AnalyzerDefinition` interface for defining SurrealDB text analyzers (tokenizers + filters)

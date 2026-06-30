@@ -264,10 +264,10 @@ describe('generateFullMigration', () => {
       access?: AccessConfig[],
       events?: any[],
       functions?: FunctionConfig[],
-    ) => { upStatements: string[]; downStatements: string[] };
+    ) => { upStatements: string[] };
   }
 
-  it('generates up and down statements for tables', async () => {
+  it('generates up statements for tables', async () => {
     const generateFullMigration = await getGenerateFullMigration();
     const generator = new SurrealQLGenerator();
     const tables: TableDefinition[] = [
@@ -287,14 +287,10 @@ describe('generateFullMigration', () => {
     const result = generateFullMigration(tables, generator);
 
     expect(result.upStatements.length).toBeGreaterThan(0);
-    expect(result.downStatements.length).toBeGreaterThan(0);
 
     const allUp = result.upStatements.join(' ');
     expect(allUp).toContain('DEFINE TABLE');
     expect(allUp).toContain('DEFINE FIELD');
-
-    const allDown = result.downStatements.join(' ');
-    expect(allDown).toContain('REMOVE TABLE');
   });
 
   it('generates access definitions when provided', async () => {
@@ -380,10 +376,9 @@ describe('generateFullMigration', () => {
     const result = generateFullMigration([], generator);
 
     expect(result.upStatements).toEqual([]);
-    expect(result.downStatements).toEqual([]);
   });
 
-  it('generates remove statements for indexes on tables', async () => {
+  it('generates up statements for indexes on tables', async () => {
     const generateFullMigration = await getGenerateFullMigration();
     const generator = new SurrealQLGenerator();
     const tables: TableDefinition[] = [
@@ -399,9 +394,6 @@ describe('generateFullMigration', () => {
     ];
 
     const result = generateFullMigration(tables, generator);
-
-    const allDown = result.downStatements.join(' ');
-    expect(allDown).toContain('REMOVE INDEX');
   });
 });
 
@@ -699,42 +691,36 @@ describe('generateMigrationFile', () => {
     return mod.generateMigrationFile;
   }
 
-  it('produces correct surql format with UP/DOWN sections', async () => {
+  it('produces correct surql format', async () => {
     const fn = await getGenerateMigrationFile();
     const result = fn('001', 'create_user', {
       up: ['DEFINE TABLE user SCHEMAFULL', 'DEFINE FIELD name ON user TYPE string'],
-      down: ['REMOVE TABLE user'],
     });
 
     expect(result).toContain('-- Migration: create_user');
     expect(result).toContain('-- Version: 001');
     expect(result).toContain('-- UP');
-    expect(result).toContain('-- DOWN');
     expect(result).toContain('DEFINE TABLE user SCHEMAFULL;');
     expect(result).toContain('DEFINE FIELD name ON user TYPE string;');
-    expect(result).toContain('REMOVE TABLE user;');
   });
 
-  it('filters out empty statements', async () => {
+  it('filters out empty statements from up array', async () => {
     const fn = await getGenerateMigrationFile();
     const result = fn('001', 'empty_test', {
       up: ['DEFINE TABLE user SCHEMAFULL', '', '   ', 'DEFINE FIELD name ON user TYPE string'],
-      down: ['REMOVE TABLE user'],
     });
 
     // Should not have blank lines where empty statements were
     expect(result).toContain('DEFINE TABLE user SCHEMAFULL;');
     expect(result).toContain('DEFINE FIELD name ON user TYPE string;');
-    expect(result).toContain('REMOVE TABLE user;');
   });
 
-  it('handles empty up/down arrays', async () => {
+  it('handles empty up array', async () => {
     const fn = await getGenerateMigrationFile();
-    const result = fn('001', 'empty', { up: [], down: [] });
+    const result = fn('001', 'empty', { up: [] });
 
     expect(result).toContain('-- Migration: empty');
     expect(result).toContain('-- UP');
-    expect(result).toContain('-- DOWN');
   });
 
   it('inserts section separator comments between categories', async () => {
@@ -745,7 +731,6 @@ describe('generateMigrationFile', () => {
         'DEFINE ACCESS account ON DATABASE TYPE RECORD',
         'DEFINE FUNCTION fn::greet() RETURN "hello"',
       ],
-      down: ['REMOVE TABLE user', 'REMOVE ACCESS account'],
     });
 
     // Should have section comment separators
@@ -908,7 +893,6 @@ describe('generateSnapshotMigration', () => {
     const result = await fn(tables, snapshotDir, generator, '001');
 
     expect(result.upStatements.length).toBeGreaterThan(0);
-    expect(result.downStatements.length).toBeGreaterThan(0);
     const allUp = result.upStatements.join(' ');
     expect(allUp).toContain('DEFINE TABLE');
     expect(allUp).toContain('DEFINE FIELD');
@@ -945,11 +929,6 @@ describe('generateSnapshotMigration', () => {
     // Should detect email as new field
     const allUp = result.upStatements.join(' ');
     expect(allUp).toContain('email');
-
-    // Should generate REMOVE FIELD in DOWN section for added field
-    const allDown = result.downStatements.join(' ');
-    expect(allDown).toContain('REMOVE FIELD');
-    expect(allDown).toContain('email');
   });
 
   it('detects new tables when compared against existing snapshot', async () => {
@@ -1086,11 +1065,6 @@ describe('generateSnapshotMigration', () => {
     // Should detect email as new field
     const allUp = result.upStatements.join(' ');
     expect(allUp).toContain('email');
-
-    // Should generate REMOVE FIELD in DOWN section for added field
-    const allDown = result.downStatements.join(' ');
-    expect(allDown).toContain('REMOVE FIELD');
-    expect(allDown).toContain('email');
   });
 
   it('generates access statements for new access definitions', async () => {
@@ -1207,7 +1181,6 @@ describe('generateLiveMigration', () => {
     const result = await fn([], driver, generator);
 
     expect(result.upStatements).toEqual([]);
-    expect(result.downStatements).toEqual([]);
   });
 
   it('generates field definitions for schemaless tables in live DB', async () => {

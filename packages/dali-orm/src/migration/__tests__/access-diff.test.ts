@@ -142,14 +142,8 @@ describe('access SQL generation', () => {
 
   it('generates access migration up', () => {
     const access: SurrealAccess = { name: 'my_access', type: 'JWT' };
-    const sql = generator.generateAccessMigration(access, 'up');
+    const sql = generator.generateAccessMigration(access);
     expect(sql).toContain('DEFINE ACCESS my_access ON DATABASE TYPE JWT');
-  });
-
-  it('generates access migration down', () => {
-    const access: SurrealAccess = { name: 'my_access', type: 'JWT' };
-    const sql = generator.generateAccessMigration(access, 'down');
-    expect(sql).toBe('REMOVE ACCESS IF EXISTS my_access ON DATABASE');
   });
 
   it('converts statement to SQL via statementToSql', async () => {

@@ -518,11 +518,7 @@ export async function pullAndMigrate(
     accessForMigration = [...ddl.access];
   }
 
-  const { upStatements } = generateFullMigration(
-    tablesAsTableDef,
-    generator,
-    options.access,
-  );
+  const { upStatements } = generateFullMigration(tablesAsTableDef, generator, options.access);
 
   // Inject raw access SQL from DB introspection
   if (accessForMigration.length > 0 && ddl.access.length > 0) {

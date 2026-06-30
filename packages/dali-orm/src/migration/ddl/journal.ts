@@ -228,7 +228,6 @@ export class MigrationJournalManager {
     return journal.entries.some((e) => e.tag === tag && e.breakpoints.some((b) => b === true));
   }
 
-
   /**
    * Get journal status
    */

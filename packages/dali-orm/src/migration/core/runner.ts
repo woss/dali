@@ -352,7 +352,8 @@ export class MigrationRunner {
    * Parse migration file content
    */
   private parseMigrationFileContent(content: string): { up: string[] } {
-    const upMatch = content.match(/--\s*UP\s*\n([\s\S]*?)(?:--\s*DOWN|$)/i);
+    // Phase 9 removed -- DOWN sections from migration files so the (?:--\s*DOWN|$) alternation is no longer needed
+    const upMatch = content.match(/--\s*UP\s*\n([\s\S]*?)$/i);
     const upStatements = upMatch ? this.parseStatements(upMatch[1]) : [];
 
     return { up: upStatements };

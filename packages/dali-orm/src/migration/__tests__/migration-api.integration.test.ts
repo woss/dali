@@ -68,7 +68,6 @@ async function createMigrationFile(
   dir: string,
   name: string,
   upStatements: string[],
-  downStatements: string[],
 ): Promise<string> {
   const timestamp = Date.now().toString();
   const migrationDir = path.join(dir, `${timestamp}_${name}`);
@@ -81,9 +80,6 @@ async function createMigrationFile(
     '',
     '-- UP',
     ...upStatements.map((s) => `${s};`),
-    '',
-    '-- DOWN',
-    ...downStatements.map((s) => `${s};`),
   ].join('\n');
 
   await fs.writeFile(filePath, content, 'utf-8');
@@ -133,16 +129,11 @@ describe('Migration API (integration)', () => {
 
   describe('migrateToDatabase', () => {
     it('applies migration and verifies DB structure', async () => {
-      await createMigrationFile(
-        testProject.migrationsDir,
-        'add_user',
-        [
-          'DEFINE TABLE user SCHEMAFULL',
-          'DEFINE FIELD name ON user TYPE string',
-          'DEFINE FIELD email ON user TYPE string',
-        ],
-        ['REMOVE TABLE user'],
-      );
+      await createMigrationFile(testProject.migrationsDir, 'add_user', [
+        'DEFINE TABLE user SCHEMAFULL',
+        'DEFINE FIELD name ON user TYPE string',
+        'DEFINE FIELD email ON user TYPE string',
+      ]);
 
       const result = await migrateToDatabase(driver);
 
@@ -162,21 +153,16 @@ describe('Migration API (integration)', () => {
     });
 
     it('applies multiple migrations and tracks applied state', async () => {
-      await createMigrationFile(
-        testProject.migrationsDir,
-        '001_create_user',
-        ['DEFINE TABLE user SCHEMAFULL', 'DEFINE FIELD name ON user TYPE string'],
-        ['REMOVE TABLE user'],
-      );
+      await createMigrationFile(testProject.migrationsDir, '001_create_user', [
+        'DEFINE TABLE user SCHEMAFULL',
+        'DEFINE FIELD name ON user TYPE string',
+      ]);
 
       await new Promise((r) => setTimeout(r, 10));
 
-      await createMigrationFile(
-        testProject.migrationsDir,
-        '002_add_email',
-        ['DEFINE FIELD email ON user TYPE string'],
-        ['REMOVE FIELD email ON user'],
-      );
+      await createMigrationFile(testProject.migrationsDir, '002_add_email', [
+        'DEFINE FIELD email ON user TYPE string',
+      ]);
 
       const result = await migrateToDatabase(driver);
 
@@ -195,12 +181,10 @@ describe('Migration API (integration)', () => {
     it('auto-connects when driver is disconnected', async () => {
       await driver.disconnect();
 
-      await createMigrationFile(
-        testProject.migrationsDir,
-        'add_table',
-        ['DEFINE TABLE test_table SCHEMAFULL', 'DEFINE FIELD val ON test_table TYPE string'],
-        ['REMOVE TABLE test_table'],
-      );
+      await createMigrationFile(testProject.migrationsDir, 'add_table', [
+        'DEFINE TABLE test_table SCHEMAFULL',
+        'DEFINE FIELD val ON test_table TYPE string',
+      ]);
 
       const result = await migrateToDatabase(driver);
 
@@ -209,12 +193,9 @@ describe('Migration API (integration)', () => {
     });
 
     it('rejects invalid SQL in migration', async () => {
-      await createMigrationFile(
-        testProject.migrationsDir,
-        'bad_migration',
-        ['THIS IS NOT VALID SURREALQL'],
-        ['REMOVE TABLE IF EXISTS doesnt_exist'],
-      );
+      await createMigrationFile(testProject.migrationsDir, 'bad_migration', [
+        'THIS IS NOT VALID SURREALQL',
+      ]);
 
       await expect(migrateToDatabase(driver)).rejects.toThrow();
     });
@@ -343,12 +324,9 @@ describe('Migration API (integration)', () => {
 
   describe('getMigrationStatus', () => {
     it('shows pending before apply, applied after', async () => {
-      await createMigrationFile(
-        testProject.migrationsDir,
-        'add_user_table',
-        ['DEFINE TABLE user SCHEMAFULL'],
-        ['REMOVE TABLE user'],
-      );
+      await createMigrationFile(testProject.migrationsDir, 'add_user_table', [
+        'DEFINE TABLE user SCHEMAFULL',
+      ]);
 
       const statusBefore = await getMigrationStatus(driver);
       expect(statusBefore.pending).toHaveLength(1);
@@ -387,12 +365,9 @@ describe('Migration API (integration)', () => {
     });
 
     it('tracks current version correctly', async () => {
-      await createMigrationFile(
-        testProject.migrationsDir,
-        'v1_create',
-        ['DEFINE TABLE my_table SCHEMAFULL'],
-        ['REMOVE TABLE my_table'],
-      );
+      await createMigrationFile(testProject.migrationsDir, 'v1_create', [
+        'DEFINE TABLE my_table SCHEMAFULL',
+      ]);
 
       await migrateToDatabase(driver);
 

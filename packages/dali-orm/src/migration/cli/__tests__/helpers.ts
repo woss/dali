@@ -58,7 +58,6 @@ export async function createMigrationFile(
   dir: string,
   name: string,
   upStatements: string[],
-  downStatements: string[],
 ): Promise<string> {
   const timestamp = Date.now().toString();
   const migrationDir = path.join(dir, `${timestamp}_${name}`);
@@ -70,9 +69,6 @@ export async function createMigrationFile(
     '',
     '-- UP',
     ...upStatements.map((s) => `${s};`),
-    '',
-    '-- DOWN',
-    ...downStatements.map((s) => `${s};`),
   ].join('\n');
   await fs.writeFile(filePath, content, 'utf-8');
   return filePath;

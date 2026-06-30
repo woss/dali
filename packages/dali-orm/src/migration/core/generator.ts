@@ -804,10 +804,7 @@ export class SurrealQLGenerator {
   /**
    * Generate migration from multiple tables
    */
-  generateMigration(
-    tables: TableDefinition[],
-    analyzers?: AnalyzerDefinition[],
-  ): string[] {
+  generateMigration(tables: TableDefinition[], analyzers?: AnalyzerDefinition[]): string[] {
     const statements: string[] = [];
 
     // Emit analyzers before tables

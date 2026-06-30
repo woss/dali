@@ -215,14 +215,8 @@ describe('function SQL generation', () => {
 
   it('generates function migration up (DEFINE FUNCTION)', () => {
     const func: SurrealFunction = { name: 'fn::hello', body: 'RETURN "hello"' };
-    const sql = generator.generateFunctionMigration(func, 'up');
+    const sql = generator.generateFunctionMigration(func);
     expect(sql).toContain('DEFINE FUNCTION IF NOT EXISTS fn::hello');
-  });
-
-  it('generates function migration down (REMOVE FUNCTION)', () => {
-    const func: SurrealFunction = { name: 'fn::hello', body: 'RETURN "hello"' };
-    const sql = generator.generateFunctionMigration(func, 'down');
-    expect(sql).toBe('REMOVE FUNCTION IF EXISTS fn::hello');
   });
 });
 

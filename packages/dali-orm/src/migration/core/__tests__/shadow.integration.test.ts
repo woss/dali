@@ -33,7 +33,6 @@ async function createMigrationFile(
   dir: string,
   name: string,
   upStatements: string[],
-  downStatements: string[],
 ): Promise<string> {
   const timestamp = Date.now().toString();
   const migrationDir = path.join(dir, `${timestamp}_${name}`);
@@ -46,9 +45,6 @@ async function createMigrationFile(
     '',
     '-- UP',
     ...upStatements.map((s) => `${s};`),
-    '',
-    '-- DOWN',
-    ...downStatements.map((s) => `${s};`),
   ].join('\n');
 
   await fs.writeFile(filePath, content, 'utf-8');
@@ -98,16 +94,11 @@ describe('Shadow DB (integration)', () => {
       await driver.connect();
 
       try {
-        await createMigrationFile(
-          tmpDir,
-          'init',
-          [
-            'DEFINE TABLE project SCHEMAFULL',
-            'DEFINE FIELD name ON project TYPE string',
-            'DEFINE FIELD budget ON project TYPE float',
-          ],
-          ['REMOVE TABLE project'],
-        );
+        await createMigrationFile(tmpDir, 'init', [
+          'DEFINE TABLE project SCHEMAFULL',
+          'DEFINE FIELD name ON project TYPE string',
+          'DEFINE FIELD budget ON project TYPE float',
+        ]);
 
         const result = await validateWithShadow(driver, {
           migrationsDir: tmpDir,
@@ -128,12 +119,7 @@ describe('Shadow DB (integration)', () => {
       await driver.connect();
 
       try {
-        await createMigrationFile(
-          tmpDir,
-          'bad_sql',
-          ['DEFINE TABLE bad ALSO SCHEMAFULL INVALID'],
-          ['REMOVE TABLE IF EXISTS doesnt_exist'],
-        );
+        await createMigrationFile(tmpDir, 'bad_sql', ['DEFINE TABLE bad ALSO SCHEMAFULL INVALID']);
 
         const result = await validateWithShadow(driver, {
           migrationsDir: tmpDir,
@@ -176,21 +162,14 @@ describe('Shadow DB (integration)', () => {
       await driver.connect();
 
       try {
-        await createMigrationFile(
-          tmpDir,
-          'first',
-          ['DEFINE TABLE user SCHEMAFULL', 'DEFINE FIELD name ON user TYPE string'],
-          ['REMOVE TABLE user'],
-        );
+        await createMigrationFile(tmpDir, 'first', [
+          'DEFINE TABLE user SCHEMAFULL',
+          'DEFINE FIELD name ON user TYPE string',
+        ]);
 
         await new Promise((r) => setTimeout(r, 10));
 
-        await createMigrationFile(
-          tmpDir,
-          'second',
-          ['DEFINE FIELD email ON user TYPE string'],
-          ['REMOVE FIELD email ON user'],
-        );
+        await createMigrationFile(tmpDir, 'second', ['DEFINE FIELD email ON user TYPE string']);
 
         const result = await validateWithShadow(driver, {
           migrationsDir: tmpDir,
@@ -210,21 +189,14 @@ describe('Shadow DB (integration)', () => {
       await driver.connect();
 
       try {
-        await createMigrationFile(
-          tmpDir,
-          'first_ok',
-          ['DEFINE TABLE item SCHEMAFULL', 'DEFINE FIELD title ON item TYPE string'],
-          ['REMOVE TABLE item'],
-        );
+        await createMigrationFile(tmpDir, 'first_ok', [
+          'DEFINE TABLE item SCHEMAFULL',
+          'DEFINE FIELD title ON item TYPE string',
+        ]);
 
         await new Promise((r) => setTimeout(r, 10));
 
-        await createMigrationFile(
-          tmpDir,
-          'second_bad',
-          ['DEFINE FIELD invalid STUFF'],
-          ['REMOVE FIELD IF EXISTS invalid ON item'],
-        );
+        await createMigrationFile(tmpDir, 'second_bad', ['DEFINE FIELD invalid STUFF']);
 
         const result = await validateWithShadow(driver, {
           migrationsDir: tmpDir,
@@ -244,12 +216,10 @@ describe('Shadow DB (integration)', () => {
       await driver.connect();
 
       try {
-        await createMigrationFile(
-          tmpDir,
-          'init',
-          ['DEFINE TABLE workspace SCHEMAFULL', 'DEFINE FIELD name ON workspace TYPE string'],
-          ['REMOVE TABLE workspace'],
-        );
+        await createMigrationFile(tmpDir, 'init', [
+          'DEFINE TABLE workspace SCHEMAFULL',
+          'DEFINE FIELD name ON workspace TYPE string',
+        ]);
 
         await validateWithShadow(driver, {
           migrationsDir: tmpDir,
@@ -271,19 +241,14 @@ describe('Shadow DB (integration)', () => {
       await driver.connect();
 
       try {
-        await createMigrationFile(
-          tmpDir,
-          'complex_types',
-          [
-            'DEFINE TABLE analytics SCHEMAFULL',
-            'DEFINE FIELD event ON analytics TYPE string',
-            'DEFINE FIELD count ON analytics TYPE int',
-            'DEFINE FIELD ratio ON analytics TYPE float',
-            'DEFINE FIELD active ON analytics TYPE bool',
-            'DEFINE FIELD recorded_at ON analytics TYPE datetime',
-          ],
-          ['REMOVE TABLE analytics'],
-        );
+        await createMigrationFile(tmpDir, 'complex_types', [
+          'DEFINE TABLE analytics SCHEMAFULL',
+          'DEFINE FIELD event ON analytics TYPE string',
+          'DEFINE FIELD count ON analytics TYPE int',
+          'DEFINE FIELD ratio ON analytics TYPE float',
+          'DEFINE FIELD active ON analytics TYPE bool',
+          'DEFINE FIELD recorded_at ON analytics TYPE datetime',
+        ]);
 
         const result = await validateWithShadow(driver, {
           migrationsDir: tmpDir,
@@ -303,12 +268,10 @@ describe('Shadow DB (integration)', () => {
       await driver.connect();
 
       try {
-        await createMigrationFile(
-          tmpDir,
-          'init',
-          ['DEFINE TABLE test_table SCHEMAFULL', 'DEFINE FIELD val ON test_table TYPE string'],
-          ['REMOVE TABLE test_table'],
-        );
+        await createMigrationFile(tmpDir, 'init', [
+          'DEFINE TABLE test_table SCHEMAFULL',
+          'DEFINE FIELD val ON test_table TYPE string',
+        ]);
 
         const first = await validateWithShadow(driver, {
           migrationsDir: tmpDir,

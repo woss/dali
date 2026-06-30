@@ -325,23 +325,20 @@ describe('addSectionSeparators', () => {
 // ============================================================================
 
 describe('generateMigrationFile', () => {
-  it('generates minimal file with up/down', () => {
+  it('generates minimal file with up section', () => {
     const result = generateMigrationFile('001', 'create_user', {
       up: ['DEFINE TABLE user SCHEMAFULL', 'DEFINE FIELD name ON user TYPE string'],
-      down: ['REMOVE TABLE user'],
     });
     expect(result).toContain('-- Migration: create_user');
     expect(result).toContain('-- Version: 001');
     expect(result).toContain('-- UP');
-    expect(result).toContain('-- DOWN');
     expect(result).toContain('DEFINE TABLE user SCHEMAFULL;');
-    expect(result).toContain('REMOVE TABLE user;');
+    expect(result).toContain('DEFINE FIELD name ON user TYPE string;');
   });
 
   it('filters empty statements from up', () => {
     const result = generateMigrationFile('001', 'test', {
       up: ['DEFINE TABLE user SCHEMAFULL', '', ' ', 'DEFINE FIELD name ON user TYPE string'],
-      down: [],
     });
     // Only the two non-empty statements get through (empty/whitespace filtered)
     expect(result).toContain('DEFINE TABLE user SCHEMAFULL;');
@@ -351,21 +348,18 @@ describe('generateMigrationFile', () => {
   });
 
   it('handles empty up', () => {
-    const result = generateMigrationFile('001', 'test', { up: [], down: ['REMOVE TABLE user'] });
+    const result = generateMigrationFile('001', 'test', { up: [] });
     expect(result).toContain('-- UP\n\n');
-    expect(result).toContain('REMOVE TABLE user;');
   });
 
-  it('handles empty down', () => {
-    const result = generateMigrationFile('001', 'test', { up: ['DEFINE TABLE user'], down: [] });
+  it('generates up-only migration content', () => {
+    const result = generateMigrationFile('001', 'test', { up: ['DEFINE TABLE user'] });
     expect(result).toContain('DEFINE TABLE user;');
-    expect(result).toContain('-- DOWN\n\n');
   });
 
   it('adds section separators between statement categories', () => {
     const result = generateMigrationFile('001', 'test', {
       up: ['DEFINE TABLE user SCHEMAFULL', 'DEFINE ACCESS admin ON DATABASE TYPE RECORD'],
-      down: ['REMOVE TABLE user'],
     });
     expect(result).toContain('-- ---- Access ----');
   });
@@ -373,7 +367,6 @@ describe('generateMigrationFile', () => {
   it('does not add semicolons to comment lines', () => {
     const result = generateMigrationFile('001', 'test', {
       up: ['DEFINE TABLE user'],
-      down: [],
     });
     const lines = result.split('\n');
     const commentLines = lines.filter((l) => l.startsWith('--'));

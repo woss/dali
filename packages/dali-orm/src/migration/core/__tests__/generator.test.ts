@@ -705,17 +705,12 @@ describe('generateAccessDefinition', () => {
 // ===========================================================================
 describe('generateAccessMigration', () => {
   it('generates DEFINE ACCESS for up direction', () => {
-    const sql = gen.generateAccessMigration({ name: 'web', type: 'JWT' }, 'up');
+    const sql = gen.generateAccessMigration({ name: 'web', type: 'JWT' });
     expect(sql).toContain('DEFINE ACCESS web');
   });
 
-  it('generates REMOVE ACCESS for down direction', () => {
-    const sql = gen.generateAccessMigration({ name: 'web', type: 'JWT' }, 'down');
-    expect(sql).toBe('REMOVE ACCESS IF EXISTS web ON DATABASE');
-  });
-
   it('throws when name is missing', () => {
-    expect(() => gen.generateAccessMigration({ name: '', type: 'JWT' }, 'up')).toThrow(
+    expect(() => gen.generateAccessMigration({ name: '', type: 'JWT' })).toThrow(
       'Access name is required for migration',
     );
   });
@@ -833,21 +828,13 @@ describe('generateEventMigration', () => {
   };
 
   it('generates DEFINE EVENT for up direction', () => {
-    const sql = gen.generateEventMigration(evt, 'up');
+    const sql = gen.generateEventMigration(evt);
     expect(sql).toContain('DEFINE EVENT IF NOT EXISTS on_create');
-  });
-
-  it('generates REMOVE EVENT for down direction', () => {
-    const sql = gen.generateEventMigration(evt, 'down');
-    expect(sql).toBe('REMOVE EVENT IF EXISTS on_create ON TABLE user');
   });
 
   it('throws when name is missing', () => {
     expect(() =>
-      gen.generateEventMigration(
-        { name: '', what: 'user', when: 'true', then: ['SELECT 1'] },
-        'up',
-      ),
+      gen.generateEventMigration({ name: '', what: 'user', when: 'true', then: ['SELECT 1'] }),
     ).toThrow('Event name is required for migration');
   });
 });
@@ -925,17 +912,12 @@ describe('generateFunctionMigration', () => {
   };
 
   it('generates DEFINE FUNCTION for up direction', () => {
-    const sql = gen.generateFunctionMigration(fn, 'up');
+    const sql = gen.generateFunctionMigration(fn);
     expect(sql).toContain('DEFINE FUNCTION IF NOT EXISTS fn::add');
   });
 
-  it('generates REMOVE FUNCTION for down direction', () => {
-    const sql = gen.generateFunctionMigration(fn, 'down');
-    expect(sql).toBe('REMOVE FUNCTION IF EXISTS fn::add');
-  });
-
   it('throws when name is missing', () => {
-    expect(() => gen.generateFunctionMigration({ name: '', body: 'RETURN 1' }, 'up')).toThrow(
+    expect(() => gen.generateFunctionMigration({ name: '', body: 'RETURN 1' })).toThrow(
       'Function name is required for migration',
     );
   });
@@ -1068,11 +1050,6 @@ describe('generateAlterFieldDefault', () => {
 // generateTableMigration
 // ===========================================================================
 describe('generateTableMigration', () => {
-  it('generates REMOVE TABLE for down direction', () => {
-    const sql = gen.generateTableMigration(tableDef({ name: 'user' }), 'down');
-    expect(sql).toEqual(['REMOVE TABLE user']);
-  });
-
   it('generates table + fields for up direction', () => {
     const sql = gen.generateTableMigration(
       tableDef({
@@ -1082,7 +1059,6 @@ describe('generateTableMigration', () => {
           col({ name: 'email', config: { type: 'string' } }),
         ],
       }),
-      'up',
     );
     expect(sql).toHaveLength(3); // table + 2 fields
     expect(sql[0]).toBe('DEFINE TABLE IF NOT EXISTS user SCHEMAFULL');
@@ -1099,7 +1075,6 @@ describe('generateTableMigration', () => {
           indexes: [index({ name: 'idx_email', fields: ['email'], type: 'unique' })],
         },
       }),
-      'up',
     );
     expect(sql).toHaveLength(3); // table + field + index
     expect(sql[2]).toContain('DEFINE INDEX idx_email');
@@ -1111,7 +1086,6 @@ describe('generateTableMigration', () => {
         name: 'user',
         columns: [col({ name: 'id', config: { type: 'string' } })],
       }),
-      'up',
     );
     // id field returns empty string, filtered out
     expect(sql).toHaveLength(1);
@@ -1138,14 +1112,6 @@ describe('generateMigration', () => {
     expect(sql.filter((s) => s.includes('DEFINE TABLE'))).toHaveLength(2);
   });
 
-  it('generates REMOVE TABLE for down direction', () => {
-    const sql = gen.generateMigration(
-      [tableDef({ name: 'user' }), tableDef({ name: 'post' })],
-      'down',
-    );
-    expect(sql).toEqual(['REMOVE TABLE user', 'REMOVE TABLE post']);
-  });
-
   it('filters out empty statements', () => {
     const sql = gen.generateMigration([
       tableDef({
@@ -1162,16 +1128,14 @@ describe('generateMigration', () => {
 // generateMigrationFile
 // ===========================================================================
 describe('generateMigrationFile', () => {
-  it('returns both up and down arrays', () => {
+  it('returns up array', () => {
     const result = gen.generateMigrationFile(
       [tableDef({ name: 'user', columns: [col({ name: 'name', config: { type: 'string' } })] })],
       '1',
       'create_user',
     );
     expect(result).toHaveProperty('up');
-    expect(result).toHaveProperty('down');
     expect(Array.isArray(result.up)).toBe(true);
-    expect(Array.isArray(result.down)).toBe(true);
   });
 
   it('up contains DEFINE statements', () => {
@@ -1183,12 +1147,7 @@ describe('generateMigrationFile', () => {
     expect(result.up[0]).toContain('DEFINE TABLE IF NOT EXISTS user');
   });
 
-  it('down contains REMOVE statements', () => {
-    const result = gen.generateMigrationFile([tableDef({ name: 'user' })], '1', 'create_user');
-    expect(result.down).toContain('REMOVE TABLE user');
-  });
-
-  it('filters empty statements in both directions', () => {
+  it('filters empty statements from up array', () => {
     const result = gen.generateMigrationFile(
       [
         tableDef({
@@ -1201,8 +1160,6 @@ describe('generateMigrationFile', () => {
     );
     // up: only table def (id field returns empty)
     expect(result.up.filter((s) => s.trim() !== '')).toEqual(result.up);
-    // down: REMOVE TABLE
-    expect(result.down).toEqual(['REMOVE TABLE user']);
   });
 });
 
@@ -1429,17 +1386,17 @@ describe('empty and boundary states', () => {
   });
 
   it('generateTableMigration with no columns', () => {
-    const sql = gen.generateTableMigration(tableDef({ name: 'empty', columns: [] }), 'up');
+    const sql = gen.generateTableMigration(tableDef({ name: 'empty', columns: [] }));
     expect(sql).toEqual(['DEFINE TABLE IF NOT EXISTS empty SCHEMAFULL']);
   });
 
   it('generateMigration with empty tables array', () => {
-    const sql = gen.generateMigration([], 'up');
+    const sql = gen.generateMigration([]);
     expect(sql).toEqual([]);
   });
 
   it('generateMigrationFile with empty tables', () => {
     const result = gen.generateMigrationFile([], '1', 'empty');
-    expect(result).toEqual({ up: [], down: [] });
+    expect(result).toEqual({ up: [] });
   });
 });

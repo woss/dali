@@ -546,8 +546,6 @@ describe('MigrationRunner integration', () => {
     const tableNames = Object.keys(dbTables?.tables ?? {});
     expect(tableNames).toContain('dryrun_test');
   });
-
-
 });
 
 // ============================================================================

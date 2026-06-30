@@ -221,7 +221,7 @@ const articleTable = defineTable(
 );
 ```
 
-Analyzers are emitted **before** tables in UP migrations (indexes depend on their analyzer), and **after** tables in DOWN migrations (remove analyzer only after all referencing indexes are gone).
+Analyzers are emitted **before** tables in UP migrations (indexes depend on their analyzer).
 
 ### Column Types
 
@@ -695,12 +695,6 @@ npx dali-orm migrate deploy
 # Apply pending migrations to database
 npx dali-orm migrate up
 
-# Rollback last migration
-npx dali-orm migrate down --steps 1
-
-# Reset all migrations
-npx dali-orm migrate reset
-
 # Check migration status
 npx dali-orm migrate status
 
@@ -753,7 +747,7 @@ const orm = await DaliORM.connect({
 const generator = new SurrealQLGenerator();
 const sql = generator.generateMigration([userTable]);
 
-// With analyzers (emitted before tables in UP, after in DOWN)
+// With analyzers (emitted before tables)
 const analyzers = [
   { name: 'my_analyzer', tokenizers: ['class', 'punctuation'], filters: ['lowercase'] },
 ];
@@ -817,12 +811,39 @@ const userSchema = defineTable('user', {
 
 // Type for SELECT results
 type User = InferSelectResult<typeof userSchema>;
-// { id?: string; name?: string; email?: string; age?: number | null }
+// { id?: string; id?: string; name?: string; email?: string; age?: number | null }
 
 // Type for INSERT data
 type NewUser = InferInsertInput<typeof userSchema>;
 // { name: string; email: string; age?: number }
 ```
+
+## RecordId Conventions
+
+SurrealDB v2 uses `RecordId` objects as the canonical record identifier (`{ table: Table, id: Id }`). The SDK accepts `RecordId` natively — never extract bare strings for query params.
+
+**RecordId inside, strings at I/O boundary.** Convert string → RecordId at routes, MCP handlers, or API adapters — not in service methods.
+
+```typescript
+import { RecordId } from 'surrealdb';
+
+// ✓ Pass RecordId directly to SDK methods
+const result = await db.select(new RecordId('user', id));
+
+// ✗ Don't extract bare slugs for SDK calls
+// const result = await db.select(`user:${id}`); // avoid
+```
+
+**Extract ID for human-readable output only:**
+
+```typescript
+const slug = String(record.id.id); // ✓ clean value
+// record.id.toString()             // ✗ adds ⟨⟩ SurrealQL escaping
+```
+
+**TypeScript caveat:** `InferSelectResult<T>` types `id` as `string` — known type/runtime mismatch. Service code handles `RecordId` at runtime even if types say `string`.
+
+**Never write string-parsing helpers** (`toQualifiedId`, `stripBrackets`, `rawId`, `normalizeId`). The SDK handles `RecordId` natively. See [id-conventions.md](../../.agents/skills/dali-orm/references/id-conventions.md) for full guidelines.
 
 ## Packages
 

@@ -301,7 +301,6 @@ describe('main', () => {
       expect(mockRunnerInstance.init).toHaveBeenCalled();
       expect(mockRunnerInstance.status).toHaveBeenCalled();
     });
-
   });
 
   // ============================================================================
@@ -651,10 +650,5 @@ describe('parseGlobalOptions (additional edge cases)', () => {
     // In real usage, --to is parsed from the full args array
     const opts = parseGlobalOptions(['--to', '005', 'status']);
     expect(opts.to).toBe('005');
-  });
-
-  it('parses --steps as number from string', () => {
-    const opts = parseGlobalOptions(['--steps', '10']);
-    expect(opts.steps).toBe(10);
   });
 });

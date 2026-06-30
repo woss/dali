@@ -123,10 +123,10 @@ function addMigrationDir(
   version: string,
   name: string,
   up: string[] = ['CREATE TABLE foo (id int)'],
-  down: string[] = ['DROP TABLE foo'],
+  _down?: string[],
 ): string {
   const dirName = `${version}_${name}`;
-  const content = `-- UP\n${up.join(';\n')};\n-- DOWN\n${down.join(';\n')};`;
+  const content = `-- UP\n${up.join(';\n')};`;
 
   // stat(dir) uses raw config value: './migrations'
   mockDirs.add(migrationsDir);
@@ -443,7 +443,7 @@ describe('MigrationRunner', () => {
       mockDirs.add(dirPath);
       mockFiles.set(
         `${dirPath}/migration.surql`,
-        '-- UP\n-- this is a comment\nCREATE TABLE foo;\n-- another comment\nCREATE TABLE bar;\n-- DOWN\nDROP TABLE foo;\nDROP TABLE bar;',
+        '-- UP\n-- this is a comment\nCREATE TABLE foo;\n-- another comment\nCREATE TABLE bar;',
       );
 
       const files = await runner.getMigrationFiles();
@@ -575,10 +575,6 @@ describe('MigrationRunner', () => {
       expect(allTrueCall).toBeTruthy();
     });
   });
-
-
-
-
 
   // ==========================================================================
   // status

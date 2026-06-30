@@ -90,16 +90,6 @@ describe('parseGlobalOptions', () => {
     expect(opts.to).toBe('001');
   });
 
-  it('parses --steps with numeric value', () => {
-    const opts = parseGlobalOptions(['--steps', '5']);
-    expect(opts.steps).toBe(5);
-  });
-
-  it('parses --steps with zero', () => {
-    const opts = parseGlobalOptions(['--steps', '0']);
-    expect(opts.steps).toBe(0);
-  });
-
   it('parses --name / -m', () => {
     expect(parseGlobalOptions(['--name', 'test']).name).toBe('test');
     expect(parseGlobalOptions(['-m', 'test']).name).toBe('test');
@@ -166,15 +156,12 @@ describe('parseGlobalOptions', () => {
       './schema',
       '--to',
       '003',
-      '--steps',
-      '2',
     ]);
     expect(opts.config).toBe('config.ts');
     expect(opts.name).toBe('my_migration');
     expect(opts.output).toBe('./migrations');
     expect(opts.schema).toBe('./schema');
     expect(opts.to).toBe('003');
-    expect(opts.steps).toBe(2);
   });
 
   it('handles dry-run before --config', () => {

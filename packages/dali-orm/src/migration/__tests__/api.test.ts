@@ -60,7 +60,6 @@ async function createMigrationFile(
   dir: string,
   name: string,
   upStatements: string[],
-  downStatements: string[],
 ): Promise<string> {
   const timestamp = Date.now().toString();
   const migrationDir = path.join(dir, `${timestamp}_${name}`);
@@ -73,9 +72,6 @@ async function createMigrationFile(
     '',
     '-- UP',
     ...upStatements.map((s) => `${s};`),
-    '',
-    '-- DOWN',
-    ...downStatements.map((s) => `${s};`),
   ].join('\n');
 
   await fs.writeFile(filePath, content, 'utf-8');
@@ -129,12 +125,10 @@ describe('Migration API', () => {
 
   describe('migrateToDatabase', () => {
     it('applies pending migrations from directory', async () => {
-      await createMigrationFile(
-        testProject.migrationsDir,
-        'add_user_table',
-        ['DEFINE TABLE user SCHEMAFULL', 'DEFINE FIELD name ON user TYPE string'],
-        ['REMOVE TABLE user'],
-      );
+      await createMigrationFile(testProject.migrationsDir, 'add_user_table', [
+        'DEFINE TABLE user SCHEMAFULL',
+        'DEFINE FIELD name ON user TYPE string',
+      ]);
 
       const result = await migrateToDatabase(driver);
 
@@ -144,12 +138,9 @@ describe('Migration API', () => {
     });
 
     it('skips already-applied migrations', async () => {
-      await createMigrationFile(
-        testProject.migrationsDir,
-        'add_user_table',
-        ['DEFINE TABLE user SCHEMAFULL'],
-        ['REMOVE TABLE user'],
-      );
+      await createMigrationFile(testProject.migrationsDir, 'add_user_table', [
+        'DEFINE TABLE user SCHEMAFULL',
+      ]);
 
       const first = await migrateToDatabase(driver);
       expect(first.applied).toHaveLength(1);
@@ -166,21 +157,15 @@ describe('Migration API', () => {
     });
 
     it('applies multiple migrations in order', async () => {
-      await createMigrationFile(
-        testProject.migrationsDir,
-        '001_create_user',
-        ['DEFINE TABLE user SCHEMAFULL'],
-        ['REMOVE TABLE user'],
-      );
+      await createMigrationFile(testProject.migrationsDir, '001_create_user', [
+        'DEFINE TABLE user SCHEMAFULL',
+      ]);
 
       await new Promise((r) => setTimeout(r, 10));
 
-      await createMigrationFile(
-        testProject.migrationsDir,
-        '002_add_email',
-        ['DEFINE FIELD email ON user TYPE string'],
-        ['REMOVE FIELD email ON user'],
-      );
+      await createMigrationFile(testProject.migrationsDir, '002_add_email', [
+        'DEFINE FIELD email ON user TYPE string',
+      ]);
 
       const result = await migrateToDatabase(driver);
 
@@ -201,29 +186,20 @@ describe('Migration API', () => {
     });
 
     it('shows pending and applied migrations', async () => {
-      await createMigrationFile(
-        testProject.migrationsDir,
-        'add_user_table',
-        ['DEFINE TABLE user SCHEMAFULL'],
-        ['REMOVE TABLE user'],
-      );
+      await createMigrationFile(testProject.migrationsDir, 'add_user_table', [
+        'DEFINE TABLE user SCHEMAFULL',
+      ]);
 
-      await createMigrationFile(
-        testProject.migrationsDir,
-        'add_post_table',
-        ['DEFINE TABLE post SCHEMAFULL'],
-        ['REMOVE TABLE post'],
-      );
+      await createMigrationFile(testProject.migrationsDir, 'add_post_table', [
+        'DEFINE TABLE post SCHEMAFULL',
+      ]);
 
       await migrateToDatabase(driver);
 
       // Create another pending migration after applying
-      await createMigrationFile(
-        testProject.migrationsDir,
-        'add_comment_table',
-        ['DEFINE TABLE comment SCHEMAFULL'],
-        ['REMOVE TABLE comment'],
-      );
+      await createMigrationFile(testProject.migrationsDir, 'add_comment_table', [
+        'DEFINE TABLE comment SCHEMAFULL',
+      ]);
 
       const status = await getMigrationStatus(driver);
 

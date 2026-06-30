@@ -216,20 +216,9 @@ describe('event SQL generation', () => {
       when: '$before',
       then: ['UPDATE user SET updated_at = time::now()'],
     };
-    const sql = generator.generateEventMigration(event, 'up');
+    const sql = generator.generateEventMigration(event);
     expect(sql).toContain('DEFINE EVENT IF NOT EXISTS user_created ON TABLE user');
     expect(sql).toContain('WHEN ($before)');
-  });
-
-  it('generates event migration down (REMOVE EVENT)', () => {
-    const event: SurrealEvent = {
-      name: 'user_created',
-      what: 'user',
-      when: '$before',
-      then: ['UPDATE user SET updated_at = time::now()'],
-    };
-    const sql = generator.generateEventMigration(event, 'down');
-    expect(sql).toBe('REMOVE EVENT IF EXISTS user_created ON TABLE user');
   });
 });
 
