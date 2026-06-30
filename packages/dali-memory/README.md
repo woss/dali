@@ -100,7 +100,7 @@ All config via environment variables, validated by Zod.
 | models     | TABLE | provider_id, model_id, variant (optional), dimensions, created_at. Unique index on (provider_id, model_id).                                                                                   |
 | tags       | TABLE | name (unique)                                                                                                                                                                                 |
 | api_keys   | TABLE | key_hash (unique), name, created_at, last_used_at (optional), user_id → users (optional)                                                                                                      |
-| users      | TABLE | email (unique), pass, name, created_at                                                                                       |
+| users      | TABLE | email (unique), pass, name, created_at                                                                                                                                                        |
 
 ### Relations
 
@@ -200,14 +200,14 @@ SvelteKit with Tailwind v4 + daisyUI, hard-coded dark theme (`data-theme="dark"`
 
 ### Pages
 
-| Route       | Description                                                                                                                       |
-| ----------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| /           | Home hero with gradient heading glow + 3 stat cards (memories, workspaces, tags)                                                  |
-| /login      | Glass card with email/password form → HMAC-signed cookie, 30-day expiry                                                           |
-| /register   | Glass card with name/email/password/confirm → CREATE users with crypto::argon2 + name, auto sign-in on success                    |
-| /logout     | Clears dali_session cookie, redirects to /login                                                                                   |
-| /memories   | Workspace dropdown selector + inline create form + staggered memory glass cards, content dedup                                    |
-| /workspaces | Create form + staggered workspace glass cards, link to memories per workspace                                                     |
+| Route       | Description                                                                                                                                |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| /           | Home hero with gradient heading glow + 3 stat cards (memories, workspaces, tags)                                                           |
+| /login      | Glass card with email/password form → HMAC-signed cookie, 30-day expiry                                                                    |
+| /register   | Glass card with name/email/password/confirm → CREATE users with crypto::argon2 + name, auto sign-in on success                             |
+| /logout     | Clears dali_session cookie, redirects to /login                                                                                            |
+| /memories   | Workspace dropdown selector + inline create form + staggered memory glass cards, content dedup                                             |
+| /workspaces | Create form + staggered workspace glass cards, link to memories per workspace                                                              |
 | /settings   | Read-only config display + API key management (generate / delete) + profile section (name/email update), user_id linkage via session email |
 
 ### Navbar

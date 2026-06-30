@@ -1,13 +1,14 @@
 {
   "version": 1,
   "dialect": "surrealdb",
-  "id": "98505d2f0f62",
+  "id": "e9c797ef5e46",
   "entries": [
     {
       "idx": 1,
       "tag": "init",
-      "when": "2026-06-29T07:19:17.121340626Z",
+      "when": "2026-06-30T15:17:53.655721213Z",
       "breakpoints": [
+        true,
         true,
         true,
         true,
@@ -59,16 +60,7 @@
         true,
         true
       ],
-      "hash": "7c6477e807f09ddca461de33570ac108d579a998208af0f1e6d2169432985533"
-    },
-    {
-      "idx": 2,
-      "tag": "add_user_name",
-      "when": "2026-06-29T07:39:20.731180336Z",
-      "breakpoints": [
-        true
-      ],
-      "hash": "50fff0150d340a19d336b675993227cc0e0e82133250facae16ff6bf21d2baf9"
+      "hash": "d227605e6be5c6096cee660e78594f4760a67418fe0e2130cb130253dc2b653e"
     }
   ]
 }

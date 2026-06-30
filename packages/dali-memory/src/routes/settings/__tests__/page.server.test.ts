@@ -470,10 +470,9 @@ describe('settings actions.update-profile', () => {
       cookies: mockProfileCookies,
     } as any);
 
-    expect(mockDB.query).toHaveBeenCalledWith(
-      'SELECT id FROM users WHERE email = $email',
-      { email: 'taken@test.com' },
-    );
+    expect(mockDB.query).toHaveBeenCalledWith('SELECT id FROM users WHERE email = $email', {
+      email: 'taken@test.com',
+    });
     expect(mockFail).toHaveBeenCalledWith(409, { error: 'This email is already in use' });
     expect(result).toEqual({ status: 409, data: { error: 'This email is already in use' } });
   });

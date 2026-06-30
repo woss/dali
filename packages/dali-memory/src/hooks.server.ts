@@ -1,6 +1,12 @@
 import { initLogger, getLog } from '$lib/server/logger';
 import { getConfig } from '$lib/server/config';
+import { initEmbedder } from '$lib/server/embedder/index';
 import type { Handle } from '@sveltejs/kit';
+
+// Preload embedder model on server start — runs once at module load
+initEmbedder().catch((err) => {
+  console.error('Failed to preload embedder:', err instanceof Error ? err.message : String(err));
+});
 
 async function signSession(sessionId: string, secret: string): Promise<string> {
   const encoder = new TextEncoder();

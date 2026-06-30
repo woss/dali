@@ -28,6 +28,18 @@ vi.mock('../../embedder/index', () => ({
   }),
 }));
 
+vi.mock('$env/dynamic/private', () => ({
+  env: {
+    DALI_MEMORY_SECRET: 'test-secret-value',
+    DALI_MEMORY_EMBEDDING_MODEL: 'Xenova/all-MiniLM-L6-v2',
+    DALI_MEMORY_SURREAL_URL: 'ws://localhost:10101',
+    DALI_MEMORY_SURREAL_NS: 'memory',
+    DALI_MEMORY_SURREAL_DB: 'memory',
+    DALI_MEMORY_SURREAL_USER: 'root',
+    DALI_MEMORY_SURREAL_PASS: 'root',
+  },
+}));
+
 // ---------------------------------------------------------------------------
 // Imports
 // ---------------------------------------------------------------------------
@@ -82,11 +94,6 @@ beforeAll(async () => {
   // Push all table definitions, fields, and indexes to the embedded DB.
   await pushSchemaFromTableDefs(orm.getDriver(), schema.getTables());
 
-  // The memories table lacks an `embedding` field, but both MemoryService
-  // and HybridSearch expect it. Add it here.
-  // TODO: Add `embedding: array('embedding')` to memoriesTable in schema.ts.
-  await orm.query('DEFINE FIELD embedding ON memories TYPE array');
-
   // The memoriesTable defines metadata as object('metadata') (strict — no nested
   // fields). SeedMemory passes metadata.source; some createMemory calls pass
   // no metadata at all (defaults to {}). Make metadata.source optional so NONE is
@@ -99,8 +106,14 @@ beforeAll(async () => {
   wsId = 'workspaces:default';
 
   mockState.orm = orm;
-  mockState.embed.mockResolvedValue({ embedding: EMBEDDING_384 });
-  mockState.embedBatch.mockResolvedValue([{ embedding: EMBEDDING_384 }]);
+  mockState.embed.mockResolvedValue({
+    embedding: EMBEDDING_384,
+    model: 'test-model',
+    dimensions: 384,
+  });
+  mockState.embedBatch.mockResolvedValue([
+    { embedding: EMBEDDING_384, model: 'test-model', dimensions: 384 },
+  ]);
 });
 
 afterAll(async () => {

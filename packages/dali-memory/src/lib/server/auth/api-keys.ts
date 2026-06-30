@@ -31,8 +31,7 @@ export async function validateApiKey(key: string | null | undefined): Promise<bo
 
   getLog(['dali-memory', 'auth']).debug('API key validated successfully');
 
-  // Fire-and-forget: touch last_used_at (non-blocking)
-  const record = results[0] as { id: unknown };
+  const record = results[0];
   const rawId = record.id;
   const shortId =
     typeof rawId === 'string'

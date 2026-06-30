@@ -41,3 +41,30 @@ export class EmbedderService {
     return this.provider.embedBatch(texts);
   }
 }
+
+// ---------------------------------------------------------------------------
+// Singleton
+// ---------------------------------------------------------------------------
+
+let instance: EmbedderService | null = null;
+
+/**
+ * Initialize the singleton embedder. Idempotent — subsequent calls return
+ * immediately without re-initializing. Safe to call at server startup.
+ */
+export async function initEmbedder(): Promise<void> {
+  if (instance !== null) return;
+  const svc = new EmbedderService();
+  await svc.initialize();
+  instance = svc;
+  getLog(['dali-memory', 'embedder']).info('Embedder singleton initialized');
+}
+
+/**
+ * Get the initialized singleton embedder.
+ * @throws Error if initEmbedder() has not been called yet.
+ */
+export function getEmbedder(): EmbedderService {
+  if (!instance) throw new Error('Embedder not initialized. Call initEmbedder() first.');
+  return instance;
+}
