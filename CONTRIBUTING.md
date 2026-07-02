@@ -188,7 +188,15 @@ dali-orm/
    pnpm build           # vp pack (all packages)
    ```
 
-4. **Commit** with a descriptive message:
+4. **Changeset** — if your change should trigger a release, create a changeset:
+
+   ```bash
+   pnpm changeset
+   ```
+
+   Select packages to bump and describe the change. Commit the generated `.md` file.
+
+5. **Commit** with a descriptive message:
 
    ```bash
    but commit -m "feat(dali-orm): add defaultRaw() for SurrealDB function defaults"
@@ -196,7 +204,7 @@ dali-orm/
 
    Pre-commit hooks auto-run `vp check --fix` on staged files. If hooks fail, fix the issues and try again.
 
-5. **Push** and open a pull request:
+6. **Push** and open a pull request:
    ```bash
    but push
    ```
