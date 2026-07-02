@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vite-plus/test';
-import { defineAccess } from '../schema/access-builder.js';
+import { defineAccess } from '../schema.js';
 
 describe('defineAccess builder', () => {
   it('creates access with name and default type', () => {

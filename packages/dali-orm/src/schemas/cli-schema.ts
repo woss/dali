@@ -29,9 +29,7 @@ export type CLIOptions = InferOutput<typeof CLIOptionsSchema>;
  * Migrate command options schema
  */
 export const MigrateOptionsSchema = object({
-  subcommand: optional(
-    union([literal('up'), literal('status'), literal('resume')]),
-  ),
+  subcommand: optional(union([literal('up'), literal('status'), literal('resume')])),
   to: optional(string()),
   steps: optional(string()),
   force: optional(boolean()),

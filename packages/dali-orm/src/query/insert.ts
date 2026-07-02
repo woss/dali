@@ -6,6 +6,7 @@
  */
 
 import type { SurrealDriver } from '../sdk/driver/types.js';
+import type { DaliORM } from '../sdk/dali-orm.js';
 import type { TableDefinition } from '../sdk/table.js';
 import type { InferSelectResult } from './types.js';
 
@@ -15,11 +16,11 @@ export class InsertBuilder<TDef extends TableDefinition, TResult = InferSelectRe
   private _records: Record<string, unknown>[] = [];
   private _ignoreDuplicates = false;
 
-  constructor(driver: SurrealDriver, tableDef: TDef) {
-    if (!driver) throw new Error('Driver is required');
+  constructor(orm: DaliORM, tableDef: TDef) {
+    if (!orm) throw new Error('DaliORM instance is required');
     if (!tableDef?.name) throw new Error('Table definition with name is required');
 
-    this.driver = driver;
+    this.driver = orm.getDriver();
     this.tableDef = tableDef;
   }
 
@@ -79,7 +80,7 @@ export class InsertBuilder<TDef extends TableDefinition, TResult = InferSelectRe
   /** Serialize a value to SurrealQL */
   private serializeValue(value: unknown): string {
     if (value === null || value === undefined) return 'NONE';
-    if (typeof value === 'string') return `'${value.replace(/'/g, "\\'")}'`;
+    if (typeof value === 'string') return `'${value.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}'`;
     if (typeof value === 'number') return String(value);
     if (typeof value === 'boolean') return value ? 'true' : 'false';
     if (Array.isArray(value)) return `[ ${value.map((v) => this.serializeValue(v)).join(', ')} ]`;
@@ -95,8 +96,8 @@ export class InsertBuilder<TDef extends TableDefinition, TResult = InferSelectRe
 
 /** Factory function */
 export function insert<TDef extends TableDefinition>(
-  driver: SurrealDriver,
+  orm: DaliORM,
   tableDef: TDef,
 ): InsertBuilder<TDef> {
-  return new InsertBuilder(driver, tableDef);
+  return new InsertBuilder(orm, tableDef);
 }

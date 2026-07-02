@@ -1,5 +1,6 @@
 import { array, boolean, literal, number, object, optional, string, union } from 'valibot';
 import type { TableDefinition } from './table.js';
+import { SurrealQLGenerator } from '../migration/core/generator.js';
 
 // =============================================================================
 // ACCESS DEFINITION
@@ -277,4 +278,156 @@ export function eventToSQL(config: EventConfig): string {
   if (config.maxdepth !== undefined) parts.push(`MAXDEPTH ${config.maxdepth}`);
 
   return parts.join(' ');
+}
+
+// =============================================================================
+// FLUENT BUILDERS
+// =============================================================================
+
+export type AccessBuilder = ReturnType<typeof defineAccess>;
+
+export function defineAccess(name: string) {
+  if (!name) throw new Error('Access name is required');
+
+  let config: {
+    type?: 'RECORD' | 'JWT' | 'OIDC';
+    table?: string;
+    signup?: string;
+    signin?: string;
+    identifier?: string;
+    algorithm?: 'HS256' | 'HS512';
+    key?: string;
+    issuer?: string;
+    duration?: string;
+    tokenDuration?: string;
+  } = { type: 'RECORD' };
+
+  return {
+    get name() {
+      return name;
+    },
+    type(type: AccessType) {
+      config = { ...config, type };
+      return this;
+    },
+    table(tableName: string) {
+      config = { ...config, table: tableName };
+      return this;
+    },
+    signup(sql: string) {
+      config = { ...config, signup: sql };
+      return this;
+    },
+    signin(sql: string) {
+      config = { ...config, signin: sql };
+      return this;
+    },
+    identifier(column: string) {
+      config = { ...config, identifier: column };
+      return this;
+    },
+    algorithm(algo: 'HS256' | 'HS512') {
+      config = { ...config, algorithm: algo };
+      return this;
+    },
+    key(key: string) {
+      config = { ...config, key };
+      return this;
+    },
+    issuer(issuer: string) {
+      config = { ...config, issuer };
+      return this;
+    },
+    duration(duration: string) {
+      config = { ...config, duration };
+      return this;
+    },
+    tokenDuration(duration: string) {
+      config = { ...config, tokenDuration: duration };
+      return this;
+    },
+    build(): AccessConfig {
+      return { name, ...config, type: config.type ?? 'RECORD' };
+    },
+    toSQL(): string {
+      return new SurrealQLGenerator().generateAccessDefinition(this.build());
+    },
+  };
+}
+
+export type EventBuilder = ReturnType<typeof defineEvent>;
+
+export function defineEvent(name: string) {
+  if (!name) throw new Error('Event name is required');
+
+  let config: {
+    on?: string;
+    when?: string;
+    then?: string[];
+    comment?: string;
+    async?: boolean;
+    retry?: number;
+    maxdepth?: number;
+  } = {};
+
+  return {
+    get name() {
+      return name;
+    },
+    on(tableName: string) {
+      config = { ...config, on: tableName };
+      return this;
+    },
+    when(condition: string) {
+      config = { ...config, when: condition };
+      return this;
+    },
+    then(sql: string) {
+      config = { ...config, then: [...(config.then ?? []), sql] };
+      return this;
+    },
+    comment(text: string) {
+      config = { ...config, comment: text };
+      return this;
+    },
+    async() {
+      config = { ...config, async: true };
+      return this;
+    },
+    retry(count: number) {
+      config = { ...config, retry: count };
+      return this;
+    },
+    maxdepth(depth: number) {
+      config = { ...config, maxdepth: depth };
+      return this;
+    },
+    build(): EventConfig {
+      const on = config.on;
+      if (!on) throw new Error('Table name is required (use .on())');
+      const when = config.when;
+      if (!when) throw new Error('WHEN condition is required (use .when())');
+      const then = config.then;
+      if (!then || then.length === 0) {
+        throw new Error('At least one THEN statement is required (use .then())');
+      }
+      return {
+        name,
+        on,
+        when,
+        then,
+        comment: config.comment,
+        async: config.async,
+        retry: config.retry,
+        maxdepth: config.maxdepth,
+      };
+    },
+    toSQL(): string {
+      const built = this.build();
+      return new SurrealQLGenerator().generateEventDefinition({
+        ...built,
+        what: built.on,
+      });
+    },
+  };
 }

@@ -82,6 +82,10 @@ export async function connect(
     throw new Error('Must provide nodeDriver or embeddedDriver config');
   }
 
+  if (config.schema) {
+    driver.schema = config.schema;
+  }
+
   await driver.connect();
   connectLog('Connecting to database %s', driver.getUrl());
 

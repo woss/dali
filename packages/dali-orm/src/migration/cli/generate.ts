@@ -1471,15 +1471,28 @@ export async function loadSchemaFiles(
         const functionsExports = [module.functions];
         const analyzersExports = [module.analyzers];
 
-        // Also check for OrmSchema-like exports (has .tableDefinitions as Record)
+        // Also check for OrmSchema-like exports (has .tables Map or .tableDefinitions Record)
         // Check 'ormSchema', 'schema', and 'default' exports for OrmSchema instances
         const ormSchemaKeys = ['ormSchema', 'schema', 'default'] as const;
         for (const key of ormSchemaKeys) {
           const val = module[key];
           if (!val || Array.isArray(val) || typeof val !== 'object') continue;
           const obj = val as Record<string, unknown>;
-          // Detect OrmSchema by its tableDefinitions Record property
-          if (
+          // Detect OrmSchema by its .tables Map property (preferred)
+          if (obj.tables instanceof Map) {
+            tablesOrExports.push(Object.fromEntries(obj.tables));
+            if (Array.isArray(obj.access)) {
+              accessExports.push(obj.access);
+            }
+            if (Array.isArray(obj.functions)) {
+              functionsExports.push(obj.functions);
+            }
+            if (Array.isArray(obj.analyzers)) {
+              analyzersExports.push(obj.analyzers);
+            }
+          }
+          // Fallback: detect OrmSchema-like objects via .tableDefinitions Record
+          else if (
             obj.tableDefinitions &&
             typeof obj.tableDefinitions === 'object' &&
             !Array.isArray(obj.tableDefinitions)
@@ -1657,15 +1670,28 @@ export async function loadSchemaFromFile(filePath: string): Promise<SchemaFilesR
     const functionsExports = [module.functions];
     const analyzersExports = [module.analyzers];
 
-    // Also check for OrmSchema-like exports (has .tableDefinitions as Record)
+    // Also check for OrmSchema-like exports (has .tables Map or .tableDefinitions Record)
     // Check 'ormSchema', 'schema', and 'default' exports for OrmSchema instances
     const ormSchemaKeys = ['ormSchema', 'schema', 'default'] as const;
     for (const key of ormSchemaKeys) {
       const val = module[key];
       if (!val || Array.isArray(val) || typeof val !== 'object') continue;
       const obj = val as Record<string, unknown>;
-      // Detect OrmSchema by its tableDefinitions Record property
-      if (
+      // Detect OrmSchema by its .tables Map property (preferred)
+      if (obj.tables instanceof Map) {
+        tablesOrExports.push(Object.fromEntries(obj.tables));
+        if (Array.isArray(obj.access)) {
+          accessExports.push(obj.access);
+        }
+        if (Array.isArray(obj.functions)) {
+          functionsExports.push(obj.functions);
+        }
+        if (Array.isArray(obj.analyzers)) {
+          analyzersExports.push(obj.analyzers);
+        }
+      }
+      // Fallback: detect OrmSchema-like objects via .tableDefinitions Record
+      else if (
         obj.tableDefinitions &&
         typeof obj.tableDefinitions === 'object' &&
         !Array.isArray(obj.tableDefinitions)

@@ -29,9 +29,6 @@ export class OrmSchema {
   /** Table definitions as a Map for iteration-safe access */
   readonly tables: ReadonlyMap<string, TableDefinition>;
 
-  /** Table definitions as a Record for backward compat with migration system */
-  readonly tableDefinitions: Record<string, TableDefinition>;
-
   /** Access definitions */
   readonly access: AccessConfig[];
 
@@ -48,7 +45,6 @@ export class OrmSchema {
   readonly analyzers: AnalyzerDefinition[];
 
   constructor(config: OrmSchemaConfig) {
-    this.tableDefinitions = { ...config.tables };
     this.tables = new Map(Object.entries(config.tables));
     this.access = config.access ?? [];
     this.events = config.events ?? [];

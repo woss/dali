@@ -223,7 +223,11 @@ async function walkUpForConfig(dir: string): Promise<string | null> {
 let _testConfigDir: string | undefined;
 
 /**
- * @internal - for testing only
+ * Set the config directory for testing purposes.
+ *
+ * @internal NOT part of public API — for testing only.
+ * @deprecated Internal test utility. Do not use in production code.
+ *   This mutates global module state and is only intended for test setup.
  */
 export function _setTestConfigDir(dir: string | undefined): void {
   _testConfigDir = dir;

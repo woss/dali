@@ -20,7 +20,7 @@
  * ```
  */
 
-import type { SurrealDriver } from '../sdk/driver/types.js';
+import type { DaliORM } from '../sdk/dali-orm.js';
 import type { TableDefinition } from '../sdk/table.js';
 import { DeleteBuilder } from './delete.js';
 import { InsertBuilder } from './insert.js';
@@ -40,15 +40,15 @@ import { UpdateBuilder } from './update.js';
  */
 export type TableBinding<TDef extends TableDefinition> = TDef & {
   /** Create a bound SelectBuilder */
-  select(driver: SurrealDriver): SelectBuilder<TDef>;
+  select(orm: DaliORM): SelectBuilder<TDef>;
   /** Create a bound InsertBuilder */
-  insert(driver: SurrealDriver): InsertBuilder<TDef>;
+  insert(orm: DaliORM): InsertBuilder<TDef>;
   /** Create a bound UpdateBuilder */
-  update(driver: SurrealDriver): UpdateBuilder<TDef>;
+  update(orm: DaliORM): UpdateBuilder<TDef>;
   /** Create a bound DeleteBuilder */
-  delete(driver: SurrealDriver): DeleteBuilder<TDef>;
+  delete(orm: DaliORM): DeleteBuilder<TDef>;
   /** Create a bound RelateBuilder (only meaningful for relation tables) */
-  relate(driver: SurrealDriver): RelateBuilder<TDef>;
+  relate(orm: DaliORM): RelateBuilder<TDef>;
 };
 
 // ============================================================================
@@ -58,20 +58,19 @@ export type TableBinding<TDef extends TableDefinition> = TDef & {
 /**
  * Enhance a TableDefinition with builder factory methods.
  *
- * Mutates the table definition object by adding `.select()`, `.insert()`,
- * `.update()`, and `.delete()` methods, then returns it typed as a TableBinding.
+ * Returns a new object (does NOT mutate the input) with `.select()`, `.insert()`,
+ * `.update()`, `.delete()`, and `.relate()` methods added.
  *
  * @param tableDef - The table definition to enhance
- * @returns The same object typed with builder methods
+ * @returns A new object typed with builder methods
  */
 export function bindTable<TDef extends TableDefinition>(tableDef: TDef): TableBinding<TDef> {
-  const binding = tableDef as unknown as TableBinding<TDef>;
-
-  binding.select = (driver: SurrealDriver) => new SelectBuilder(driver, tableDef);
-  binding.insert = (driver: SurrealDriver) => new InsertBuilder(driver, tableDef);
-  binding.update = (driver: SurrealDriver) => new UpdateBuilder(driver, tableDef);
-  binding.delete = (driver: SurrealDriver) => new DeleteBuilder(driver, tableDef);
-  binding.relate = (driver: SurrealDriver) => relateFactory(driver, tableDef);
-
-  return binding;
+  return {
+    ...tableDef,
+    select: (orm: DaliORM) => new SelectBuilder(orm, tableDef),
+    insert: (orm: DaliORM) => new InsertBuilder(orm, tableDef),
+    update: (orm: DaliORM) => new UpdateBuilder(orm, tableDef),
+    delete: (orm: DaliORM) => new DeleteBuilder(orm, tableDef),
+    relate: (orm: DaliORM) => relateFactory(orm, tableDef),
+  } as TableBinding<TDef>;
 }

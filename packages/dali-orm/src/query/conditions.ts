@@ -14,6 +14,10 @@ export {
   containsAll,
   containsAny,
   containsNone,
+  /** Exact equality — treats the value as a raw SurrealQL expression (no escaping).
+   * Unlike `eq()` which escapes/parameterizes the value, `eeq()` passes it
+   * through literally. Use for column-to-column comparisons or SurrealQL
+   * functions where the right-hand side must not be treated as a string literal. */
   eeq,
   eq,
   expr,
@@ -32,7 +36,7 @@ export {
 export type { Expr, ExprCtx, ExprLike };
 
 // Alias for SDK Expr type
-export type SurrealCondition = Expr;
+export type Condition = Expr;
 
 // ============================================================================
 // Simple Condition Helpers (Serialize to SurrealQL + params)

@@ -19,13 +19,13 @@ vi.unmock('../../../sdk/driver/orm-connection.js');
 import {
   getMigrationProgressString,
   handleResumeWithProgress,
-  migrateDev,
   migrateDeploy,
+  migrateDev,
   migrateResume,
   migrateSync,
   migrateUp,
 } from '../migrate.js';
-import { createMigrationFile, createTempDir as createTmpDir, cleanupDir } from './helpers.js';
+import { cleanupDir, createMigrationFile, createTempDir as createTmpDir } from './helpers.js';
 import { createConnection, safeDisconnect } from '../operations.js';
 import type { Config } from '../../config.js';
 
@@ -664,7 +664,11 @@ describe('migrateDeploy', () => {
       namespace: 'test_deploy',
       database: 'test_deploy_db',
       schema: { dir: './schema', pattern: '**/*.ts' },
-      migrations: { dir: './migrations', journalDir: './meta', table: '__test_deploy_mig' },
+      migrations: {
+        dir: './migrations',
+        journalDir: './meta',
+        table: '__test_deploy_mig',
+      },
     };
 
     await expect(migrateDeploy({ config })).rejects.toThrow(/shadow/i);

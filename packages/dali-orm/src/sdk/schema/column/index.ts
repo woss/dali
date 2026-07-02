@@ -1,4 +1,6 @@
+export { geometry } from './geometry.js';
 export { record } from './record.js';
+export { tuple } from './tuple.js';
 export {
   array,
   bool,

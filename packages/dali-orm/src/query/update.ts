@@ -6,6 +6,7 @@
  */
 
 import type { SurrealDriver } from '../sdk/driver/types.js';
+import type { DaliORM } from '../sdk/dali-orm.js';
 import type { TableDefinition } from '../sdk/table.js';
 import type { InferSelectResult } from './types.js';
 
@@ -15,11 +16,11 @@ export class UpdateBuilder<TDef extends TableDefinition, TResult = InferSelectRe
   private recordId?: string;
   private _data: Record<string, unknown> = {};
 
-  constructor(driver: SurrealDriver, tableDef: TDef) {
-    if (!driver) throw new Error('Driver is required');
+  constructor(orm: DaliORM, tableDef: TDef) {
+    if (!orm) throw new Error('DaliORM instance is required');
     if (!tableDef?.name) throw new Error('Table definition with name is required');
 
-    this.driver = driver;
+    this.driver = orm.getDriver();
     this.tableDef = tableDef;
   }
 
@@ -60,8 +61,8 @@ export class UpdateBuilder<TDef extends TableDefinition, TResult = InferSelectRe
 
 /** Factory function */
 export function update<TDef extends TableDefinition>(
-  driver: SurrealDriver,
+  orm: DaliORM,
   tableDef: TDef,
 ): UpdateBuilder<TDef> {
-  return new UpdateBuilder(driver, tableDef);
+  return new UpdateBuilder(orm, tableDef);
 }

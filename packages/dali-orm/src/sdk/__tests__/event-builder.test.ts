@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vite-plus/test';
-import { defineEvent } from '../schema/event-builder.js';
+import { defineEvent } from '../schema.js';
 
 describe('defineEvent builder', () => {
   it('creates event with name and required fields', () => {

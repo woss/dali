@@ -92,16 +92,17 @@ await orm.query('SELECT * FROM users WHERE email = $email', { email: 'a@b.com' }
 
 ## Reference Files
 
-| Task                                      | File                                                               |
-| ----------------------------------------- | ------------------------------------------------------------------ |
-| Column builders, defineTable, OrmSchema   | [references/schema-definition.md](references/schema-definition.md) |
-| DaliORM class, connect, CRUD operations   | [references/dali-orm-class.md](references/dali-orm-class.md)       |
-| Query builders (select/insert/update/etc) | [references/query-builders.md](references/query-builders.md)       |
-| Conditions DSL (eq/ne/gt/and/or/isNull)   | [references/conditions.md](references/conditions.md)               |
-| Migration system (CLI + programmatic)     | [references/migrations.md](references/migrations.md)               |
-| Database function wrappers                | [references/functions.md](references/functions.md)                 |
-| Type inference utilities                  | [references/type-inference.md](references/type-inference.md)       |
-| Driver configuration                      | [references/driver-config.md](references/driver-config.md)         |
+| Task                                          | File                                                               |
+| --------------------------------------------- | ------------------------------------------------------------------ |
+| Column builders, defineTable, OrmSchema       | [references/schema-definition.md](references/schema-definition.md) |
+| DaliORM class, connect, CRUD operations       | [references/dali-orm-class.md](references/dali-orm-class.md)       |
+| Query builders (select/insert/update/etc)     | [references/query-builders.md](references/query-builders.md)       |
+| Conditions DSL (eq/ne/gt/and/or/isNull)       | [references/conditions.md](references/conditions.md)               |
+| Migration system (CLI + programmatic)         | [references/migrations.md](references/migrations.md)               |
+| Database function wrappers                    | [references/functions.md](references/functions.md)                 |
+| RecordId conventions (I/O boundary, services) | [references/id-conventions.md](references/id-conventions.md)       |
+| Type inference utilities                      | [references/type-inference.md](references/type-inference.md)       |
+| Driver configuration                          | [references/driver-config.md](references/driver-config.md)         |
 
 ## Loading Files
 
@@ -114,6 +115,7 @@ await orm.query('SELECT * FROM users WHERE email = $email', { email: 'a@b.com' }
 - [ ] [references/migrations.md](references/migrations.md) — if generating/applying migrations
 - [ ] [references/functions.md](references/functions.md) — if using SurrealDB functions (math, string, vector, etc.)
 - [ ] [references/type-inference.md](references/type-inference.md) — if working with InferSelectResult, custom types
+- [ ] [references/id-conventions.md](references/id-conventions.md) — if writing service methods, routes, or MCP handlers that handle record IDs
 - [ ] [references/driver-config.md](references/driver-config.md) — if configuring connections, config files
 
 ## Export Map

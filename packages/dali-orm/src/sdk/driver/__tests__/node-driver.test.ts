@@ -62,6 +62,7 @@ vi.mock('surrealdb', () => {
     DatabaseAuth: class {},
     AccessRecordAuth: class {},
     AnyAuth: class {},
+    SystemAuth: class {},
   };
 });
 
@@ -287,14 +288,14 @@ describe('getToken', () => {
     expect(driver.getToken()).toBeNull();
   });
 
-  it('returns the access token after signin via connect', async () => {
+  it('returns null token for system auth via connect', async () => {
     const driver = new NodeDriver({
       driver: 'node',
       url: 'ws://localhost:8000',
       auth: { type: 'root', username: 'root', password: 'root' },
     });
     await driver.connect();
-    expect(driver.getToken()).toBe('token123');
+    expect(driver.getToken()).toBeNull();
   });
 });
 
@@ -354,7 +355,7 @@ describe('connect', () => {
     expect(mockConnect).not.toHaveBeenCalled();
   });
 
-  it('signs in first then uses namespace/database for root auth', async () => {
+  it('passes root auth in connect options', async () => {
     const driver = new NodeDriver({
       driver: 'node',
       url: 'ws://localhost:8000',
@@ -362,15 +363,19 @@ describe('connect', () => {
     });
     await driver.connect();
 
-    expect(mockSignin).toHaveBeenCalledTimes(1);
-    expect(mockUse).toHaveBeenCalledTimes(1);
-
-    const signinCallOrder = mockSignin.mock.invocationCallOrder[0];
-    const useCallOrder = mockUse.mock.invocationCallOrder[0];
-    expect(signinCallOrder).toBeLessThan(useCallOrder);
+    expect(mockConnect).toHaveBeenCalledTimes(1);
+    const opts = mockConnect.mock.calls[0][1];
+    expect(opts).toMatchObject({
+      namespace: driver.config.namespace,
+      database: driver.config.database,
+      authentication: { username: 'root', password: 'root' },
+    });
+    expect(mockSignin).not.toHaveBeenCalled();
+    expect(mockUse).not.toHaveBeenCalled();
+    expect(driver.getToken()).toBeNull();
   });
 
-  it('signs in first then uses namespace/database for namespace auth', async () => {
+  it('passes namespace auth in connect options', async () => {
     const driver = new NodeDriver({
       driver: 'node',
       url: 'ws://localhost:8000',
@@ -383,15 +388,18 @@ describe('connect', () => {
     });
     await driver.connect();
 
-    expect(mockSignin).toHaveBeenCalledTimes(1);
-    expect(mockUse).toHaveBeenCalledTimes(1);
-
-    const signinCallOrder = mockSignin.mock.invocationCallOrder[0];
-    const useCallOrder = mockUse.mock.invocationCallOrder[0];
-    expect(signinCallOrder).toBeLessThan(useCallOrder);
+    expect(mockConnect).toHaveBeenCalledTimes(1);
+    const opts = mockConnect.mock.calls[0][1];
+    expect(opts).toMatchObject({
+      namespace: driver.config.namespace,
+      database: driver.config.database,
+      authentication: { namespace: 'ns', username: 'user', password: 'pass' },
+    });
+    expect(mockSignin).not.toHaveBeenCalled();
+    expect(mockUse).not.toHaveBeenCalled();
   });
 
-  it('uses namespace/database first then signs in for database auth', async () => {
+  it('passes database auth in connect options', async () => {
     const driver = new NodeDriver({
       driver: 'node',
       url: 'ws://localhost:8000',
@@ -405,12 +413,15 @@ describe('connect', () => {
     });
     await driver.connect();
 
-    expect(mockUse).toHaveBeenCalledTimes(1);
-    expect(mockSignin).toHaveBeenCalledTimes(1);
-
-    const useCallOrder = mockUse.mock.invocationCallOrder[0];
-    const signinCallOrder = mockSignin.mock.invocationCallOrder[0];
-    expect(useCallOrder).toBeLessThan(signinCallOrder);
+    expect(mockConnect).toHaveBeenCalledTimes(1);
+    const opts = mockConnect.mock.calls[0][1];
+    expect(opts).toMatchObject({
+      namespace: driver.config.namespace,
+      database: driver.config.database,
+      authentication: { namespace: 'ns', database: 'db', username: 'user', password: 'pass' },
+    });
+    expect(mockSignin).not.toHaveBeenCalled();
+    expect(mockUse).not.toHaveBeenCalled();
   });
 
   it('uses namespace/database first then signs in for record auth', async () => {
@@ -437,19 +448,34 @@ describe('connect', () => {
   it('adds /rpc suffix to ws:// URLs', async () => {
     const driver = new NodeDriver({ driver: 'node', url: 'ws://localhost:8000' });
     await driver.connect();
-    expect(mockConnect).toHaveBeenCalledWith('ws://localhost:8000/rpc');
+    expect(mockConnect).toHaveBeenCalledTimes(1);
+    expect(mockConnect.mock.calls[0][0]).toBe('ws://localhost:8000/rpc');
+    expect(mockConnect.mock.calls[0][1]).toMatchObject({
+      namespace: driver.config.namespace,
+      database: driver.config.database,
+    });
   });
 
   it('adds /rpc suffix to wss:// URLs', async () => {
     const driver = new NodeDriver({ driver: 'node', url: 'wss://localhost:8000' });
     await driver.connect();
-    expect(mockConnect).toHaveBeenCalledWith('wss://localhost:8000/rpc');
+    expect(mockConnect).toHaveBeenCalledTimes(1);
+    expect(mockConnect.mock.calls[0][0]).toBe('wss://localhost:8000/rpc');
+    expect(mockConnect.mock.calls[0][1]).toMatchObject({
+      namespace: driver.config.namespace,
+      database: driver.config.database,
+    });
   });
 
   it('does NOT add /rpc to http:// URLs', async () => {
     const driver = new NodeDriver({ driver: 'node', url: 'http://localhost:8000' });
     await driver.connect();
-    expect(mockConnect).toHaveBeenCalledWith('http://localhost:8000');
+    expect(mockConnect).toHaveBeenCalledTimes(1);
+    expect(mockConnect.mock.calls[0][0]).toBe('http://localhost:8000');
+    expect(mockConnect.mock.calls[0][1]).toMatchObject({
+      namespace: driver.config.namespace,
+      database: driver.config.database,
+    });
   });
 
   it('does NOT add /rpc if already present', async () => {
@@ -458,13 +484,23 @@ describe('connect', () => {
       url: 'ws://localhost:8000/rpc',
     });
     await driver.connect();
-    expect(mockConnect).toHaveBeenCalledWith('ws://localhost:8000/rpc');
+    expect(mockConnect).toHaveBeenCalledTimes(1);
+    expect(mockConnect.mock.calls[0][0]).toBe('ws://localhost:8000/rpc');
+    expect(mockConnect.mock.calls[0][1]).toMatchObject({
+      namespace: driver.config.namespace,
+      database: driver.config.database,
+    });
   });
 
   it('handles URL with trailing slash before adding /rpc', async () => {
     const driver = new NodeDriver({ driver: 'node', url: 'ws://localhost:8000/' });
     await driver.connect();
-    expect(mockConnect).toHaveBeenCalledWith('ws://localhost:8000/rpc');
+    expect(mockConnect).toHaveBeenCalledTimes(1);
+    expect(mockConnect.mock.calls[0][0]).toBe('ws://localhost:8000/rpc');
+    expect(mockConnect.mock.calls[0][1]).toMatchObject({
+      namespace: driver.config.namespace,
+      database: driver.config.database,
+    });
   });
 
   it('wraps connection errors in a descriptive message', async () => {
@@ -486,14 +522,17 @@ describe('connect', () => {
     expect(driver.isConnected()).toBe(false);
   });
 
-  it('skips signin when no auth is provided', async () => {
+  it('passes ns/db in connect options when no auth', async () => {
     const driver = new NodeDriver({ driver: 'node', url: 'ws://localhost:8000' });
     await driver.connect();
-    expect(mockSignin).not.toHaveBeenCalled();
-    expect(mockUse).toHaveBeenCalledWith({
+    expect(mockConnect).toHaveBeenCalledTimes(1);
+    const opts = mockConnect.mock.calls[0][1];
+    expect(opts).toMatchObject({
       namespace: driver.config.namespace,
       database: driver.config.database,
     });
+    expect(mockSignin).not.toHaveBeenCalled();
+    expect(mockUse).not.toHaveBeenCalled();
   });
 });
 
@@ -548,7 +587,8 @@ describe('signin', () => {
       auth: { type: 'root', username: 'root', password: 'root' },
     });
     await driver.connect();
-    expect(driver.getToken()).toBe('token123');
+    // System auth passes authentication via ConnectOptions — SDK manages token internally
+    expect(driver.getToken()).toBeNull();
   });
 });
 
@@ -675,12 +715,14 @@ describe('buildSigninObject (via signin)', () => {
       auth: { type: 'root', username: 'root', password: 'root' },
     });
     await driver.connect();
-    // mockSignin called during connect with the built object
-    const signinArg = mockSignin.mock.calls[0][0];
-    expect(signinArg).toEqual({
+    // System auth passed via ConnectOptions.authentication
+    expect(mockConnect).toHaveBeenCalledTimes(1);
+    const auth = mockConnect.mock.calls[0][1].authentication;
+    expect(auth).toEqual({
       username: 'root',
       password: 'root',
     });
+    expect(mockSignin).not.toHaveBeenCalled();
   });
 
   it('builds namespace auth object', async () => {
@@ -695,8 +737,10 @@ describe('buildSigninObject (via signin)', () => {
       },
     });
     await driver.connect();
-    const signinArg = mockSignin.mock.calls[0][0];
-    expect(signinArg).toEqual({
+    // System auth passed via ConnectOptions.authentication
+    expect(mockConnect).toHaveBeenCalledTimes(1);
+    const auth = mockConnect.mock.calls[0][1].authentication;
+    expect(auth).toEqual({
       namespace: 'ns',
       username: 'ns_user',
       password: 'ns_pass',
@@ -716,8 +760,10 @@ describe('buildSigninObject (via signin)', () => {
       },
     });
     await driver.connect();
-    const signinArg = mockSignin.mock.calls[0][0];
-    expect(signinArg).toEqual({
+    // System auth passed via ConnectOptions.authentication
+    expect(mockConnect).toHaveBeenCalledTimes(1);
+    const auth = mockConnect.mock.calls[0][1].authentication;
+    expect(auth).toEqual({
       namespace: 'ns',
       database: 'db',
       username: 'db_user',

@@ -9,6 +9,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vite-plus/test';
 import { select } from '../../../query/select.js';
 import { EmbeddedDriver } from '../../driver/embedded-driver.js';
+import type { DaliORM } from '../../dali-orm.js';
 import { array, bool, float, int, string } from '../../schema/column/index.js';
 import { defineTable } from '../../table.js';
 import {
@@ -1517,6 +1518,7 @@ describe('Function SQL output', () => {
 
 describe('End-to-end function tests', () => {
   let driver: EmbeddedDriver;
+  let orm: DaliORM;
 
   /** Define user table schema in SurrealDB */
   async function defineUserTable(): Promise<void> {
@@ -1536,6 +1538,7 @@ describe('End-to-end function tests', () => {
       database: 'test_db',
       mode: 'memory',
     });
+    orm = { getDriver: () => driver } as unknown as DaliORM;
     await driver.connect();
     await defineUserTable();
 
@@ -1561,7 +1564,7 @@ describe('End-to-end function tests', () => {
 
   describe('count()', () => {
     it('verify 3 records exist', async () => {
-      const result = await select(driver, users).execute();
+      const result = await select(orm, users).execute();
       expect(result).toHaveLength(3);
     });
 
@@ -1577,7 +1580,7 @@ describe('End-to-end function tests', () => {
 
   describe('math functions', () => {
     it('mathRound rounds values', async () => {
-      const result = await select(driver, users)
+      const result = await select(orm, users)
         .fields(as_(mathRound($('score')), 'rounded'))
         .where((w) => w.eq('name', 'Alice'))
         .execute();
@@ -1586,7 +1589,7 @@ describe('End-to-end function tests', () => {
     });
 
     it('mathFloor floors values', async () => {
-      const result = await select(driver, users)
+      const result = await select(orm, users)
         .fields(as_(mathFloor($('score')), 'floored'))
         .where((w) => w.eq('name', 'Alice'))
         .execute();
@@ -1595,7 +1598,7 @@ describe('End-to-end function tests', () => {
     });
 
     it('mathCeil ceils values', async () => {
-      const result = await select(driver, users)
+      const result = await select(orm, users)
         .fields(as_(mathCeil($('score')), 'ceiled'))
         .where((w) => w.eq('name', 'Alice'))
         .execute();
@@ -1608,7 +1611,7 @@ describe('End-to-end function tests', () => {
         "CREATE user:neg SET name = 'Neg', email = 'neg@test.com', age = 20, score = -5.5, active = false",
       );
 
-      const result = await select(driver, users)
+      const result = await select(orm, users)
         .fields(as_(mathAbs($('score')), 'abs_val'))
         .where((w) => w.eq('name', 'Neg'))
         .execute();
@@ -1617,7 +1620,7 @@ describe('End-to-end function tests', () => {
     });
 
     it('mathSqrt computes square root', async () => {
-      const result = await select(driver, users)
+      const result = await select(orm, users)
         .fields(as_(mathSqrt($('age')), 'sqrt_age'))
         .where((w) => w.eq('name', 'Alice'))
         .execute();
@@ -1627,7 +1630,7 @@ describe('End-to-end function tests', () => {
 
     it('mathSum per row returns single element array value', async () => {
       // math::sum([age]) returns the single element of the array per row
-      const result = await select(driver, users)
+      const result = await select(orm, users)
         .fields(as_(mathSum($('age')), 'sum_age'))
         .where((w) => w.eq('name', 'Alice'))
         .execute();
@@ -1636,7 +1639,7 @@ describe('End-to-end function tests', () => {
     });
 
     it('mathMax per row returns single element array value', async () => {
-      const result = await select(driver, users)
+      const result = await select(orm, users)
         .fields(as_(mathMax($('age')), 'max_age'))
         .where((w) => w.eq('name', 'Bob'))
         .execute();
@@ -1645,7 +1648,7 @@ describe('End-to-end function tests', () => {
     });
 
     it('mathMin per row returns single element array value', async () => {
-      const result = await select(driver, users)
+      const result = await select(orm, users)
         .fields(as_(mathMin($('age')), 'min_age'))
         .where((w) => w.eq('name', 'Bob'))
         .execute();
@@ -1654,7 +1657,7 @@ describe('End-to-end function tests', () => {
     });
 
     it('mathMean per row returns single element array value', async () => {
-      const result = await select(driver, users)
+      const result = await select(orm, users)
         .fields(as_(mathMean($('age')), 'mean_age'))
         .where((w) => w.eq('name', 'Bob'))
         .execute();
@@ -1663,7 +1666,7 @@ describe('End-to-end function tests', () => {
     });
 
     it('mathRandom returns a number', async () => {
-      const result = await select(driver, users).fields(as_(mathRandom(), 'r')).limit(1).execute();
+      const result = await select(orm, users).fields(as_(mathRandom(), 'r')).limit(1).execute();
 
       const record = result[0] as Record<string, unknown>;
       expect(record.r).toBeDefined();
@@ -1677,7 +1680,7 @@ describe('End-to-end function tests', () => {
 
   describe('string functions', () => {
     it('stringLowercase transforms to lowercase', async () => {
-      const result = await select(driver, users)
+      const result = await select(orm, users)
         .fields(as_(stringLowercase($('name')), 'lowered'))
         .where((w) => w.eq('name', 'Alice'))
         .execute();
@@ -1686,7 +1689,7 @@ describe('End-to-end function tests', () => {
     });
 
     it('stringUppercase transforms to uppercase', async () => {
-      const result = await select(driver, users)
+      const result = await select(orm, users)
         .fields(as_(stringUppercase($('name')), 'uppered'))
         .where((w) => w.eq('name', 'Alice'))
         .execute();
@@ -1695,7 +1698,7 @@ describe('End-to-end function tests', () => {
     });
 
     it('stringLen returns string length', async () => {
-      const result = await select(driver, users)
+      const result = await select(orm, users)
         .fields(as_(stringLen($('name')), 'len'))
         .where((w) => w.eq('name', 'Alice'))
         .execute();
@@ -1704,7 +1707,7 @@ describe('End-to-end function tests', () => {
     });
 
     it('stringConcat concatenates values', async () => {
-      const result = await select(driver, users)
+      const result = await select(orm, users)
         .fields(as_(stringConcat($('name'), $("' - '"), $('email')), 'joined'))
         .where((w) => w.eq('name', 'Alice'))
         .execute();
@@ -1713,23 +1716,21 @@ describe('End-to-end function tests', () => {
     });
 
     it('stringContains filters records in WHERE', async () => {
-      const result = await select(driver, users)
-        .where("string::contains(email, 'alice')")
-        .execute();
+      const result = await select(orm, users).where("string::contains(email, 'alice')").execute();
 
       expect(result).toHaveLength(1);
       expect((result[0] as Record<string, unknown>).name).toBe('Alice');
     });
 
     it('stringStartsWith filters records in WHERE', async () => {
-      const result = await select(driver, users).where("string::starts_with(name, 'A')").execute();
+      const result = await select(orm, users).where("string::starts_with(name, 'A')").execute();
 
       expect(result).toHaveLength(1);
       expect((result[0] as Record<string, unknown>).name).toBe('Alice');
     });
 
     it('stringEndsWith filters records in WHERE', async () => {
-      const result = await select(driver, users).where("string::ends_with(name, 'e')").execute();
+      const result = await select(orm, users).where("string::ends_with(name, 'e')").execute();
 
       // Alice and Charlie both end with 'e'
       expect(result).toHaveLength(2);
@@ -1752,7 +1753,7 @@ describe('End-to-end function tests', () => {
         "CREATE user:pad SET name = '  padded  ', email = 'pad@test.com', active = true",
       );
 
-      const result = await select(driver, users)
+      const result = await select(orm, users)
         .fields(as_(stringTrim($('name')), 'trimmed'))
         .where((w) => w.eq('name', '  padded  '))
         .execute();
@@ -1761,7 +1762,7 @@ describe('End-to-end function tests', () => {
     });
 
     it('stringReverse reverses string', async () => {
-      const result = await select(driver, users)
+      const result = await select(orm, users)
         .fields(as_(stringReverse($("'abc'")), 'reversed'))
         .limit(1)
         .execute();
@@ -1770,7 +1771,7 @@ describe('End-to-end function tests', () => {
     });
 
     it('stringRepeat repeats string', async () => {
-      const result = await select(driver, users)
+      const result = await select(orm, users)
         .fields(as_(stringRepeat($("'ab'"), $('3')), 'repeated'))
         .limit(1)
         .execute();
@@ -1779,7 +1780,7 @@ describe('End-to-end function tests', () => {
     });
 
     it('stringReplace substitutes text', async () => {
-      const result = await select(driver, users)
+      const result = await select(orm, users)
         .fields(as_(stringReplace($("'hello world'"), $("'world'"), $("'there'")), 'replaced'))
         .limit(1)
         .execute();
@@ -1788,7 +1789,7 @@ describe('End-to-end function tests', () => {
     });
 
     it('stringSlice extracts substring', async () => {
-      const result = await select(driver, users)
+      const result = await select(orm, users)
         .fields(as_(stringSlice($('name'), $('1'), $('3')), 'sliced'))
         .where((w) => w.eq('name', 'Alice'))
         .execute();
@@ -1799,7 +1800,7 @@ describe('End-to-end function tests', () => {
     });
 
     it('stringSplit splits by delimiter', async () => {
-      const result = await select(driver, users)
+      const result = await select(orm, users)
         .fields(as_(stringSplit($("'a,b,c'"), $("','")), 'split'))
         .limit(1)
         .execute();
@@ -1810,7 +1811,7 @@ describe('End-to-end function tests', () => {
     });
 
     it('stringIsEmail validates email', async () => {
-      const result = await select(driver, users)
+      const result = await select(orm, users)
         .fields(as_(stringIsEmail($('email')), 'is_email'))
         .where((w) => w.eq('name', 'Alice'))
         .execute();
@@ -1819,7 +1820,7 @@ describe('End-to-end function tests', () => {
     });
 
     it('stringIsUrl validates url', async () => {
-      const result = await select(driver, users)
+      const result = await select(orm, users)
         .fields(as_(stringIsUrl($("'https://example.com'")), 'is_url'))
         .limit(1)
         .execute();
@@ -1828,7 +1829,7 @@ describe('End-to-end function tests', () => {
     });
 
     it('stringIsUuid validates uuid', async () => {
-      const result = await select(driver, users)
+      const result = await select(orm, users)
         .fields(as_(stringIsUuid($("'550e8400-e29b-41d4-a716-446655440000'")), 'is_uuid'))
         .limit(1)
         .execute();
@@ -1837,7 +1838,7 @@ describe('End-to-end function tests', () => {
     });
 
     it('stringIsAlphanum validates alphanumeric', async () => {
-      const result = await select(driver, users)
+      const result = await select(orm, users)
         .fields(as_(stringIsAlphanum($('name')), 'is_alphanum'))
         .where((w) => w.eq('name', 'Alice'))
         .execute();
@@ -1852,7 +1853,7 @@ describe('End-to-end function tests', () => {
 
   describe('time functions', () => {
     it('timeNow returns current datetime', async () => {
-      const result = await select(driver, users).fields(as_(timeNow(), 'now')).limit(1).execute();
+      const result = await select(orm, users).fields(as_(timeNow(), 'now')).limit(1).execute();
 
       const val = (result[0] as Record<string, unknown>).now;
       expect(val).toBeDefined();
@@ -1861,7 +1862,7 @@ describe('End-to-end function tests', () => {
     });
 
     it('timeYear extracts year from datetime', async () => {
-      const result = await select(driver, users)
+      const result = await select(orm, users)
         .fields(as_(timeYear($("d'2024-01-15T10:30:00Z'")), 'y'))
         .limit(1)
         .execute();
@@ -1870,7 +1871,7 @@ describe('End-to-end function tests', () => {
     });
 
     it('timeMonth extracts month from datetime', async () => {
-      const result = await select(driver, users)
+      const result = await select(orm, users)
         .fields(as_(timeMonth($("d'2024-01-15T10:30:00Z'")), 'm'))
         .limit(1)
         .execute();
@@ -1879,7 +1880,7 @@ describe('End-to-end function tests', () => {
     });
 
     it('timeDay extracts day from datetime', async () => {
-      const result = await select(driver, users)
+      const result = await select(orm, users)
         .fields(as_(timeDay($("d'2024-01-15T10:30:00Z'")), 'd'))
         .limit(1)
         .execute();
@@ -1888,7 +1889,7 @@ describe('End-to-end function tests', () => {
     });
 
     it('timeHour extracts hour from datetime', async () => {
-      const result = await select(driver, users)
+      const result = await select(orm, users)
         .fields(as_(timeHour($("d'2024-01-15T10:30:00Z'")), 'h'))
         .limit(1)
         .execute();
@@ -1897,7 +1898,7 @@ describe('End-to-end function tests', () => {
     });
 
     it('timeMinute extracts minute from datetime', async () => {
-      const result = await select(driver, users)
+      const result = await select(orm, users)
         .fields(as_(timeMinute($("d'2024-01-15T10:30:00Z'")), 'min'))
         .limit(1)
         .execute();
@@ -1906,7 +1907,7 @@ describe('End-to-end function tests', () => {
     });
 
     it('timeSecond extracts second from datetime', async () => {
-      const result = await select(driver, users)
+      const result = await select(orm, users)
         .fields(as_(timeSecond($("d'2024-01-15T10:30:00Z'")), 's'))
         .limit(1)
         .execute();
@@ -1915,7 +1916,7 @@ describe('End-to-end function tests', () => {
     });
 
     it('timeUnix returns unix timestamp', async () => {
-      const result = await select(driver, users)
+      const result = await select(orm, users)
         .fields(as_(timeUnix($("d'2024-01-15T10:30:00Z'")), 'ts'))
         .limit(1)
         .execute();
@@ -1928,7 +1929,7 @@ describe('End-to-end function tests', () => {
 
     it('timeWeekday returns weekday number', async () => {
       // 2024-01-15 is a Monday
-      const result = await select(driver, users)
+      const result = await select(orm, users)
         .fields(as_(timeWeekday($("d'2024-01-15T10:30:00Z'")), 'wd'))
         .limit(1)
         .execute();
@@ -1944,7 +1945,7 @@ describe('End-to-end function tests', () => {
 
   describe('crypto functions', () => {
     it('cryptoMd5 produces correct MD5 hash', async () => {
-      const result = await select(driver, users)
+      const result = await select(orm, users)
         .fields(as_(cryptoMd5($("'hello'")), 'hash'))
         .limit(1)
         .execute();
@@ -1953,7 +1954,7 @@ describe('End-to-end function tests', () => {
     });
 
     it('cryptoSha256 produces correct SHA-256 hash', async () => {
-      const result = await select(driver, users)
+      const result = await select(orm, users)
         .fields(as_(cryptoSha256($("'hello'")), 'hash'))
         .limit(1)
         .execute();
@@ -1971,7 +1972,7 @@ describe('End-to-end function tests', () => {
   describe('geo functions', () => {
     it('geoDistance calculates distance between points', async () => {
       // Distance between (0,0) and (0,1) in degrees ≈ 111km
-      const result = await select(driver, users)
+      const result = await select(orm, users)
         .fields(as_(geoDistance($('(0, 0)'), $('(0, 1)')), 'dist'))
         .limit(1)
         .execute();
@@ -1990,7 +1991,7 @@ describe('End-to-end function tests', () => {
 
   describe('type conversion functions', () => {
     it('typeInt converts string to integer', async () => {
-      const result = await select(driver, users)
+      const result = await select(orm, users)
         .fields(as_(typeInt($("'42'")), 'val'))
         .limit(1)
         .execute();
@@ -1999,7 +2000,7 @@ describe('End-to-end function tests', () => {
     });
 
     it('typeString converts number to string', async () => {
-      const result = await select(driver, users)
+      const result = await select(orm, users)
         .fields(as_(typeString($('42')), 'val'))
         .limit(1)
         .execute();
@@ -2008,7 +2009,7 @@ describe('End-to-end function tests', () => {
     });
 
     it('typeBool converts to boolean', async () => {
-      const result = await select(driver, users)
+      const result = await select(orm, users)
         .fields(as_(typeBool($("'true'")), 'val'))
         .limit(1)
         .execute();
@@ -2023,7 +2024,7 @@ describe('End-to-end function tests', () => {
 
   describe('record and meta functions', () => {
     it('recordId extracts string ID from record', async () => {
-      const result = await select(driver, users)
+      const result = await select(orm, users)
         .fields(as_(recordId($('id')), 'rid'))
         .where((w) => w.eq('name', 'Alice'))
         .execute();
@@ -2032,7 +2033,7 @@ describe('End-to-end function tests', () => {
     });
 
     it('recordTable extracts table name from record', async () => {
-      const result = await select(driver, users)
+      const result = await select(orm, users)
         .fields(as_(recordTable($('id')), 'tbl'))
         .where((w) => w.eq('name', 'Alice'))
         .execute();
@@ -2041,7 +2042,7 @@ describe('End-to-end function tests', () => {
     });
 
     it('metaId extracts string ID from record', async () => {
-      const result = await select(driver, users)
+      const result = await select(orm, users)
         .fields(as_(metaId($('id')), 'mid'))
         .where((w) => w.eq('name', 'Alice'))
         .execute();
@@ -2050,7 +2051,7 @@ describe('End-to-end function tests', () => {
     });
 
     it('metaTable extracts table name from record', async () => {
-      const result = await select(driver, users)
+      const result = await select(orm, users)
         .fields(as_(metaTable($('id')), 'mtbl'))
         .where((w) => w.eq('name', 'Alice'))
         .execute();
@@ -2066,7 +2067,7 @@ describe('End-to-end function tests', () => {
   describe('builder integration', () => {
     it('functions used with .fields() and .where() together', async () => {
       // Query: users with score above average math::mean
-      const result = await select(driver, users)
+      const result = await select(orm, users)
         .fields('name', as_(mathRound($('score')), 'rounded_score'))
         .where('score > 5')
         .execute();
@@ -2080,7 +2081,7 @@ describe('End-to-end function tests', () => {
     });
 
     it('multiple function wrappers compose in single query', async () => {
-      const result = await select(driver, users)
+      const result = await select(orm, users)
         .fields(
           'name',
           as_(stringUppercase($('name')), 'upper_name'),

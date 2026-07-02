@@ -118,7 +118,11 @@ export class MigrationRunner {
     this.journal = new MigrationJournalManager({
       dir: config.journalDir,
     });
-    this.migrationsTable = config.migrationsTable ?? '__migrations';
+    const raw = config.migrationsTable ?? '__migrations';
+    if (!raw.match(/^[a-zA-Z_][a-zA-Z0-9_]*$/)) {
+      throw new Error(`Invalid migrationsTable: "${raw}" — must be alphanumeric + underscore`);
+    }
+    this.migrationsTable = raw;
   }
 
   /**

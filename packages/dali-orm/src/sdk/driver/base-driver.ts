@@ -18,11 +18,13 @@ import type {
   SurrealDriver,
   Transaction,
 } from './types.js';
+import type { OrmSchema } from '../orm-schema.js';
 
 export abstract class BaseDriver implements SurrealDriver {
   protected abstract db: Surreal;
   protected connected = false;
   protected subscriptions = new Map<string, { created: number; liveSubscription?: unknown }>();
+  schema?: OrmSchema;
 
   protected warn(message: string): void {
     console.warn(message);
@@ -273,8 +275,9 @@ export abstract class BaseDriver implements SurrealDriver {
     }
 
     try {
+      const { tableName } = this.parseTableWithId(table);
       const transformedData = this.transformDatetimeValues(data);
-      const coercedData = this.coerceRecordIds(table, transformedData);
+      const coercedData = this.coerceRecordIds(tableName, transformedData);
 
       const result = (await this.db
         .upsert(new Table(table))
@@ -643,6 +646,29 @@ export abstract class BaseDriver implements SurrealDriver {
 
     const out: Record<string, unknown> = {};
 
+    // Schema-aware coercion: only coerce columns defined as record() in the table schema
+    if (this.schema) {
+      const tableDef = this.schema.getTable(tableName);
+      if (tableDef?.$columns) {
+        const recordColumns = new Set<string>();
+        for (const [colName, colDef] of Object.entries(tableDef.$columns)) {
+          if (colDef.config.recordTable) {
+            recordColumns.add(colName);
+          }
+        }
+
+        for (const [key, value] of Object.entries(input)) {
+          if (recordColumns.has(key)) {
+            out[key] = this.tryCoerceRecordId(value);
+          } else {
+            out[key] = value;
+          }
+        }
+        return out;
+      }
+    }
+
+    // Fallback: coerce all values (backward compatibility, FR-005)
     for (const [key, value] of Object.entries(input)) {
       out[key] = this.tryCoerceRecordId(value);
     }
@@ -688,7 +714,25 @@ export abstract class BaseDriver implements SurrealDriver {
     const trimmed = value.trim();
     if (!trimmed) return value;
 
-    const { tableName, recordId } = this.parseTableWithId(trimmed);
+    // Guard: only convert strings that look like valid record references.
+    // A SurrealDB record reference is "tablename:id" where tablename is a
+    // simple word (word chars only, no whitespace, no newlines) and the
+    // entire string has no whitespace/newlines outside the colon boundary.
+    // This prevents accidental conversion of long text (e.g. changelogs,
+    // descriptions) that happen to contain a colon somewhere inside.
+    if (trimmed.includes('\n') || trimmed.includes('\r')) return value;
+
+    const colonIndex = trimmed.indexOf(':');
+    if (colonIndex === -1) return value;
+
+    const tableName = trimmed.substring(0, colonIndex);
+    const recordId = trimmed.substring(colonIndex + 1);
+
+    // table name must be simple word characters (matching SurrealDB table naming)
+    if (!/^\w+$/.test(tableName)) return value;
+    // record id part must contain no whitespace — no spaces, tabs, newlines
+    if (/\s/.test(recordId)) return value;
+
     if (!recordId) return value;
     if (!tableName) return value;
 

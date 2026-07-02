@@ -7,6 +7,7 @@
  */
 
 import type { SurrealDriver } from '../sdk/driver/types.js';
+import type { DaliORM } from '../sdk/dali-orm.js';
 import type { SqlExpr } from '../sdk/functions/sql.js';
 import type { TableDefinition } from '../sdk/table.js';
 import type { ConditionOp, SerializedCondition } from './conditions.js';
@@ -67,11 +68,11 @@ export class SelectBuilder<TDef extends TableDefinition, TResult = InferSelectRe
   }[] = [];
   private _cteQueries?: { name: string; query: SelectBuilder<any, any> }[];
 
-  constructor(driver: SurrealDriver, tableDef: TDef) {
-    if (!driver) throw new Error('Driver is required');
+  constructor(orm: DaliORM, tableDef: TDef) {
+    if (!orm) throw new Error('DaliORM instance is required');
     if (!tableDef?.name) throw new Error('Table definition with name is required');
 
-    this.driver = driver;
+    this.driver = orm.getDriver();
     this.tableDef = tableDef;
   }
 
@@ -802,8 +803,8 @@ export class WhereBuilder {
 
 /** Create a new SelectBuilder for the given table definition */
 export function select<TDef extends TableDefinition>(
-  driver: SurrealDriver,
+  orm: DaliORM,
   tableDef: TDef,
 ): SelectBuilder<TDef> {
-  return new SelectBuilder(driver, tableDef);
+  return new SelectBuilder(orm, tableDef);
 }

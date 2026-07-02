@@ -8,6 +8,9 @@
  * available from '@woss/dali-orm/functions'.
  */
 
+// Re-exports
+export type { DaliORM } from '../sdk/dali-orm.js';
+
 // Binding
 export type { TableBinding } from './binding.js';
 export { bindTable } from './binding.js';
@@ -45,7 +48,7 @@ export {
   outside,
   raw,
   type SerializedCondition,
-  type SurrealCondition,
+  type Condition,
 } from './conditions.js';
 // Create
 export { CreateBuilder, create } from './create.js';
@@ -66,6 +69,8 @@ export type {
   ColumnsToRecord,
   ColumnType,
   InferInsertInput,
+  InferRelateInput,
+  InferRelateResult,
   InferSelection,
   InferSelectResult,
   InferTypedRecord,

@@ -6,6 +6,7 @@
  */
 
 import type { SurrealDriver } from '../sdk/driver/types.js';
+import type { DaliORM } from '../sdk/dali-orm.js';
 import type { TableDefinition } from '../sdk/table.js';
 import type { InferRelateInput, InferRelateResult } from './types.js';
 
@@ -172,11 +173,11 @@ export class RelateBuilder<
   private _to: string = '';
   private _data: Partial<InferRelateInput<TEdgeDef>> = {};
 
-  constructor(driver: SurrealDriver, edgeDef: TEdgeDef) {
-    if (!driver) throw new Error('Driver is required');
+  constructor(orm: DaliORM, edgeDef: TEdgeDef) {
+    if (!orm) throw new Error('DaliORM instance is required');
     if (!edgeDef?.name) throw new Error('Edge table definition with name is required');
 
-    this.driver = driver;
+    this.driver = orm.getDriver();
     this.edgeDef = edgeDef;
   }
 
@@ -264,15 +265,15 @@ export class RelateBuilder<
  * }
  * ```
  *
- * @param driver - Connected SurrealDB driver instance
+ * @param orm - DaliORM instance
  * @param edgeDef - Edge table definition from `defineRelationTable()`
  * @returns A `RelateBuilder` instance for chaining `.from()`, `.to()`, `.set()`, `.execute()`
  */
 export function relate<TEdgeDef extends TableDefinition>(
-  driver: SurrealDriver,
+  orm: DaliORM,
   edgeDef: TEdgeDef,
 ): RelateBuilder<TEdgeDef> {
-  return new RelateBuilder(driver, edgeDef);
+  return new RelateBuilder(orm, edgeDef);
 }
 
 /** Create a new GraphPath builder */

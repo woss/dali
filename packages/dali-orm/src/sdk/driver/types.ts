@@ -6,6 +6,7 @@
  */
 
 import type { ConfigAuth } from './config/types.js';
+import type { OrmSchema } from '../orm-schema.js';
 
 // ============================================================================
 // Codec and Reconnect Options
@@ -269,6 +270,9 @@ export interface SurrealDriver {
 
   /** Get the driver configuration */
   config: DriverConfig | EmbeddedConfig;
+
+  /** Schema definition for column metadata (recordTable, etc.) */
+  schema?: OrmSchema;
 
   /** Show changes for a table since a given point */
   showChanges<T = unknown>(

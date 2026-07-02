@@ -2,15 +2,17 @@
 
 ## [Unreleased]
 
-### Removed
-
-- `down()` and `reset()` methods from `MigrationRunner` — forward-only migrations (no rollback)
-- `rollback()` method from `MigrationJournalManager`
-- `-- DOWN` section parsing from `parseMigrationFileContent()` — now returns only `{ up: string[] }`
-- `migrate down` and `migrate reset` CLI commands removed
-
 ### Added
 
+- Schema-aware record ID coercion — `coerceRecordIds` only coerces fields defined as `record()` columns when schema is available; non-record string fields with colons preserved as-is
+- Schema threading from `DaliORM.connect()` through to `BaseDriver` — schema config flows to `SurrealDriver.schema` for all CRUD coercion decisions
+- `NodeDriverConfig.reconnect` field — forward reconnect options to SDK `ConnectOptions` for auto-reconnection support
+- System auth (root/namespace/database) passed via `ConnectOptions.authentication` instead of `db.signin()` — credentials persist across SDK auto-reconnections
+- Typed CRUD methods on DaliORM: `selectFrom()`, `insertInto()`, `updateTable()`, `deleteFrom()` with full type inference from table definitions
+- Type inference utilities in `@woss/dali-orm/sdk/infer-types`: `InferSelectResult<T>`, `InferInsertData<T>`, `InferUpdateData<T>`, `SurrealTypeToTS<S>`
+- All query builders and factory functions now accept `DaliORM` instead of raw `SurrealDriver`
+- `TableBinding` builder methods now accept `DaliORM`
+- `DaliORM` type re-export from `@woss/dali-orm/query`
 - `AnalyzerDefinition` interface for defining SurrealDB text analyzers (tokenizers + filters)
 - `analyzers` field on `OrmSchemaConfig` / `OrmSchema` for declaring analyzers alongside tables
 - `generateAnalyzerDefinition()` and `generateRemoveAnalyzer()` methods on `SurrealQLGenerator`
@@ -18,6 +20,23 @@
 - Analyzer support in all migration generation paths: `generateMigration`, `fullMigration`, `snapshotMigration`, `liveMigration`
 - Analyzers emitted UP before tables, DOWN after tables (correct ordering since indexes depend on analyzers)
 - Section separators (`-- ---- Analyzers ----`) in generated migration files
+
+### Changed
+
+- `BaseDriver.coerceRecordIds` rewritten to be schema-aware: when `schema` is set, only record-typed columns are coerced; falls back to coerce-all behavior when no schema is provided (backward compatible)
+- `upsertWhere` now parses table name (`table:id` → `table`) before passing to `coerceRecordIds`
+- `NodeDriver.connect()` refactored: system auth types now authenticate through connect options rather than `db.signin()`. Record auth flow unchanged.
+
+### Fixed
+
+- Non-record string fields containing colons (e.g. `"repo: woss/dali"`) no longer incorrectly coerced to `RecordId` when schema is available — only `record()` typed columns are coerced
+
+### Removed
+
+- `down()` and `reset()` methods from `MigrationRunner` — forward-only migrations (no rollback)
+- `rollback()` method from `MigrationJournalManager`
+- `-- DOWN` section parsing from `parseMigrationFileContent()` — now returns only `{ up: string[] }`
+- `migrate down` and `migrate reset` CLI commands removed
 
 ## 0.1.0
 

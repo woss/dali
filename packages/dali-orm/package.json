@@ -105,9 +105,9 @@
     "./sdk/functions/type": "./dist/sdk/functions/type.mjs",
     "./sdk/functions/value": "./dist/sdk/functions/value.mjs",
     "./sdk/functions/vector": "./dist/sdk/functions/vector.mjs",
+    "./sdk/infer-types": "./dist/sdk/infer-types.mjs",
     "./sdk/orm-schema": "./dist/sdk/orm-schema.mjs",
     "./sdk/schema": "./dist/sdk/schema.mjs",
-    "./sdk/schema/access-builder": "./dist/sdk/schema/access-builder.mjs",
     "./sdk/schema/column": "./dist/sdk/schema/column/index.mjs",
     "./sdk/schema/column/array": "./dist/sdk/schema/column/array.mjs",
     "./sdk/schema/column/base": "./dist/sdk/schema/column/base.mjs",
@@ -124,7 +124,6 @@
     "./sdk/schema/column/string": "./dist/sdk/schema/column/string.mjs",
     "./sdk/schema/column/tuple": "./dist/sdk/schema/column/tuple.mjs",
     "./sdk/schema/column/types": "./dist/sdk/schema/column/types.mjs",
-    "./sdk/schema/event-builder": "./dist/sdk/schema/event-builder.mjs",
     "./sdk/schema/function-builder": "./dist/sdk/schema/function-builder.mjs",
     "./sdk/table": "./dist/sdk/table.mjs",
     "./package.json": "./package.json"

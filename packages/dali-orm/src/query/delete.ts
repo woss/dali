@@ -6,6 +6,7 @@
  */
 
 import type { SurrealDriver } from '../sdk/driver/types.js';
+import type { DaliORM } from '../sdk/dali-orm.js';
 import type { TableDefinition } from '../sdk/table.js';
 import type { InferSelectResult } from './types.js';
 
@@ -14,11 +15,11 @@ export class DeleteBuilder<TDef extends TableDefinition, TResult = InferSelectRe
   private readonly tableDef: TDef;
   private recordId?: string;
 
-  constructor(driver: SurrealDriver, tableDef: TDef) {
-    if (!driver) throw new Error('Driver is required');
+  constructor(orm: DaliORM, tableDef: TDef) {
+    if (!orm) throw new Error('DaliORM instance is required');
     if (!tableDef?.name) throw new Error('Table definition with name is required');
 
-    this.driver = driver;
+    this.driver = orm.getDriver();
     this.tableDef = tableDef;
   }
 
@@ -46,8 +47,8 @@ export class DeleteBuilder<TDef extends TableDefinition, TResult = InferSelectRe
 
 /** Factory function */
 export function delete_<TDef extends TableDefinition>(
-  driver: SurrealDriver,
+  orm: DaliORM,
   tableDef: TDef,
 ): DeleteBuilder<TDef> {
-  return new DeleteBuilder(driver, tableDef);
+  return new DeleteBuilder(orm, tableDef);
 }

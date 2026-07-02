@@ -1,5 +1,7 @@
 import { connect as createDriver } from './driver/orm-connection.js';
 import type { OrmSchema } from './orm-schema.js';
+import type { InferSelectResult, InferInsertData, InferUpdateData } from './infer-types.js';
+import type { TableDefinition } from './table.js';
 
 /**
  * DaliORM configuration - extends SurrealORMConfig with optional schema
@@ -64,6 +66,7 @@ export class DaliORM {
       config: config.config,
       codecOptions: config.codecOptions,
       reconnect: config.reconnect,
+      schema: config.schema,
     });
     return new DaliORM(driver, config.schema);
   }
@@ -95,6 +98,50 @@ export class DaliORM {
    */
   async select<T = unknown>(thing: string): Promise<T[]> {
     return this.driver.select<T>(thing);
+  }
+
+  /**
+   * Select all records from a table with full type inference from schema
+   * @param table - Table definition from defineTable()
+   * @returns Typed array of records matching the table schema
+   */
+  async selectFrom<T extends TableDefinition>(table: T): Promise<InferSelectResult<T>[]> {
+    return await this.driver.select<InferSelectResult<T>>(table.name);
+  }
+
+  /**
+   * Insert typed records into a table with full type inference from schema
+   * @param table - Table definition from defineTable()
+   * @param data - Typed insert data (excludes auto-generated id field)
+   * @returns Typed array of inserted records
+   */
+  async insertInto<T extends TableDefinition>(
+    table: T,
+    data: InferInsertData<T> | InferInsertData<T>[],
+  ): Promise<InferSelectResult<T>[]> {
+    return await this.driver.insert<InferSelectResult<T>>(table.name, data);
+  }
+
+  /**
+   * Update records in a table with full type inference from schema
+   * @param table - Table definition from defineTable()
+   * @param data - Partial typed update data (all fields optional)
+   * @returns Typed array of updated records
+   */
+  async updateTable<T extends TableDefinition>(
+    table: T,
+    data: InferUpdateData<T>,
+  ): Promise<InferSelectResult<T>[]> {
+    return await this.driver.update<InferSelectResult<T>>(table.name, data);
+  }
+
+  /**
+   * Delete all records from a table with full type inference from schema
+   * @param table - Table definition from defineTable()
+   * @returns Typed array of deleted records
+   */
+  async deleteFrom<T extends TableDefinition>(table: T): Promise<InferSelectResult<T>[]> {
+    return await this.driver.delete<InferSelectResult<T>>(table.name);
   }
 
   /**
