@@ -90,6 +90,27 @@ const [newUser] = await insert(driver, usersTable)
 await orm.query('SELECT * FROM users WHERE email = $email', { email: 'a@b.com' });
 ```
 
+## ConnectOptions Auth Pattern
+
+System-level auth (root / namespace / database) MUST flow through `ConnectOptions.authentication` in SurrealDB SDK v2. Do **not** use standalone `db.signin()` for system auth.
+
+**Why**: SDK v2 opens a new WebSocket on auto-reconnect. Session-level `db.signin()` tokens bind to the old connection and are lost. Credentials in `ConnectOptions.authentication` persist across reconnects.
+
+**System auth** — auth config maps to `buildSystemAuth()` which strips the `type` discriminator and produces `RootAuth | NamespaceAuth | DatabaseAuth`:
+
+```typescript
+const orm = await DaliORM.connect({
+  nodeDriver: {
+    url: 'ws://localhost:10101',
+    namespace: 'test',
+    database: 'test',
+    auth: { type: 'root', username: 'root', password: 'root' },
+  },
+});
+```
+
+**Record / scope auth** still uses `db.use()` + `db.signin()` — it requires matching the selected namespace/database to the access scope.
+
 ## Reference Files
 
 | Task                                      | File                                                               |
@@ -144,3 +165,4 @@ await orm.query('SELECT * FROM users WHERE email = $email', { email: 'a@b.com' }
 
 - **TypeScript generics** → Use `typescript-pro` skill for advanced type patterns
 - **Testing query builders** → Use `vitest` skill for writing tests
+- **Test patterns (mocking, record comparison)** → Use `dali-orm-test-patterns` skill

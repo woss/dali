@@ -4,6 +4,10 @@
 
 ### Added
 
+- Memory detail page at `/memories/[slug]` — load by slug with 404 on not found, inline edit form (name + content), delete action with redirect to list
+- Title links in `/memories` list navigate to memory detail page
+- `edit` form action on detail page with cross-validation of form ID against URL slug to prevent tampering
+
 - Changesets versioning workflow — `pnpm changeset`, `pnpm version-packages`, `pnpm release` scripts
 - End-to-end changesets verification — test changeset creation, version bump, changelog generation, and cleanup validated
 - Profile settings page — name and email update form on `/settings` with validation, email uniqueness check, and session cookie resigning on email change
