@@ -1,29 +1,15 @@
+import { signSession } from '$lib/server/auth/session';
 import { connect, getDB } from '$lib/server/db/connection';
 import { getConfig } from '$lib/server/config';
 import { fail, redirect } from '@sveltejs/kit';
+import { RecordId } from 'surrealdb';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async ({ locals }) => {
   if (locals.authenticated) {
-    redirect(303, '/memories');
+    redirect(303, '/workspaces');
   }
 };
-
-async function signSession(sessionId: string, secret: string): Promise<string> {
-  const encoder = new TextEncoder();
-  const cryptoKey = await crypto.subtle.importKey(
-    'raw',
-    encoder.encode(secret),
-    { name: 'HMAC', hash: 'SHA-256' },
-    false,
-    ['sign'],
-  );
-  const signature = await crypto.subtle.sign('HMAC', cryptoKey, encoder.encode(sessionId));
-  const hex = Array.from(new Uint8Array(signature))
-    .map((b) => b.toString(16).padStart(2, '0'))
-    .join('');
-  return `${hex}.${sessionId}`;
-}
 
 export const actions: Actions = {
   default: async ({ request, cookies }) => {
@@ -37,8 +23,12 @@ export const actions: Actions = {
       return fail(400, { error: 'All fields are required', missing: true });
     }
 
-    if (password.length < 8) {
-      return fail(400, { error: 'Password must be at least 8 characters', weak: true });
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
+    if (!passwordRegex.test(password)) {
+      return fail(400, {
+        error: 'Password must be at least 8 characters with at least 1 uppercase, 1 lowercase, and 1 digit',
+        weak: true,
+      });
     }
 
     if (password !== confirmPassword) {
@@ -48,16 +38,46 @@ export const actions: Actions = {
     await connect();
     try {
       const driver = getDB().getDriver();
-      await driver.query(
-        'CREATE users SET name = $name, email = $email, pass = crypto::argon2::generate($pass)',
-        { name, email, pass: password },
-      );
+      await driver.transaction(async (tx) => {
+        // Step 1: Create the user
+        const userResult = await tx.query<{ id: RecordId; name: string; email: string }>(
+          'CREATE users SET name = $name, email = $email, pass = crypto::argon2::generate($pass)',
+          { name, email, pass: password },
+        );
+        const user = userResult[0];
+        if (!user) throw new Error('Failed to create user record');
+
+        // Step 2: Create a personal workspace for the user
+        const workspaceResult = await tx.query<{ id: RecordId }>(
+          'CREATE workspaces SET is_personal = true, user_id = $userId, name = $name, description = $description',
+          { userId: user.id, name, description: email },
+        );
+        const workspace = workspaceResult[0];
+        if (!workspace) throw new Error('Failed to create workspace');
+
+        // Step 3: Set the workspace as the user's default
+        await tx.query(
+          'UPDATE $userId SET default_workspace_id = $workspaceId',
+          { userId: user.id, workspaceId: workspace.id },
+        );
+      });
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
+      // Check email uniqueness first — the 'already contains' pattern also matches workspace name collisions
+      if (
+        msg.includes('idx_users_email')
+      ) {
+        return fail(409, { error: 'An account with this email already exists', duplicate: true });
+      }
+      if (
+        msg.includes('idx_workspaces_name')
+      ) {
+        return fail(409, { error: 'A workspace with this name already exists. Please choose a different name.', workspaceNameTaken: true });
+      }
       if (
         msg.includes('UNIQUE') ||
-        msg.includes('idx_users_email') ||
-        msg.includes('already exists')
+        msg.includes('already exists') ||
+        msg.includes('already contains')
       ) {
         return fail(409, { error: 'An account with this email already exists', duplicate: true });
       }
@@ -75,6 +95,6 @@ export const actions: Actions = {
       maxAge: 60 * 60 * 24 * 30, // 30 days
     });
 
-    redirect(303, '/memories');
+    redirect(303, '/workspaces');
   },
 };

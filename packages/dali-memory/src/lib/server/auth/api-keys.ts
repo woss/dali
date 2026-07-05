@@ -17,10 +17,10 @@ export async function validateApiKey(key: string | null | undefined): Promise<bo
   if (!key) return false;
   if (!getConfig().DALI_MEMORY_AUTH_ENABLED) return true;
 
-  const driver = getDB().getDriver();
+  const db = getDB();
   const hash = await hashApiKey(key);
 
-  const results = await select(driver, apiKeysTable)
+  const results = await select(db, apiKeysTable)
     .where((w) => w.eq('key_hash', hash))
     .execute();
 
@@ -43,7 +43,7 @@ export async function validateApiKey(key: string | null | undefined): Promise<bo
         : undefined;
 
   if (shortId) {
-    update(driver, apiKeysTable)
+    update(db, apiKeysTable)
       .id(shortId)
       .set('last_used_at', new Date().toISOString())
       .execute()

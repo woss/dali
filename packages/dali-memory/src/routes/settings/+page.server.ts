@@ -1,3 +1,4 @@
+import { signSession } from '$lib/server/auth/session';
 import { connect, getDB } from '$lib/server/db/connection';
 import { getConfig } from '$lib/server/config';
 import { hashApiKey } from '$lib/server/auth/api-keys';
@@ -13,9 +14,7 @@ export const load: PageServerLoad = async () => {
   const safeConfig = {
     embeddingProvider: config.DALI_MEMORY_EMBEDDING_PROVIDER,
     embeddingModel: config.DALI_MEMORY_EMBEDDING_MODEL,
-    embeddingEndpoint: config.DALI_MEMORY_EMBEDDING_ENDPOINT,
     authEnabled: config.DALI_MEMORY_AUTH_ENABLED,
-    surrealUrl: config.DALI_MEMORY_SURREAL_URL,
     surrealNs: config.DALI_MEMORY_SURREAL_NS,
     surrealDb: config.DALI_MEMORY_SURREAL_DB,
     logLevel: config.DALI_MEMORY_LOG_LEVEL,
@@ -27,22 +26,6 @@ export const load: PageServerLoad = async () => {
 
   return { config: safeConfig, apiKeys: toPlain(apiKeys) };
 };
-
-async function signSession(sessionId: string, secret: string): Promise<string> {
-  const encoder = new TextEncoder();
-  const cryptoKey = await crypto.subtle.importKey(
-    'raw',
-    encoder.encode(secret),
-    { name: 'HMAC', hash: 'SHA-256' },
-    false,
-    ['sign'],
-  );
-  const signature = await crypto.subtle.sign('HMAC', cryptoKey, encoder.encode(sessionId));
-  const hex = Array.from(new Uint8Array(signature))
-    .map((b) => b.toString(16).padStart(2, '0'))
-    .join('');
-  return `${hex}.${sessionId}`;
-}
 
 export const actions: Actions = {
   'generate-key': async ({ request, locals }) => {

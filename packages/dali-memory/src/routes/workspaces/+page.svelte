@@ -81,7 +81,7 @@
               </div>
               <div class="card-actions items-center gap-2">
                 <a
-                  href="/memories?workspace={ws.id}"
+                  href="/workspaces/{ws.slug}/memories"
                   class="btn btn-ghost btn-sm"
                 >
                   View &rarr;

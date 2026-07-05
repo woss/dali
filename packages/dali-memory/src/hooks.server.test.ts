@@ -4,12 +4,14 @@ import { describe, test, expect, vi, beforeEach } from 'vitest';
 // Hoisted mocks — referenced inside vi.mock() factories
 // =============================================================================
 
-const { mockInitLogger, mockGetLog, mockGetConfig } = vi.hoisted(() => {
+const { mockInitLogger, mockGetLog, mockGetConfig, mockInitEmbedder, mockVerifyCookie } = vi.hoisted(() => {
   const mockDebug = vi.fn();
   return {
     mockInitLogger: vi.fn(),
     mockGetLog: vi.fn(() => ({ debug: mockDebug })),
     mockGetConfig: vi.fn(),
+    mockInitEmbedder: vi.fn().mockResolvedValue(undefined),
+    mockVerifyCookie: vi.fn(),
   };
 });
 
@@ -24,6 +26,14 @@ vi.mock('$lib/server/logger', () => ({
 
 vi.mock('$lib/server/config', () => ({
   getConfig: mockGetConfig,
+}));
+
+vi.mock('$lib/server/embedder/index', () => ({
+  initEmbedder: mockInitEmbedder,
+}));
+
+vi.mock('$lib/server/auth/session', () => ({
+  verifyCookie: mockVerifyCookie,
 }));
 
 // =============================================================================
@@ -174,6 +184,7 @@ describe('handle() — verifyCookie flow', () => {
   test('protected path with valid cookie: sets locals and resolves', async () => {
     enableAuth();
     const email = 'user@example.com';
+    mockVerifyCookie.mockResolvedValueOnce(email);
     const signed = await signSession(email, TEST_SECRET);
     const event = createMockEvent('/memories', signed);
     const resolve = vi.fn(async (e: unknown) => new Response('ok'));
@@ -219,6 +230,7 @@ describe('handle() — verifyCookie flow', () => {
   test('protected path with email containing dots: preserves full email', async () => {
     enableAuth();
     const email = 'firstname.lastname+tag@example.co.uk';
+    mockVerifyCookie.mockResolvedValueOnce(email);
     const signed = await signSession(email, TEST_SECRET);
     const event = createMockEvent('/memories', signed);
     const resolve = vi.fn(async (e: unknown) => new Response('ok'));

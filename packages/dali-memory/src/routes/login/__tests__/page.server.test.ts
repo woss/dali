@@ -4,7 +4,7 @@ import { describe, test, expect, vi, beforeEach } from 'vitest';
 // Hoisted mocks
 // =============================================================================
 
-const { mockGetConfig, mockConnect, mockGetDB, mockFail, mockRedirect } = vi.hoisted(() => {
+const { mockGetConfig, mockConnect, mockGetDB, mockFail, mockRedirect, mockSignSession } = vi.hoisted(() => {
   const mockDriver = {
     query: vi.fn(),
   };
@@ -21,6 +21,7 @@ const { mockGetConfig, mockConnect, mockGetDB, mockFail, mockRedirect } = vi.hoi
       err.location = location;
       throw err;
     }),
+    mockSignSession: vi.fn().mockResolvedValue('mock-signed-token'),
     mockDriver,
   };
 });
@@ -36,6 +37,10 @@ vi.mock('$lib/server/db/connection', () => ({
 
 vi.mock('$lib/server/config', () => ({
   getConfig: mockGetConfig,
+}));
+
+vi.mock('$lib/server/auth/session', () => ({
+  signSession: mockSignSession,
 }));
 
 vi.mock('@sveltejs/kit', () => ({
@@ -150,8 +155,9 @@ describe('login actions.default — signSession and cookie creation', () => {
     const [name, signed, opts] = mockCookies.set.mock.calls[0];
     expect(name).toBe('dali_session');
 
-    // Verify signed cookie format: hex.email
-    expect(signed).toMatch(/^[0-9a-f]+\.test@example\.com$/);
+    // Verify signSession called with the email as session payload
+    expect(mockSignSession).toHaveBeenCalledWith('test@example.com', expect.any(String));
+    expect(signed).toBe('mock-signed-token');
 
     // Verify cookie options
     expect(opts).toMatchObject({
@@ -176,7 +182,8 @@ describe('login actions.default — signSession and cookie creation', () => {
     }
 
     const signed = mockCookies.set.mock.calls[0][1];
-    expect(signed).toMatch(/^[0-9a-f]+\.user\+tag@example\.com$/);
+    expect(mockSignSession).toHaveBeenCalledWith('user+tag@example.com', expect.any(String));
+    expect(signed).toBe('mock-signed-token');
   });
 
   test('valid credentials with dotted email: preserves full email', async () => {
@@ -193,9 +200,8 @@ describe('login actions.default — signSession and cookie creation', () => {
     }
 
     const signed = mockCookies.set.mock.calls[0][1];
-    // Several dots in there — verify the full email is the session payload
-    const [, ...rest] = signed.split('.');
-    expect(rest.join('.')).toBe('first.last@example.co.uk');
+    expect(mockSignSession).toHaveBeenCalledWith('first.last@example.co.uk', expect.any(String));
+    expect(signed).toBe('mock-signed-token');
   });
 
   test('DB query throws error: returns fail 401', async () => {
@@ -210,7 +216,7 @@ describe('login actions.default — signSession and cookie creation', () => {
     expect(mockCookies.set).not.toHaveBeenCalled();
   });
 
-  test('valid credentials: redirects to /memories', async () => {
+  test('valid credentials: redirects to /workspaces', async () => {
     (mockGetDB().getDriver() as any).query.mockResolvedValueOnce([{ id: 'user:abc123' }]);
 
     try {
@@ -221,7 +227,7 @@ describe('login actions.default — signSession and cookie creation', () => {
       expect.unreachable('Expected redirect to be thrown');
     } catch (err: any) {
       expect(err.status).toBe(303);
-      expect(err.location).toBe('/memories');
+      expect(err.location).toBe('/workspaces');
     }
   });
 });

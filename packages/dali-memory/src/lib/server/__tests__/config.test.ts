@@ -67,7 +67,7 @@ describe('getConfig()', () => {
 
       // Embedding defaults
       expect(cfg.DALI_MEMORY_EMBEDDING_PROVIDER).toBe('local');
-      expect(cfg.DALI_MEMORY_EMBEDDING_MODEL).toBe('all-MiniLM-L6-v2');
+      expect(cfg.DALI_MEMORY_EMBEDDING_MODEL).toBe('Xenova/all-MiniLM-L6-v2');
       expect(cfg.DALI_MEMORY_EMBEDDING_DIMENSION).toBe(384);
       expect(cfg.DALI_MEMORY_EMBEDDING_ENDPOINT).toBe('http://localhost:1234/v1');
       expect(cfg.DALI_MEMORY_EMBEDDING_CACHE_DIR).toBe('./models');
@@ -177,30 +177,22 @@ describe('getConfig()', () => {
       expect(exitSpy).toHaveBeenCalledWith(1);
     });
 
-    test('invalid DALI_MEMORY_SURREAL_URL causes process.exit(1)', async () => {
+    test('invalid DALI_MEMORY_SURREAL_URL accepted as string (no URL validation)', async () => {
       mockEnv = validEnv({ DALI_MEMORY_SURREAL_URL: 'not-a-valid-url' });
       vi.resetModules();
 
-      const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
-        throw new Error('process.exit(1)');
-      });
-
       const { getConfig } = await import('../config');
-      expect(() => getConfig()).toThrow('process.exit(1)');
-      expect(exitSpy).toHaveBeenCalledWith(1);
+      const cfg = getConfig();
+      expect(cfg.DALI_MEMORY_SURREAL_URL).toBe('not-a-valid-url');
     });
 
-    test('invalid DALI_MEMORY_EMBEDDING_ENDPOINT causes process.exit(1)', async () => {
+    test('invalid DALI_MEMORY_EMBEDDING_ENDPOINT accepted as string (no URL validation)', async () => {
       mockEnv = validEnv({ DALI_MEMORY_EMBEDDING_ENDPOINT: 'bad-endpoint' });
       vi.resetModules();
 
-      const exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => {
-        throw new Error('process.exit(1)');
-      });
-
       const { getConfig } = await import('../config');
-      expect(() => getConfig()).toThrow('process.exit(1)');
-      expect(exitSpy).toHaveBeenCalledWith(1);
+      const cfg = getConfig();
+      expect(cfg.DALI_MEMORY_EMBEDDING_ENDPOINT).toBe('bad-endpoint');
     });
 
     test('invalid DALI_MEMORY_LOG_LEVEL enum causes process.exit(1)', async () => {

@@ -60,6 +60,18 @@ export class MemoryService {
     const db = getDB();
     const driver = db.getDriver();
 
+    // Validate workspace exists
+    const wsRecordId = typeof data.workspace_id !== 'string'
+      ? (data.workspace_id as unknown as RecordId)
+      : new RecordId('workspaces', data.workspace_id.split(':').pop()!);
+    const wsResult = await db.query<Record<string, unknown>>(
+      'SELECT id FROM workspaces WHERE id = $wsId LIMIT 1',
+      { wsId: wsRecordId },
+    );
+    if (!wsResult || wsResult.length === 0) {
+      throw new Error('Workspace not found');
+    }
+
     // Generate slug from name if not provided
     const slug =
       data.slug ??
@@ -69,7 +81,7 @@ export class MemoryService {
         .replace(/^-+|-+$/g, '');
 
     // Content dedup: check for existing record with same content + workspace_id
-    const existing = await select(driver, memoriesTable)
+    const existing = await select(db, memoriesTable)
       .where((w) => w.eq('content', data.content).eq('workspace_id', data.workspace_id))
       .limit(1)
       .execute();
@@ -88,7 +100,7 @@ export class MemoryService {
     const { embedding, model: modelName, dimensions } = await this.embedder.embed(data.content);
 
     // Create new memory with slug as record ID (no embedding field)
-    const result = await create(driver, memoriesTable)
+    const result = await create(db, memoriesTable)
       .id(slug)
       .data({
         name: data.name,
@@ -104,7 +116,7 @@ export class MemoryService {
     const providerId = config.DALI_MEMORY_EMBEDDING_PROVIDER;
 
     let modelRecordId: string;
-    const existingModels = await select(driver, modelsTable)
+    const existingModels = await select(db, modelsTable)
       .where((w) => w.eq('provider_id', providerId).eq('model_id', modelName))
       .limit(1)
       .execute();
@@ -112,7 +124,7 @@ export class MemoryService {
     if (existingModels.length > 0) {
       modelRecordId = String((existingModels[0] as Record<string, unknown>).id);
     } else {
-      const modelResult = await create(driver, modelsTable)
+      const modelResult = await create(db, modelsTable)
         .data({
           provider_id: providerId,
           model_id: modelName,
@@ -124,7 +136,7 @@ export class MemoryService {
 
     // Create embedding record linked to model
     const embId = crypto.randomUUID().replace(/-/g, '');
-    await create(driver, embeddingsTable)
+    await create(db, embeddingsTable)
       .id(embId)
       .data({
         vector: embedding,
@@ -134,7 +146,7 @@ export class MemoryService {
       .execute();
 
     // Relate embedding -> memory
-    await relate(driver, hasEmbeddingTable)
+    await relate(db, hasEmbeddingTable)
       .from(`embeddings:${embId}`)
       .to(`memories:${slug}`)
       .execute();
@@ -142,7 +154,7 @@ export class MemoryService {
     return toMemoryRecord(result[0]);
   }
 
-  async getMemory(id: string): Promise<MemoryRecord | null> {
+  async getMemory(id: string, workspaceId?: string): Promise<MemoryRecord | null> {
     const db = getDB();
     const driver = db.getDriver();
 
@@ -152,17 +164,26 @@ export class MemoryService {
     // Use native driver.select() which handles RecordId via the SDK
     // instead of parameterized WHERE which can't match record-typed id columns.
     const result = await driver.select(qualified);
-    return result[0] ? toMemoryRecord(result[0]) : null;
+    const memory = result[0] ? toMemoryRecord(result[0]) : null;
+
+    if (memory && workspaceId !== undefined) {
+      if (memory.workspace_id && workspaceId !== undefined && toQualifiedId(memory.workspace_id) !== workspaceId) {
+        throw new Error('Memory not found in workspace');
+      }
+    }
+
+    return memory;
   }
 
   async updateMemory(
     id: string,
     data: { name?: string; content?: string; metadata?: Record<string, unknown> },
+    workspaceId?: string,
   ): Promise<MemoryRecord> {
     const db = getDB();
     const driver = db.getDriver();
 
-    const existing = await this.getMemory(id);
+    const existing = await this.getMemory(id, workspaceId);
     if (!existing) {
       throw new Error(`Memory not found: ${id}`);
     }
@@ -190,7 +211,7 @@ export class MemoryService {
         if (edges.length > 0) {
           const embRecordId = edges[0].in;
           const embKey = String(embRecordId.id);
-          await update(driver, embeddingsTable).id(embKey).data({ vector: embedding }).execute();
+          await update(db, embeddingsTable).id(embKey).data({ vector: embedding }).execute();
         }
       }
     }
@@ -198,14 +219,21 @@ export class MemoryService {
     // Normalize to key (bare slug or raw ID part) — strip table prefix and angle brackets
     const qualified = toQualifiedId(id);
     const recordKey = qualified.includes(':') ? qualified.split(':')[1] : qualified;
-    const result = await update(driver, memoriesTable).id(recordKey).data(updateData).execute();
+    const result = await update(db, memoriesTable).id(recordKey).data(updateData).execute();
 
     return result[0] ? toMemoryRecord(result[0]) : (await this.getMemory(id))!;
   }
 
-  async deleteMemory(id: string): Promise<void> {
+  async deleteMemory(id: string, workspaceId?: string): Promise<void> {
     const db = getDB();
     const driver = db.getDriver();
+
+    if (workspaceId !== undefined) {
+      const memory = await this.getMemory(id, workspaceId);
+      if (!memory) {
+        throw new Error('Memory not found in workspace');
+      }
+    }
 
     // Normalize to qualified ID, then extract parts
     const qualified = toQualifiedId(id);
@@ -229,7 +257,7 @@ export class MemoryService {
     if (edges.length > 0) {
       const embRecordId = edges[0].in;
       const embKey = String(embRecordId.id);
-      await delete_(driver, embeddingsTable).id(embKey).execute();
+      await delete_(db, embeddingsTable).id(embKey).execute();
     }
 
     // Delete memory_tags relations
@@ -238,7 +266,7 @@ export class MemoryService {
     });
 
     // Delete the memory record
-    await delete_(driver, memoriesTable).id(qualified).execute();
+    await delete_(db, memoriesTable).id(qualified).execute();
   }
 
   async listMemories(
@@ -248,8 +276,23 @@ export class MemoryService {
     const db = getDB();
     const driver = db.getDriver();
 
-    const result = await select(driver, memoriesTable)
+    const result = await select(db, memoriesTable)
       .where((w) => w.eq('workspace_id', workspaceId))
+      .orderBy('created_at', 'DESC')
+      .limit(opts?.limit ?? 50)
+      .start(opts?.offset ?? 0)
+      .execute();
+
+    return result.map((r) => toMemoryRecord(r));
+  }
+
+  async listAllMemories(
+    opts?: { limit?: number; offset?: number },
+  ): Promise<MemoryRecord[]> {
+    const db = getDB();
+    const driver = db.getDriver();
+
+    const result = await select(db, memoriesTable)
       .orderBy('created_at', 'DESC')
       .limit(opts?.limit ?? 50)
       .start(opts?.offset ?? 0)

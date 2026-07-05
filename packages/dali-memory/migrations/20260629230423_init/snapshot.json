@@ -1,7 +1,7 @@
 {
-  "version": "20260629092647",
-  "name": "add_user_name",
-  "createdAt": "2026-06-29T07:26:47.935Z",
+  "version": "20260629230423",
+  "name": "init",
+  "createdAt": "2026-06-29T21:04:23.382Z",
   "tables": [
     {
       "name": "workspaces",
@@ -80,6 +80,14 @@
           "tableName": "memories",
           "config": {
             "type": "object",
+            "optional": true
+          }
+        },
+        {
+          "name": "embedding",
+          "tableName": "memories",
+          "config": {
+            "type": "array",
             "optional": true
           }
         },

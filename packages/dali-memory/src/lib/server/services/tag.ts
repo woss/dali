@@ -30,14 +30,14 @@ export class TagService {
     const driver = db.getDriver();
 
     // Check for existing tag with same name (unique constraint in schema)
-    const existing = await select(driver, tagsTable)
+    const existing = await select(db, tagsTable)
       .where((w) => w.eq('name', name))
       .execute();
     if (existing.length > 0) {
       return existing[0] as unknown as TagRecord;
     }
 
-    const result = await insert(driver, tagsTable).one({ name }).execute();
+    const result = await insert(db, tagsTable).one({ name }).execute();
 
     return result[0] as unknown as TagRecord;
   }
@@ -46,7 +46,7 @@ export class TagService {
     const db = getDB();
     const driver = db.getDriver();
 
-    const result = await select(driver, tagsTable)
+    const result = await select(db, tagsTable)
       .where((w) => w.eq('id', rawId(id)))
       .execute();
 
@@ -57,7 +57,7 @@ export class TagService {
     const db = getDB();
     const driver = db.getDriver();
 
-    const result = await select(driver, tagsTable)
+    const result = await select(db, tagsTable)
       .where((w) => w.eq('name', name))
       .execute();
 
@@ -68,7 +68,7 @@ export class TagService {
     const db = getDB();
     const driver = db.getDriver();
 
-    const result = await select(driver, tagsTable).orderBy('name', 'ASC').execute();
+    const result = await select(db, tagsTable).orderBy('name', 'ASC').execute();
 
     return result as unknown as TagRecord[];
   }
@@ -82,7 +82,7 @@ export class TagService {
     const tagNorm = stripBrackets(tagId);
     const tagIdFormatted = tagNorm.includes(':') ? tagNorm : `tags:${rawId(tagNorm)}`;
 
-    await relate(driver, memoryTagsTable).from(memId).to(tagIdFormatted).execute();
+    await relate(db, memoryTagsTable).from(memId).to(tagIdFormatted).execute();
   }
 
   async removeTagFromMemory(memoryId: string, tagId: string): Promise<void> {

@@ -40,6 +40,10 @@ vi.mock('$lib/server/auth/api-keys', () => ({
   hashApiKey: mockHashApiKey,
 }));
 
+vi.mock('$lib/server/auth/session', () => ({
+  signSession: vi.fn().mockResolvedValue('mock-signed-token'),
+}));
+
 vi.mock('@sveltejs/kit', () => ({
   fail: mockFail,
 }));
@@ -126,7 +130,6 @@ describe('settings load', () => {
     expect((result as any).config).toMatchObject({
       embeddingProvider: 'openai',
       embeddingModel: 'text-embedding-3-small',
-      surrealUrl: 'http://localhost:8000',
       surrealNs: 'test',
       surrealDb: 'test',
       logLevel: 'info',
@@ -509,7 +512,7 @@ describe('settings actions.update-profile', () => {
     );
     expect(mockProfileCookies.set).toHaveBeenCalledWith(
       'dali_session',
-      expect.stringMatching(/^[0-9a-f]+\.new@test\.com$/),
+      'mock-signed-token',
       expect.objectContaining({
         path: '/',
         httpOnly: true,

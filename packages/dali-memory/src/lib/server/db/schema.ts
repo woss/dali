@@ -9,7 +9,7 @@ import {
 } from '@woss/dali-orm/sdk/schema/column/simple-builders';
 import { record } from '@woss/dali-orm/sdk/schema/column/record';
 import { createOrmSchema } from '@woss/dali-orm/sdk/orm-schema';
-import { defineAccess } from '@woss/dali-orm/sdk/schema/access-builder';
+import { defineAccess } from '@woss/dali-orm/sdk/schema';
 
 // ---- Workspaces ----
 export const workspacesTable = defineTable(
@@ -18,6 +18,7 @@ export const workspacesTable = defineTable(
     name: string('name'),
     description: string('description').optional(),
     is_personal: bool('is_personal').default(false),
+    user_id: record('users').optional(),
     created_at: datetime('created_at').defaultNow(),
   },
   {
@@ -144,6 +145,7 @@ export const usersTable = defineTable(
     email: string('email'),
     pass: string('pass'),
     name: string('name').optional(),
+    default_workspace_id: record('workspaces').optional(),
     created_at: datetime('created_at').defaultNow(),
   },
   {

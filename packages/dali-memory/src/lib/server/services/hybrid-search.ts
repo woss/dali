@@ -1,6 +1,7 @@
 import { getDB } from '../db/connection';
 import type { EmbedderService } from '../embedder';
-import type { MemoryRecord, SearchResult, SearchOptions } from './types';
+import { type MemoryRecord, type SearchResult, type SearchOptions, toMemoryRecord } from './types';
+import { RecordId } from 'surrealdb';
 
 interface RankedItem {
   id: string;
@@ -8,7 +9,19 @@ interface RankedItem {
   source: 'vector' | 'fulltext';
 }
 
-const DEFAULT_FT_INDEX = 'idx_memories_content_ft';
+interface EdgeOut {
+  out: RecordId;
+}
+
+const DEFAULT_FT_INDEX = 0; // SurrealDB v3.x uses numeric index_ref (0-255), not string index names
+
+/**
+ * Build a stable string key from a SurrealDB RecordId, e.g. "memories:test-memory".
+ */
+function memKey(rid: RecordId): string {
+  return `${rid.table.name}:${rid.id}`;
+}
+
 
 export class HybridSearch {
   private embedder: EmbedderService;
@@ -25,58 +38,75 @@ export class HybridSearch {
 
   async search(query: string, options?: SearchOptions): Promise<SearchResult[]> {
     const db = getDB();
+    const driver = db.getDriver();
     const { workspaceId, limit = 10, threshold = 0 } = options ?? {};
 
     // 1. Generate embedding from query text
     const { embedding } = await this.embedder.embed(query);
 
-    // 2. Run vector search
-    let vectorSql =
-      'SELECT id, name, content, memory_type, metadata, embedding, workspace_id, created_at, vector::similarity::cosine(embedding, $queryEmbedding) AS vector_score FROM memories';
-    const vectorParams: Record<string, unknown> = { queryEmbedding: embedding };
+    // 2. Vector search on embeddings table → traverse has_embedding edge to memory
+    const vLimit = limit * 3;
+    let vSql = `SELECT id, vector::similarity::cosine(vector, $queryEmbedding) AS vector_score
+FROM embeddings`;
+    const vParams: Record<string, unknown> = { queryEmbedding: embedding, vLimit };
 
     if (workspaceId) {
-      vectorSql += ' WHERE workspace_id = $ws';
-      vectorParams.ws = workspaceId;
+      vSql += '\nWHERE ->has_embedding.out.workspace_id = $ws';
+      vParams.ws = workspaceId;
     }
 
-    vectorSql += ' ORDER BY vector_score DESC LIMIT $limit';
-    vectorParams.limit = limit * 3; // Fetch more for fusion quality
+    vSql += '\nORDER BY vector_score DESC\nLIMIT $vLimit';
 
-    const vectorResults = await db.query<MemoryRecord & { vector_score: number }>(
-      vectorSql,
-      vectorParams,
-    );
+    const vectorRows = await db.query<Record<string, unknown>>(vSql, vParams);
 
-    // 3. Run fulltext search
-    let ftSql =
-      'SELECT id, name, content, memory_type, metadata, embedding, workspace_id, created_at, search::score($ftIndex, content) AS ft_score FROM memories WHERE content @@@ $query';
-    const ftParams: Record<string, unknown> = { query, ftIndex: DEFAULT_FT_INDEX };
+    const memoryLookup = new Map<string, MemoryRecord>();
+    const vectorRanked: RankedItem[] = [];
+
+    for (const row of vectorRows) {
+      const embId = row.id as RecordId;
+      const edges = await db.query<EdgeOut>(
+        'SELECT out FROM has_embedding WHERE in = $embId LIMIT 1',
+        { embId },
+      );
+      if (edges.length === 0) continue;
+
+      const memRef = edges[0].out;
+      const key = memKey(memRef);
+
+      const memResult = await driver.select(String(memRef));
+      if (!memResult[0]) continue;
+
+      memoryLookup.set(key, toMemoryRecord(memResult[0]));
+      vectorRanked.push({ id: key, rank: vectorRanked.length + 1, source: 'vector' });
+    }
+
+    // 3. Fulltext search on memories table (no embedding column — lives on embeddings table)
+    // SurrealDB v3.x: @N@ (matches operator with predicate ref), not v2 @@@
+    // search::score(N) corresponds to predicate ref N in @N@ operator
+    let ftSql = `SELECT id, name, content, memory_type, metadata, workspace_id, created_at,
+search::score(${DEFAULT_FT_INDEX}) AS ft_score
+FROM memories WHERE content @${DEFAULT_FT_INDEX}@ $searchText`;
+    const ftParams: Record<string, unknown> = { searchText: query, fLimit: limit * 3 };
 
     if (workspaceId) {
       ftSql += ' AND workspace_id = $ws';
       ftParams.ws = workspaceId;
     }
 
-    ftSql += ' ORDER BY ft_score DESC LIMIT $limit';
-    ftParams.limit = limit * 3;
+    ftSql += ' ORDER BY ft_score DESC LIMIT $fLimit';
 
-    const ftResults = await db.query<MemoryRecord & { ft_score: number }>(ftSql, ftParams);
+    const ftRows = await db.query<Record<string, unknown>>(ftSql, ftParams);
 
-    // 4. RRF fusion
-    const vectorRanked: RankedItem[] = vectorResults.map((r, i) => ({
-      id: r.id,
-      rank: i + 1,
-      source: 'vector' as const,
-    }));
+    const ftRanked: RankedItem[] = [];
+    for (const row of ftRows) {
+      const key = memKey(row.id as RecordId);
+      if (!memoryLookup.has(key)) {
+        memoryLookup.set(key, toMemoryRecord(row));
+      }
+      ftRanked.push({ id: key, rank: ftRanked.length + 1, source: 'fulltext' });
+    }
 
-    const ftRanked: RankedItem[] = ftResults.map((r, i) => ({
-      id: r.id,
-      rank: i + 1,
-      source: 'fulltext' as const,
-    }));
-
-    // Combine ranks: per doc id, sum weighted RRF scores
+    // 4. RRF fusion — combine vector and fulltext ranks per memory
     const fusionMap = new Map<
       string,
       {
@@ -114,17 +144,11 @@ export class HybridSearch {
       }
     }
 
-    // Build a lookup for memory data
-    const memoryLookup = new Map<string, MemoryRecord>();
-    for (const r of vectorResults) memoryLookup.set(r.id, r as unknown as MemoryRecord);
-    for (const r of ftResults) memoryLookup.set(r.id, r as unknown as MemoryRecord);
-
-    // Sort by fused score descending
+    // 5. Sort by fused score, apply threshold, return
     const sorted = [...fusionMap.entries()]
       .sort((a, b) => b[1].totalScore - a[1].totalScore)
       .slice(0, limit);
 
-    // 5. Label + threshold
     const results: SearchResult[] = [];
     for (const [id, data] of sorted) {
       if (data.totalScore < threshold) continue;
@@ -137,11 +161,7 @@ export class HybridSearch {
       else if (data.sources.has('vector')) matched_on = 'vector';
       else matched_on = 'fulltext';
 
-      results.push({
-        memory,
-        score: data.totalScore,
-        matched_on,
-      });
+      results.push({ memory, score: data.totalScore, matched_on });
     }
 
     return results;

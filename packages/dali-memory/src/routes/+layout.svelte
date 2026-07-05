@@ -2,6 +2,26 @@
   import '../app.css';
   import { page } from '$app/stores';
   let { children } = $props();
+
+  // Derive workspace context for nav
+  let workspaceName = $derived<string | null>(null);
+  $effect(() => {
+    const path = $page.url.pathname;
+    const wsMatch = path.match(/^\/workspaces\/([^/]+)/);
+    if (wsMatch) {
+      const wsId = wsMatch[1];
+      const ws = ($page.data.workspaces as Array<{id: string; name: string}>)?.find(w => w.id === wsId);
+      workspaceName = ws?.name ?? null;
+    } else {
+      workspaceName = null;
+    }
+  });
+
+  let memoriesHref = $derived(
+    $page.data.defaultWorkspaceId
+      ? `/workspaces/${$page.data.defaultWorkspaceId}/memories`
+      : '/workspaces'
+  );
 </script>
 
 <div>
@@ -12,11 +32,17 @@
         <a href="/" class="btn btn-ghost text-xl font-heading">🧠 dali-memory</a>
       </div>
       <div class="navbar-center hidden sm:flex">
-        <a href="/memories" class="btn btn-ghost" class:btn-active={$page.url.pathname === '/memories'}>Memories</a>
+        <a href={memoriesHref} class="btn btn-ghost" class:btn-active={$page.url.pathname.includes('/memories') || $page.url.pathname.startsWith('/workspaces') && $page.url.pathname !== '/workspaces'}>Memories</a>
         <a href="/workspaces" class="btn btn-ghost" class:btn-active={$page.url.pathname === '/workspaces'}>Workspaces</a>
         <a href="/settings" class="btn btn-ghost" class:btn-active={$page.url.pathname === '/settings'}>Settings</a>
       </div>
       <div class="navbar-end">
+        <!-- Workspace context pill -->
+        {#if workspaceName}
+          <span class="hidden sm:inline-flex items-center gap-1 mr-2 text-xs text-neutral-400 border border-white/10 rounded-full px-2.5 py-0.5">
+            {workspaceName}
+          </span>
+        {/if}
         <!-- Desktop auth -->
         <div class="hidden sm:flex items-center gap-1">
           {#if $page.data.authenticated}
@@ -32,7 +58,7 @@
             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" /></svg>
           </button>
           <ul tabindex="0" role="menu" class="dropdown-content menu bg-base-200 rounded-box z-[51] mt-3 w-52 p-2 shadow-xl">
-            <li role="none"><a href="/memories" role="menuitem" class:active={$page.url.pathname === '/memories'}>Memories</a></li>
+            <li role="none"><a href={memoriesHref} role="menuitem" class:active={$page.url.pathname.includes('/memories')}>Memories</a></li>
             <li role="none"><a href="/workspaces" role="menuitem" class:active={$page.url.pathname === '/workspaces'}>Workspaces</a></li>
             <li role="none"><a href="/settings" role="menuitem" class:active={$page.url.pathname === '/settings'}>Settings</a></li>
             <li role="none" class="divider my-1"></li>

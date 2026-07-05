@@ -1,3 +1,5 @@
+import { RecordId } from 'surrealdb';
+
 export interface MemoryRecord {
   id: string;
   slug: string;
@@ -24,4 +26,17 @@ export interface SearchOptions {
   workspaceId?: string;
   limit?: number;
   threshold?: number;
+}
+
+/** Transform raw DB record to MemoryRecord, extracting slug from RecordId */
+export function toMemoryRecord(raw: unknown): MemoryRecord {
+  const record = raw as Record<string, unknown>;
+  const id = record.id;
+  const slug =
+    id instanceof RecordId
+      ? String(id.id)
+      : typeof id === 'string'
+        ? id.includes(':') ? id.split(':')[1] : id
+        : String(id);
+  return { ...record, slug } as unknown as MemoryRecord;
 }

@@ -1,7 +1,7 @@
 {
-  "version": "20260629092647",
-  "name": "add_user_name",
-  "createdAt": "2026-06-29T07:26:47.935Z",
+  "version": "20260703234914",
+  "name": "init",
+  "createdAt": "2026-07-03T21:49:14.698Z",
   "tables": [
     {
       "name": "workspaces",
@@ -30,6 +30,14 @@
           }
         },
         {
+          "name": "user_id",
+          "tableName": "workspaces",
+          "config": {
+            "type": "record",
+            "optional": true
+          }
+        },
+        {
           "name": "created_at",
           "tableName": "workspaces",
           "config": {
@@ -44,7 +52,9 @@
         "indexes": [
           {
             "name": "idx_workspaces_name",
-            "fields": ["name"],
+            "fields": [
+              "name"
+            ],
             "type": "unique"
           }
         ]
@@ -105,17 +115,25 @@
         "indexes": [
           {
             "name": "idx_memories_name_ws",
-            "fields": ["name", "workspace_id"],
+            "fields": [
+              "name",
+              "workspace_id"
+            ],
             "type": "unique"
           },
           {
             "name": "idx_memories_content_ws",
-            "fields": ["content", "workspace_id"],
+            "fields": [
+              "content",
+              "workspace_id"
+            ],
             "type": "unique"
           },
           {
             "name": "idx_memories_content_ft",
-            "fields": ["content"],
+            "fields": [
+              "content"
+            ],
             "type": "fulltext",
             "analyzer": "fts_ascii"
           }
@@ -207,7 +225,10 @@
         "indexes": [
           {
             "name": "idx_models_provider_model",
-            "fields": ["provider_id", "model_id"],
+            "fields": [
+              "provider_id",
+              "model_id"
+            ],
             "type": "unique"
           }
         ]
@@ -240,7 +261,9 @@
         "indexes": [
           {
             "name": "idx_tags_name",
-            "fields": ["name"],
+            "fields": [
+              "name"
+            ],
             "type": "unique"
           }
         ]
@@ -272,7 +295,10 @@
         "indexes": [
           {
             "name": "idx_memory_tags_pair",
-            "fields": ["in", "out"],
+            "fields": [
+              "in",
+              "out"
+            ],
             "type": "unique"
           }
         ]
@@ -326,7 +352,9 @@
         "indexes": [
           {
             "name": "idx_api_keys_hash",
-            "fields": ["key_hash"],
+            "fields": [
+              "key_hash"
+            ],
             "type": "unique"
           }
         ]
@@ -372,7 +400,9 @@
         "indexes": [
           {
             "name": "idx_users_email",
-            "fields": ["email"],
+            "fields": [
+              "email"
+            ],
             "type": "unique"
           }
         ]

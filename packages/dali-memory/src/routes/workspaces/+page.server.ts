@@ -1,19 +1,37 @@
 import { connect, getDB } from '$lib/server/db/connection';
-import { toPlain } from '../../lib/utils/serialization';
 import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load: PageServerLoad = async () => {
   await connect();
   const db = getDB();
-  const workspaces = await db.query<{
-    id: string;
-    name: string;
-    description: string | null;
-    is_personal: boolean;
-    created_at: string;
-  }>('SELECT id, name, description, is_personal, created_at FROM workspaces ORDER BY name ASC');
-  return { workspaces: toPlain(workspaces) };
+
+  let workspaces: Array<{ id: string; name: string; description: string | null; is_personal: boolean; created_at: string }> = [];
+  try {
+    const result = await db.query<{
+      id: string;
+      name: string;
+      description: string | null;
+      is_personal: boolean;
+      created_at: string;
+    }>('SELECT id, name, description, is_personal, created_at FROM workspaces ORDER BY name ASC');
+    workspaces = result ?? [];
+  } catch {
+    // workspaces stays [] — graceful degradation
+  }
+
+  const workspacesWithSlug = workspaces.map((ws) => ({
+    id: String(ws.id),
+    name: ws.name,
+    description: ws.description,
+    is_personal: ws.is_personal,
+    created_at: typeof ws.created_at === 'object' && ws.created_at !== null
+      ? (ws.created_at as Date).toISOString?.() ?? String(ws.created_at)
+      : String(ws.created_at),
+    slug: String(ws.id).replace(/[⟨⟩]/g, '').split(':').pop() ?? String(ws.id),
+  }));
+
+  return { workspaces: workspacesWithSlug };
 };
 
 export const actions: Actions = {

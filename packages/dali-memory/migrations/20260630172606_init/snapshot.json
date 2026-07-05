@@ -1,7 +1,7 @@
 {
-  "version": "20260629092647",
-  "name": "add_user_name",
-  "createdAt": "2026-06-29T07:26:47.935Z",
+  "version": "20260630172606",
+  "name": "init",
+  "createdAt": "2026-06-30T15:26:06.682Z",
   "tables": [
     {
       "name": "workspaces",
