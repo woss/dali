@@ -58,6 +58,7 @@
     "./query/delete": "./dist/query/delete.mjs",
     "./query/insert": "./dist/query/insert.mjs",
     "./query/live": "./dist/query/live.mjs",
+    "./query/model": "./dist/query/model.mjs",
     "./query/relate": "./dist/query/relate.mjs",
     "./query/select": "./dist/query/select.mjs",
     "./query/types": "./dist/query/types.mjs",

@@ -15,6 +15,9 @@ export type { DaliORM } from '../sdk/dali-orm.js';
 export type { TableBinding } from './binding.js';
 export { bindTable } from './binding.js';
 
+// Model
+export { Model, createModel } from './model.js';
+
 // Conditions
 export {
   allConditions,

@@ -21,6 +21,7 @@ A TypeScript ORM for SurrealDB with schema definitions, fluent query builders, a
     - [UPDATE](#update)
     - [DELETE](#delete)
     - [RELATE](#relate)
+    - [Model Class](#model-class)
   - [Conditions](#conditions)
     - [Comparison Operators](#comparison-operators)
     - [String Operators](#string-operators)
@@ -61,6 +62,7 @@ A TypeScript ORM for SurrealDB with schema definitions, fluent query builders, a
 - **TypeScript-First** - Full type inference for schema, queries, and results
 - **Schema Builder** - Define tables, columns, indexes, analyzers, and relations programmatically
 - **Query Builders** - Fluent API for SELECT, INSERT, UPDATE, DELETE, and RELATE queries
+- **Model Class** - Pre-bound query builders via `orm.model(tableDef).select().execute()`
 - **Migrations** - Generate and run database migrations with shadow DB pre-validation
 - **Multiple Drivers** - Support for remote (WebSocket) and embedded modes (memory, file, rocksdb)
 - **Config Files** - JSON, JSONC, and TypeScript configuration files with validation
@@ -106,6 +108,17 @@ const [newUser] = await orm.insertInto(usersTable, {
 
 // Query users — fully typed result
 const users = await select(orm, usersTable)
+  .where((w) => w.eq('active', true))
+  .orderBy('name', 'ASC')
+  .limit(10)
+  .execute();
+
+// Or use a Model — bind orm + table once, then call builders freely
+import { createModel } from '@woss/dali-orm/query';
+
+const userModel = createModel(orm, usersTable);
+
+const activeUsers = await userModel.select()
   .where((w) => w.eq('active', true))
   .orderBy('name', 'ASC')
   .limit(10)
@@ -318,6 +331,70 @@ const [result] = await relate(orm, wroteSchema)
   .to('article:456')
   .set({ created_at: new Date().toISOString() })
   .execute();
+```
+
+### Model Class
+
+The `Model` class wraps a `DaliORM` instance + `TableDefinition` so you can call builder methods without passing `orm` and `tableDef` on every invocation. Use it for ad-hoc queries where you want cleaner, more concise code.
+
+**8 builder methods:**
+
+| Method      | Builder Returned      |
+| ----------- | --------------------- |
+| `.select()` | `SelectBuilder`       |
+| `.insert()` | `InsertBuilder`       |
+| `.update()` | `UpdateBuilder`       |
+| `.delete()` | `DeleteBuilder`       |
+| `.relate()` | `RelateBuilder`       |
+| `.create()` | `CreateBuilder`       |
+| `.upsert()` | `UpsertBuilder`       |
+| `.live()`   | `LiveQueryBuilder`    |
+
+**Factory import:**
+```typescript
+import { createModel } from '@woss/dali-orm/query';
+// or via the DaliORM instance:
+const userModel = orm.model(usersTable);
+```
+
+**Usage — standard CRUD:**
+```typescript
+// SELECT — where, orderBy, limit, etc.
+const adults = await userModel.select()
+  .where((w) => w.gte('age', 18))
+  .orderBy('name', 'ASC')
+  .execute();
+
+// INSERT — single record
+const [newUser] = await userModel.insert()
+  .one({ name: 'Alice', email: 'alice@example.com' })
+  .execute();
+
+// UPDATE — by ID
+const [updated] = await userModel.update()
+  .id('user:123')
+  .data({ name: 'Bob' })
+  .execute();
+
+// DELETE — with condition
+await userModel.delete()
+  .where((w) => w.eq('active', false))
+  .execute();
+```
+
+**Compare to free-standing builders:**
+```typescript
+// Free-standing — pass orm + table every time
+select(orm, usersTable).where(...).execute();
+
+// Model — bind once, call freely
+userModel.select().where(...).execute();
+```
+
+The `.orm` getter provides access to the underlying `DaliORM` instance for raw operations or other methods:
+
+```typescript
+await userModel.orm.insertInto(usersTable, { name: 'Charlie' });
 ```
 
 ## Conditions
@@ -640,6 +717,27 @@ const [updated] = await update(orm, userTable).id('user:123').data({ name: 'Jane
 const [deleted] = await delete_(orm, userTable).id('user:123').execute();
 const [link] = await relate(orm, edgeTable).from('user:123').to('article:456').execute();
 ```
+
+**Convenience — Model with pre-bound builders:**
+
+```typescript
+// orm.table(name) — returns raw table definition from schema
+const tableDef = orm.table('user');
+
+// orm.model(tableDef) — returns Model with 8 builder methods pre-bound to this ORM
+const userModel = orm.model(usersTable);
+
+// No need to pass orm/table on every call
+const results = await userModel.select()
+  .where((w) => w.eq('active', true))
+  .execute();
+
+const [newUser] = await userModel.insert()
+  .one({ name: 'Alice' })
+  .execute();
+```
+
+`orm.table()` and `orm.model()` serve different purposes — use `table()` to inspect schema definitions (column types, options), use `model()` when you want to run queries against a table.
 
 **Escape hatch — raw driver access for advanced use:**
 

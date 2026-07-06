@@ -2,6 +2,8 @@ import { connect as createDriver } from './driver/orm-connection.js';
 import type { OrmSchema } from './orm-schema.js';
 import type { InferSelectResult, InferInsertData, InferUpdateData } from './infer-types.js';
 import type { TableDefinition } from './table.js';
+import { createModel } from '../query/model.js';
+import type { Model } from '../query/model.js';
 
 /**
  * DaliORM configuration - extends SurrealORMConfig with optional schema
@@ -175,6 +177,25 @@ export class DaliORM {
    */
   table(name: string) {
     return this.schema?.getTable(name);
+  }
+
+  /**
+   * Create a Model instance bound to this ORM for the given table definition.
+   *
+   * Unlike `table(name)` which returns a raw table definition,
+   * `model(tableDef)` returns a full Model with builder methods
+   * (select, insert, update, delete, relate, create, upsert, live)
+   * pre-bound to this ORM — no need to pass `orm` on every call.
+   *
+   * @example
+   * ```typescript
+   * const users = defineTable('user', { name: string() });
+   * const userModel = orm.model(users);
+   * const results = await userModel.select().where(...).execute();
+   * ```
+   */
+  model<TDef extends TableDefinition>(tableDef: TDef): Model<TDef> {
+    return createModel(this, tableDef);
   }
 
   /**
