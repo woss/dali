@@ -4,6 +4,17 @@
 
 ### Added
 
+- Content chunking module — hierarchical splitter (heading→paragraph→line→sentence→word) with configurable maxChunkSize, overlap, and minChunkSize
+- `chunk_index`, `chunk_text`, and `section` columns on `embeddings` table for per-chunk metadata
+- `createMemory` auto-chunks content >1500 chars and embeds each chunk independently, linked to the parent memory via `has_embedding` relation
+- `updateMemory` re-chunks and re-embeds content when content changes
+- `searchSimilar` deduplicates results by parent memory, keeping only the highest-scoring chunk per memory
+- `HybridSearch` workspaceId parameter now uses `RecordId` for proper SurrealDB record-type comparison
+- `wsId()` helper on slug page for clean workspace_id comparison between RecordId and route param
+- Memory link URLs in workspace memory list use `$page.params.id` instead of `data.workspace?.id` (avoids RecordId leak)
+
+- Global `/memories` route — lists all memories across all workspaces with tag filter pills and workspace name badges linking to workspace-scoped routes
+- `MemoryService.listAllMemories(opts?: {limit?, offset?})` — returns all memories without workspace filter, paginated, ordered by created_at DESC
 - Workspace-scoped routes `/workspaces/[id]/memories` (list with search, tag filter, pagination) and `/workspaces/[id]/memories/[slug]` (detail with workspace membership verification)
 - Old `/memories` and `/memories/[slug]` routes now redirect (307) to workspace-scoped equivalents
 - Workspace-aware navbar — "Memories" link targets user's default workspace; context pill shows current workspace name on-scope
@@ -22,6 +33,7 @@
 
 ### Changed
 
+- Navbar "Memories" link now points to `/memories` (global memories list) instead of workspace-scoped `/workspaces/{defaultWorkspaceId}/memories`
 - Redesigned all 6 UI pages with glass morphism cards, gradient mesh background, amber/cyan/purple dark theme
 - Added Google Fonts (Space Grotesk headings + DM Sans body)
 - Added CSS animations (fadeIn, slideUp, slideDown, scaleIn) with stagger delays

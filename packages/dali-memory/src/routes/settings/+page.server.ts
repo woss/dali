@@ -5,6 +5,8 @@ import { hashApiKey } from '$lib/server/auth/api-keys';
 import { toPlain } from '../../lib/utils/serialization';
 import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
+import { create, select } from '@woss/dali-orm/query';
+import { apiKeysTable, usersTable } from '../../lib/server/db/schema';
 
 export const load: PageServerLoad = async () => {
   await connect();
@@ -32,7 +34,9 @@ export const actions: Actions = {
     await connect();
     const db = getDB();
     const data = await request.formData();
-    const name = data.get('name')?.toString() || 'default';
+    const name = data.get('name') || 'default';
+    console.log('Generating API key with name:', name);
+    console.log('data:', data);
 
     try {
       const rawKey =
@@ -41,22 +45,29 @@ export const actions: Actions = {
 
       // Look up user by email to get user_id
       let userId: string | null = null;
-      if (locals.userEmail) {
-        const users = await db.query<{ id: string }[]>(
-          'SELECT id FROM users WHERE email = $email',
-          { email: locals.userEmail },
-        );
-        userId = users?.[0]?.[0]?.id ?? null;
+
+      if (!locals.userEmail) {
+        // log('User email not found in locals. Cannot associate API key with user.');
+        return {
+          success: false,
+          error: 'User email not found in locals. Cannot associate API key with user.',
+        };
       }
 
-      if (userId) {
-        await db.query(
-          'CREATE api_keys CONTENT { key_hash: $hash, name: $name, user_id: $user_id }',
-          { hash, name, user_id: userId },
-        );
-      } else {
-        await db.query('CREATE api_keys CONTENT { key_hash: $hash, name: $name }', { hash, name });
+      const user = await select(db, usersTable)
+        .fields('id')
+        .where((w) => w.eq('email', locals.userEmail))
+        .execute();
+
+      if (user.length === 0) {
+        throw new Error(`User with email ${locals.userEmail} not found`);
       }
+
+      const uId = user[0];
+      userId = uId.id;
+
+      await create(db, apiKeysTable).data({ key_hash: hash, name, user_id: userId }).execute();
+
       return { success: true, newKey: rawKey, keyName: name };
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Failed to generate API key';

@@ -99,7 +99,7 @@ vi.mock('../../../../../../lib/utils/serialization', () => ({
 }));
 
 vi.mock('$lib/server/logger', () => ({
-  getLog: vi.fn(() => ({
+  createLogger: vi.fn(() => ({
     warn: vi.fn(),
     error: vi.fn(),
   })),

@@ -1,12 +1,10 @@
-import { select, create, update, delete_ } from '@woss/dali-orm/query';
-import { relate } from '@woss/dali-orm/query/relate';
 import { RecordId } from 'surrealdb';
-import type { InferSelectResult } from '@woss/dali-orm/query/types';
 import { getDB } from '../db/connection';
 import { memoriesTable, embeddingsTable, modelsTable, hasEmbeddingTable } from '../db/schema';
 import type { EmbedderService } from '../embedder';
 import type { MemoryRecord, SearchOptions, SearchResult } from './types';
 import { getConfig } from '../config';
+import { chunkContent } from '../chunking';
 
 /**
  * Normalize a record ID to "table:key" format.
@@ -58,7 +56,6 @@ export class MemoryService {
     slug?: string;
   }): Promise<MemoryRecord> {
     const db = getDB();
-    const driver = db.getDriver();
 
     // Validate workspace exists
     const wsRecordId = typeof data.workspace_id !== 'string'
@@ -81,8 +78,8 @@ export class MemoryService {
         .replace(/^-+|-+$/g, '');
 
     // Content dedup: check for existing record with same content + workspace_id
-    const existing = await select(db, memoriesTable)
-      .where((w) => w.eq('content', data.content).eq('workspace_id', data.workspace_id))
+    const existing = await db.model(memoriesTable).select()
+      .where((w) => w.eq('content', data.content).eq('workspace_id', wsRecordId))
       .limit(1)
       .execute();
 
@@ -91,32 +88,39 @@ export class MemoryService {
     }
 
     // Check if slug already exists
+    const driver = db.getDriver();
     const existingBySlug = await driver.select(`memories:${slug}`);
     if (existingBySlug.length > 0) {
       throw new Error(`Memory with slug '${slug}' already exists`);
     }
 
-    // Generate embedding
+    // Generate embedding(s)
     const { embedding, model: modelName, dimensions } = await this.embedder.embed(data.content);
+    
+    // For long content, split into chunks and embed each separately
+    const chunks = chunkContent(data.content);
+    const isMultiChunk = chunks.length > 1;
 
-    // Create new memory with slug as record ID (no embedding field)
-    const result = await create(db, memoriesTable)
+    // Create new memory with slug as record ID
+    const result = await db.model(memoriesTable).create()
       .id(slug)
       .data({
         name: data.name,
         content: data.content,
         memory_type: data.memory_type ?? 'fact',
         metadata: data.metadata ?? {},
-        workspace_id: data.workspace_id,
+        workspace_id: wsRecordId,
       })
       .execute();
+
+    const memoryRecord = result[0] as Record<string, unknown>;
 
     // Find or create model record
     const config = getConfig();
     const providerId = config.DALI_MEMORY_EMBEDDING_PROVIDER;
 
     let modelRecordId: string;
-    const existingModels = await select(db, modelsTable)
+    const existingModels = await db.model(modelsTable).select()
       .where((w) => w.eq('provider_id', providerId).eq('model_id', modelName))
       .limit(1)
       .execute();
@@ -124,7 +128,7 @@ export class MemoryService {
     if (existingModels.length > 0) {
       modelRecordId = String((existingModels[0] as Record<string, unknown>).id);
     } else {
-      const modelResult = await create(db, modelsTable)
+      const modelResult = await db.model(modelsTable).create()
         .data({
           provider_id: providerId,
           model_id: modelName,
@@ -134,22 +138,36 @@ export class MemoryService {
       modelRecordId = String((modelResult[0] as Record<string, unknown>).id);
     }
 
-    // Create embedding record linked to model
-    const embId = crypto.randomUUID().replace(/-/g, '');
-    await create(db, embeddingsTable)
-      .id(embId)
-      .data({
-        vector: embedding,
-        model: modelRecordId,
-        dimensions,
-      })
-      .execute();
+    // Create embedding record(s) — one per chunk, or one for the full content
+    const embeddingsToCreate = isMultiChunk
+      ? chunks
+      : [{ text: data.content, chunkIndex: 0, section: '' }];
 
-    // Relate embedding -> memory
-    await relate(db, hasEmbeddingTable)
-      .from(`embeddings:${embId}`)
-      .to(`memories:${slug}`)
-      .execute();
+    for (const chunk of embeddingsToCreate) {
+      // Embed each chunk individually
+      const chunkResult = isMultiChunk
+        ? await this.embedder.embed(chunk.text)
+        : { embedding, model: modelName, dimensions };
+
+      const embId = crypto.randomUUID().replace(/-/g, '');
+      await db.model(embeddingsTable).create()
+        .id(embId)
+        .data({
+          vector: chunkResult.embedding,
+          model: modelRecordId,
+          dimensions,
+          chunk_index: isMultiChunk ? chunk.chunkIndex : undefined,
+          chunk_text: isMultiChunk ? chunk.text : undefined,
+          section: chunk.section || undefined,
+        })
+        .execute();
+
+      // Relate embedding -> memory
+      await db.model(hasEmbeddingTable).relate()
+        .from(`embeddings:${embId}`)
+        .to(`memories:${slug}`)
+        .execute();
+    }
 
     return toMemoryRecord(result[0]);
   }
@@ -181,7 +199,6 @@ export class MemoryService {
     workspaceId?: string,
   ): Promise<MemoryRecord> {
     const db = getDB();
-    const driver = db.getDriver();
 
     const existing = await this.getMemory(id, workspaceId);
     if (!existing) {
@@ -197,21 +214,76 @@ export class MemoryService {
     if (data.content !== undefined) {
       updateData.content = data.content;
       if (data.content !== existing.content) {
-        const { embedding } = await this.embedder.embed(data.content);
+        const { embedding, model: modelName, dimensions } = await this.embedder.embed(data.content);
 
-        // Find the embedding record linked via has_embedding edge
+        // Find all existing embeddings for this memory
         const qualified = toQualifiedId(id);
         const recordKey = qualified.includes(':') ? qualified.split(':')[1] : qualified;
 
         const edges = await db.query<EdgeIn>(
-          'SELECT in FROM has_embedding WHERE out = $memId LIMIT 1',
+          'SELECT in FROM has_embedding WHERE out = $memId',
           { memId: new RecordId('memories', recordKey) },
         );
 
-        if (edges.length > 0) {
-          const embRecordId = edges[0].in;
-          const embKey = String(embRecordId.id);
-          await update(db, embeddingsTable).id(embKey).data({ vector: embedding }).execute();
+        // Delete old has_embedding edges and old embedding records
+        await db.query('DELETE has_embedding WHERE out = $memId', {
+          memId: new RecordId('memories', recordKey),
+        });
+
+        for (const edge of edges) {
+          const embKey = String(edge.in.id);
+          await db.model(embeddingsTable).delete().id(embKey).execute();
+        }
+
+        // Re-chunk and re-embed the updated content
+        const chunks = chunkContent(data.content);
+        const isMultiChunk = chunks.length > 1;
+
+        const config = getConfig();
+        const providerId = config.DALI_MEMORY_EMBEDDING_PROVIDER;
+
+        let modelRecordId: string;
+        const existingModels = await db.model(modelsTable).select()
+          .where((w) => w.eq('provider_id', providerId).eq('model_id', modelName))
+          .limit(1)
+          .execute();
+
+        if (existingModels.length > 0) {
+          modelRecordId = String((existingModels[0] as Record<string, unknown>).id);
+        } else {
+          const modelResult = await db.model(modelsTable).create()
+            .data({ provider_id: providerId, model_id: modelName, dimensions })
+            .execute();
+          modelRecordId = String((modelResult[0] as Record<string, unknown>).id);
+        }
+
+        // Create new embeddings from re-chunked content
+        const embeddingsToCreate = isMultiChunk
+          ? chunks
+      : [{ text: data.content, chunkIndex: 0, section: chunks[0]?.section ?? '' }];
+
+        for (const chunk of embeddingsToCreate) {
+          const chunkResult = isMultiChunk
+            ? await this.embedder.embed(chunk.text)
+            : { embedding, model: modelName, dimensions };
+
+          const embId = crypto.randomUUID().replace(/-/g, '');
+          await db.model(embeddingsTable).create()
+            .id(embId)
+            .data({
+              vector: chunkResult.embedding,
+              model: modelRecordId,
+              dimensions,
+              chunk_index: isMultiChunk ? chunk.chunkIndex : undefined,
+              chunk_text: isMultiChunk ? chunk.text : undefined,
+              section: chunk.section || undefined,
+            })
+            .execute();
+
+          await db.model(hasEmbeddingTable).relate()
+            .from(`embeddings:${embId}`)
+            .to(`memories:${recordKey}`)
+            .execute();
         }
       }
     }
@@ -219,14 +291,13 @@ export class MemoryService {
     // Normalize to key (bare slug or raw ID part) — strip table prefix and angle brackets
     const qualified = toQualifiedId(id);
     const recordKey = qualified.includes(':') ? qualified.split(':')[1] : qualified;
-    const result = await update(db, memoriesTable).id(recordKey).data(updateData).execute();
+    const result = await db.model(memoriesTable).update().id(recordKey).data(updateData).execute();
 
     return result[0] ? toMemoryRecord(result[0]) : (await this.getMemory(id))!;
   }
 
   async deleteMemory(id: string, workspaceId?: string): Promise<void> {
     const db = getDB();
-    const driver = db.getDriver();
 
     if (workspaceId !== undefined) {
       const memory = await this.getMemory(id, workspaceId);
@@ -242,9 +313,9 @@ export class MemoryService {
       : [memoriesTable.name, qualified];
     const memRecordId = new RecordId(tableName, key);
 
-    // Find related embedding edge (before deletion)
+    // Find all related embeddings via has_embedding edge
     const edges = await db.query<EdgeIn>(
-      'SELECT in FROM has_embedding WHERE out = $memId LIMIT 1',
+      'SELECT in FROM has_embedding WHERE out = $memId',
       { memId: memRecordId },
     );
 
@@ -253,11 +324,10 @@ export class MemoryService {
       memId: memRecordId,
     });
 
-    // Delete embedding record if it exists
-    if (edges.length > 0) {
-      const embRecordId = edges[0].in;
-      const embKey = String(embRecordId.id);
-      await delete_(db, embeddingsTable).id(embKey).execute();
+    // Delete ALL embedding records (not just the first)
+    for (const edge of edges) {
+      const embKey = String(edge.in.id);
+      await db.model(embeddingsTable).delete().id(embKey).execute();
     }
 
     // Delete memory_tags relations
@@ -266,7 +336,7 @@ export class MemoryService {
     });
 
     // Delete the memory record
-    await delete_(db, memoriesTable).id(qualified).execute();
+    await db.model(memoriesTable).delete().id(qualified).execute();
   }
 
   async listMemories(
@@ -274,10 +344,12 @@ export class MemoryService {
     opts?: { limit?: number; offset?: number },
   ): Promise<MemoryRecord[]> {
     const db = getDB();
-    const driver = db.getDriver();
 
-    const result = await select(db, memoriesTable)
-      .where((w) => w.eq('workspace_id', workspaceId))
+    // Convert bare string to RecordId so SurrealDB can match record<workspaces>
+    const wsId = new RecordId('workspaces', workspaceId);
+
+    const result = await db.model(memoriesTable).select()
+      .where((w) => w.eq('workspace_id', wsId))
       .orderBy('created_at', 'DESC')
       .limit(opts?.limit ?? 50)
       .start(opts?.offset ?? 0)
@@ -290,9 +362,8 @@ export class MemoryService {
     opts?: { limit?: number; offset?: number },
   ): Promise<MemoryRecord[]> {
     const db = getDB();
-    const driver = db.getDriver();
 
-    const result = await select(db, memoriesTable)
+    const result = await db.model(memoriesTable).select()
       .orderBy('created_at', 'DESC')
       .limit(opts?.limit ?? 50)
       .start(opts?.offset ?? 0)
@@ -305,28 +376,32 @@ export class MemoryService {
     const db = getDB();
     const driver = db.getDriver();
     const limit = options?.limit ?? 10;
-    const workspaceId = options?.workspaceId ?? null;
+    const rawWsId = options?.workspaceId ?? null;
     const threshold = options?.threshold ?? 0;
 
-    // Query embeddings with cosine similarity
+    // Convert string workspaceId to RecordId for proper record-type comparison
+    const wsParam: RecordId | null = rawWsId
+      ? new RecordId('workspaces', rawWsId.includes(':') ? rawWsId.split(':').pop()! : rawWsId)
+      : null;
+
     const sql = `SELECT id, vector::similarity::cosine(vector, $queryEmbedding) AS score
 FROM embeddings
-WHERE ->has_embedding.out.workspace_id = $workspaceId OR $workspaceId IS NONE
+WHERE ->has_embedding.out.workspace_id CONTAINS $wsRid OR $wsRid IS NONE
 ORDER BY score DESC
-LIMIT $limit`;
+LIMIT 500`;
 
     const rows = await db.query<Record<string, unknown>>(sql, {
       queryEmbedding: embedding,
-      workspaceId,
-      limit,
+      wsRid: wsParam,
     });
 
-    const results: SearchResult[] = [];
+    // Deduplicate by parent memory — keep only the highest-scoring chunk per memory
+    const memScores = new Map<string, { score: number; memRef: RecordId }>();
+
     for (const row of rows) {
       const score = Number((row as Record<string, unknown>).score ?? 0);
       if (score < threshold) continue;
 
-      // Fetch the memory linked via has_embedding edge
       const embRecordId = row.id as RecordId;
       const edges = await db.query<EdgeOut>(
         'SELECT out FROM has_embedding WHERE in = $embId LIMIT 1',
@@ -335,7 +410,24 @@ LIMIT $limit`;
       if (edges.length === 0) continue;
 
       const memRef = edges[0].out;
-      const memResult = await driver.select(String(memRef));
+      // Build clean key: extract table/id from RecordId to avoid
+      // angle-bracket wrapping that String(RecordId) produces for non-alphanumeric IDs
+      const memObj = memRef as unknown as Record<string, unknown>;
+      const tbl = String(memObj.tb ?? memObj.table ?? '');
+      const rid = String(memObj.id ?? '');
+      const memKey = `${tbl}:${rid}`;
+
+      // Keep only the best score per memory
+      if (!memScores.has(memKey) || score > memScores.get(memKey)!.score) {
+        memScores.set(memKey, { score, memRef });
+      }
+    }
+
+    // Fetch the best unique memories — use the clean tb:id string
+    // to avoid angle-bracket wrapping that breaks driver.select() / parseTableWithId()
+    const results: SearchResult[] = [];
+    for (const [memKey, { score }] of memScores) {
+      const memResult = await driver.select(memKey);
       if (!memResult[0]) continue;
 
       results.push({
@@ -345,6 +437,9 @@ LIMIT $limit`;
       });
     }
 
-    return results;
+    // Sort by score descending
+    results.sort((a, b) => b.score - a.score);
+
+    return results.slice(0, limit);
   }
 }

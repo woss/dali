@@ -21,7 +21,7 @@ const { mockInitLogger, mockGetLog, mockGetConfig, mockInitEmbedder, mockVerifyC
 
 vi.mock('$lib/server/logger', () => ({
   initLogger: mockInitLogger,
-  getLog: mockGetLog,
+  createLogger: mockGetLog,
 }));
 
 vi.mock('$lib/server/config', () => ({

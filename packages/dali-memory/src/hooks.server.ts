@@ -1,10 +1,14 @@
-import { initLogger, getLog } from '$lib/server/logger';
+import { initLogger, createLogger } from '$lib/server/logger';
 import { getConfig } from '$lib/server/config';
 import { initEmbedder } from '$lib/server/embedder/index';
 import { verifyCookie } from '$lib/server/auth/session';
+import { requestStorage } from '$lib/server/trace-context';
 import type { Handle } from '@sveltejs/kit';
 
-// Preload embedder model on server start — runs once at module load
+// Init logger first, then preload embedder — runs once at module load
+initLogger().catch((err) => {
+  console.error('Failed to init logger:', err instanceof Error ? err.message : String(err));
+});
 initEmbedder().catch((err) => {
   console.error('Failed to preload embedder:', err instanceof Error ? err.message : String(err));
 });
@@ -18,20 +22,22 @@ function isProtected(pathname: string): boolean {
 }
 
 export const handle: Handle = async ({ event, resolve }) => {
-  initLogger();
   const config = getConfig();
 
-  if (!config.DALI_MEMORY_AUTH_ENABLED) {
+  // Wrap each request in a trace context for log correlation
+  return requestStorage.run({ traceId: crypto.randomUUID() }, async () => {
+    if (!config.DALI_MEMORY_AUTH_ENABLED) {
+      return resolve(event);
+    }
+
+    if (isProtected(event.url.pathname)) {
+      const email = await verifyCookie(event.cookies.get('dali_session'), config.DALI_MEMORY_SECRET);
+      if (!email) return Response.redirect(new URL('/login', event.url), 303);
+      event.locals.authenticated = true;
+      event.locals.userEmail = email;
+    }
+
+    createLogger(['dali-memory', 'http']).debug(`${event.request.method} ${event.url.pathname}`);
     return resolve(event);
-  }
-
-  if (isProtected(event.url.pathname)) {
-    const email = await verifyCookie(event.cookies.get('dali_session'), config.DALI_MEMORY_SECRET);
-    if (!email) return Response.redirect(new URL('/login', event.url), 303);
-    event.locals.authenticated = true;
-    event.locals.userEmail = email;
-  }
-
-  getLog(['dali-memory', 'http']).debug(`${event.request.method} ${event.url.pathname}`);
-  return resolve(event);
+  });
 };

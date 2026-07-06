@@ -37,7 +37,7 @@ vi.mock('$env/dynamic/private', () => ({
 // ../../logger resolves to src/lib/server/logger.ts — the same module that
 // embedder/index.ts imports as '../logger'
 vi.mock('../../logger', () => ({
-  getLog: mockGetLog,
+  createLogger: mockGetLog,
 }));
 
 // Prevent LocalEmbedder from downloading ONNX weights via

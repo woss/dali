@@ -34,6 +34,7 @@ src/
     conditions.ts    — Condition DSL (eq, ne, gt, contains, and, or, etc.)
     types.ts         — InferSelectResult, InferInsertInput, ColumnRef, etc.
     binding.ts       — bindTable, TableBinding
+    model.ts         — Model&lt;TDef&gt; class + createModel() factory
   migration/
     api.ts           — Programmatic migration API (migrateToDatabase, rollbackMigrations, etc.)
     config.ts        — Migration config loading (supports shadow ns/db)
@@ -86,7 +87,14 @@ const [newUser] = await insert(driver, usersTable)
   .one({ name: 'Alice', email: 'alice@example.com', verified: false })
   .execute();
 
-// 5. Raw SQL for complex queries
+// 5. Or use Model for ad-hoc queries (bind once)
+import { createModel } from '@woss/dali-orm/query';
+
+const userModel = createModel(orm, usersTable);
+const verified = await userModel.select().where((w) => w.eq('verified', true)).limit(10).execute();
+const [newUser] = await userModel.insert().one({ name: 'Bob', email: 'bob@example.com', verified: true }).execute();
+
+// 6. Raw SQL for complex queries
 await orm.query('SELECT * FROM users WHERE email = $email', { email: 'a@b.com' });
 ```
 
@@ -111,6 +119,73 @@ const orm = await DaliORM.connect({
 
 **Record / scope auth** still uses `db.use()` + `db.signin()` — it requires matching the selected namespace/database to the access scope.
 
+## Model Class
+
+`Model<TDef>` binds a `DaliORM` + `TableDefinition` up front so you call builder methods without passing ORM/table on every invocation.
+
+**When to use:** ad-hoc queries, service methods that need multiple builder calls.
+**When to use `bindTable`/`TableBinding` instead:** when you need the builder to share an underlying driver-level chain state (the same SELECT mutated incrementally).
+
+### Factory & Methods
+
+```typescript
+import { createModel } from '@woss/dali-orm/query';
+import type { Model } from '@woss/dali-orm/query';
+
+const users = defineTable('user', { name: string('name') });
+const userModel = createModel(orm, users); // → Model<typeof users>
+
+// 8 builder methods — each returns a fresh builder instance
+userModel.select();   // → SelectBuilder<TDef>
+userModel.insert();   // → InsertBuilder<TDef>
+userModel.update();   // → UpdateBuilder<TDef>
+userModel.delete();   // → DeleteBuilder<TDef>
+userModel.relate();   // → RelateBuilder<TDef>
+userModel.create();   // → CreateBuilder<TDef>
+userModel.upsert();   // → UpsertBuilder<TDef>
+userModel.live();     // → LiveQueryBuilder<TDef>
+userModel.orm;        // → DaliORM (getter)
+```
+
+### Renamed export from barrel
+
+Both `Model` and `createModel` are re-exported from `@woss/dali-orm/query`:
+
+```typescript
+import { Model, createModel } from '@woss/dali-orm/query';
+// Equivalent:
+import { Model, createModel } from '@woss/dali-orm/query/model';
+```
+
+### DaliORM convenience
+
+`orm.model(tableDef)` wraps `createModel`:
+
+```typescript
+const userModel = orm.model(users);  // same as createModel(orm, users)
+```
+
+### Usage
+
+```typescript
+const activeUsers = await userModel.select()
+  .where((w) => w.eq('active', true))
+  .orderBy('name', 'ASC')
+  .limit(10)
+  .execute();
+
+const [newUser] = await userModel.insert()
+  .one({ name: 'Alice' })
+  .execute();
+
+await userModel.update()
+  .where((w) => w.eq('name', 'Alice'))
+  .data({ name: 'Alice Updated' })
+  .execute();
+```
+
+Each method call creates a **fresh** builder — safe to reuse the same model across concurrent calls.
+
 ## Reference Files
 
 | Task                                      | File                                                               |
@@ -131,6 +206,7 @@ const orm = await DaliORM.connect({
 - [ ] [references/schema-definition.md](references/schema-definition.md) — if defining tables, columns, OrmSchema
 - [ ] [references/dali-orm-class.md](references/dali-orm-class.md) — if connecting, CRUD, transactions
 - [ ] [references/query-builders.md](references/query-builders.md) — if writing select/insert/update/delete queries
+- [ ] [references/query-builders.md](references/query-builders.md) — Model section — if using Model class for ad-hoc queries
 - [ ] [references/conditions.md](references/conditions.md) — if building complex WHERE conditions
 - [ ] [references/migrations.md](references/migrations.md) — if generating/applying migrations
 - [ ] [references/functions.md](references/functions.md) — if using SurrealDB functions (math, string, vector, etc.)
@@ -142,7 +218,7 @@ const orm = await DaliORM.connect({
 | Import Path                                        | Exports                                                                                                                                          |
 | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `@woss/dali-orm`                                   | DaliORM, OrmSchema, createOrmSchema, connect, SurrealDriver, TableDefinition, ColumnDefinition                                                   |
-| `@woss/dali-orm/query`                             | select, insert, update, delete\_, upsert, create, relate, live, bindTable, all condition helpers, InferSelectResult, InferInsertInput, ColumnRef |
+| `@woss/dali-orm/query`                             | select, insert, update, delete\_, upsert, create, relate, live, bindTable, Model, createModel, all condition helpers, InferSelectResult, InferInsertInput, ColumnRef |
 | `@woss/dali-orm/query/select`                      | SelectBuilder, WhereBuilder, select                                                                                                              |
 | `@woss/dali-orm/query/insert`                      | InsertBuilder, insert                                                                                                                            |
 | `@woss/dali-orm/query/update`                      | UpdateBuilder, update                                                                                                                            |
@@ -151,6 +227,7 @@ const orm = await DaliORM.connect({
 | `@woss/dali-orm/query/conditions`                  | eq, ne, gt, gte, lt, lte, and, or, not, isNull, raw, etc.                                                                                        |
 | `@woss/dali-orm/query/types`                       | InferSelectResult, InferInsertInput, InferUpdateInput, ColumnRef, InferTypedRecord                                                               |
 | `@woss/dali-orm/query/binding`                     | bindTable, TableBinding                                                                                                                          |
+| `@woss/dali-orm/query/model`                      | Model, createModel                                                                                                                                 |
 | `@woss/dali-orm/migration/api`                     | migrateToDatabase, rollbackMigrations, getMigrationStatus, generateAndApplyMigration, pushSchemaFromTableDefs                                    |
 | `@woss/dali-orm/migration/core/shadow`             | connectToShadow, destroyShadow, validateWithShadow, ShadowConfig, ShadowValidationResult                                                         |
 | `@woss/dali-orm/sdk/table`                         | defineTable, defineRelationTable, TableDefinition, ColumnBuilder, IndexDefinition                                                                |

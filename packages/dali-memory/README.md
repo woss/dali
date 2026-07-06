@@ -12,6 +12,7 @@ Standalone MCP memory server with SurrealDB, hybrid search, and Web UI.
 - Auth: session cookie-based web auth + API key auth for MCP
 - Tag system for memory organization
 - Content deduplication
+- Content chunking — long content (>1500 chars) auto-split into overlapping chunks by heading→paragraph→line→sentence hierarchy, each chunk independently embedded for granular search
 - daisyUI / Tailwind v4 styling
 - DaliORM for type-safe schema, migrations, query builders
 
@@ -28,6 +29,9 @@ dali-memory/
 │   ├── lib/server/
 │   │   ├── config.ts           # Zod env var schema (DALI_MEMORY_* vars)
 │   │   ├── logger.ts           # LogTape with console + rotating file sinks
+│   │   ├── chunking/
+│   │   │   ├── index.ts        # Hierarchical content chunker (heading→paragraph→line→sentence)
+│   │   │   └── __tests__/index.test.ts
 │   │   ├── db/
 │   │   │   ├── schema.ts       # 9-table DaliORM schema (workspaces, memories, embeddings, models, tags, memory_tags, api_keys, users + has_embedding relation)
 │   │   │   ├── connection.ts   # DaliORM connect/disconnect, auto-migration on startup
@@ -41,7 +45,7 @@ dali-memory/
 │   │   │   └── api-keys.ts     # API key hashing (SHA-256 + secret salt), validation, last_used_at touch
 │   │   ├── services/
 │   │   │   ├── types.ts        # MemoryRecord, TagRecord, SearchResult, SearchOptions
-│   │   │   ├── memory.ts       # MemoryService — CRUD + vector search
+│   │   │   ├── memory.ts       # MemoryService — CRUD, vector search, listAllMemories (cross-workspace), auto-chunking on create/update
 │   │   │   ├── tag.ts          # TagService — create, find, list, attach/detach, union/intersect queries
 │   │   │   └── hybrid-search.ts # HybridSearch — RRF fusion of BM25 fulltext + cosine vector
 │   │   └── mcp.ts              # MCP server (4 tools) via @modelcontextprotocol/sdk
@@ -49,7 +53,10 @@ dali-memory/
 │   │   ├── +page.server.ts     # Home — stats dashboard (memories/workspaces/tags counts)
 │   │   ├── +page.svelte        # Home hero glass card + stat cards
 │   │   ├── +layout.server.ts   # Loads defaultWorkspaceId + workspaces list for all pages
-│   │   ├── +layout.svelte      # Glass navbar + page shell, workspace-aware nav links
+│   │   ├── +layout.svelte      # Glass navbar + page shell
+│   │   ├── memories/               # Global memory list (all workspaces) with tag filter, workspace badges
+│   │   │   ├── +page.server.ts     # Loads all memories via listAllMemories(), fetches tags per memory, batch-fetches workspace names
+│   │   │   └── +page.svelte        # Glass card memory list with tag filter, workspace badge linking to workspace
 │   │   ├── login/              # Email/password form → HMAC-signed cookie
 │   │   ├── register/           # Email/password/confirm → creates users + personal workspace
 │   │   ├── logout/             # Clears cookie, redirects to /login
@@ -102,7 +109,7 @@ All config via environment variables, validated by Zod.
 | ---------- | ----- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | workspaces | TABLE | name (unique), description, is_personal, user_id → users (optional), created_at                                                                                                               |
 | memories   | TABLE | name, content, memory_type (default "fact"), metadata, workspace_id → workspaces, created_at. Unique indexes on (name, ws) and (content, ws). Fulltext index on content (fts_ascii analyzer). |
-| embeddings | TABLE | vector, model → models, dimensions, created_at                                                                                                                                                |
+| embeddings | TABLE | vector, model → models, dimensions, chunk_index (optional), chunk_text (optional), section (optional), created_at |
 | models     | TABLE | provider_id, model_id, variant (optional), dimensions, created_at. Unique index on (provider_id, model_id).                                                                                   |
 | tags       | TABLE | name (unique)                                                                                                                                                                                 |
 | api_keys   | TABLE | key_hash (unique), name, created_at, last_used_at (optional), user_id → users (optional)                                                                                                      |
@@ -174,6 +181,8 @@ RRF (Reciprocal Rank Fusion) combining:
 
 Configurable weights (default: 0.5 each) and RRF constant K (default: 60). Results labeled with `matched_on`: `vector` / `fulltext` / `both`.
 
+**Chunk-aware:** `MemoryService.searchSimilar()` traverses the `has_embedding` edge from chunk embeddings to parent memories and deduplicates by memory, keeping only the highest-scoring chunk per memory. This prevents a single memory from dominating results while still leveraging granular chunk-level matching.
+
 ## MCP Server
 
 Exposed at `GET /api/mcp` (SSE stream) and `POST /api/mcp` (JSON-RPC) via `WebStandardStreamableHTTPServerTransport` from `@modelcontextprotocol/sdk`.
@@ -182,7 +191,7 @@ Exposed at `GET /api/mcp` (SSE stream) and `POST /api/mcp` (JSON-RPC) via `WebSt
 
 | Tool            | Input                                                | Description                                   |
 | --------------- | ---------------------------------------------------- | --------------------------------------------- |
-| memories_store  | name, content, workspace_id, memory_type?, metadata? | Create memory with auto-embedding             |
+| memories_store  | name, content, workspace_id, memory_type?, metadata? | Create memory with auto-embedding; content >1500 chars is auto-chunked into overlapping segments, each embedded independently |
 | memories_search | query, workspace_id?, limit?, threshold?             | Hybrid search (fulltext + vector, RRF fusion) |
 | tags_add        | memory_id, tag_name                                  | Create tag + attach to memory                 |
 | tags_remove     | memory_id, tag_name                                  | Detach tag from memory                        |
@@ -209,6 +218,7 @@ SvelteKit with Tailwind v4 + daisyUI, hard-coded dark theme (`data-theme="dark"`
 | Route                                          | Description                                                                                                                                                                                                                             |
 | ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | /                                              | Home hero with gradient heading glow + 3 stat cards (memories, workspaces, tags)                                                                                                                                                        |
+| /memories                                      | Global memory list (all workspaces) — staggered glass cards, tag filter (pills), workspace name badge linking to workspace, title links to individual memory page                                                                        |
 | /login                                         | Glass card with email/password form → HMAC-signed cookie, 30-day expiry                                                                                                                                                                 |
 | /register                                      | Glass card with name/email/password/confirm → CREATE users with crypto::argon2 + name, auto sign-in on success                                                                                                                          |
 | /logout                                        | Clears dali_session cookie, redirects to /login                                                                                                                                                                                         |
@@ -222,7 +232,7 @@ SvelteKit with Tailwind v4 + daisyUI, hard-coded dark theme (`data-theme="dark"`
 Fixed-top glass navbar with "dali-memory" brand link, center nav links (Memories, Workspaces, Settings), user name (or email fallback) when authenticated, Sign In/Register when not, and mobile hamburger dropdown.
 
 **Workspace-aware nav:**
-- "Memories" link targets `/workspaces/{defaultWorkspaceId}/memories` when user has a default workspace, falls back to `/workspaces` list
+- "Memories" link targets `/memories` (global memories page showing all memories across all workspaces)
 - A workspace context pill is shown on workspace-scoped routes next to the auth section, displaying the current workspace name
 - `+layout.server.ts` loads `defaultWorkspaceId` and workspaces list for all authenticated pages
 

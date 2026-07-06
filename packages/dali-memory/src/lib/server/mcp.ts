@@ -13,8 +13,8 @@ import { TagService } from './services/tag';
 import { HybridSearch } from './services/hybrid-search';
 import { EmbedderService, getEmbedder } from './embedder/index';
 import { validateApiKey } from './auth/api-keys';
-import { getDB } from './db/connection';
-import { getLog } from './logger';
+import { connect, getDB } from './db/connection';
+import { createLogger } from './logger';
 import type { SearchOptions } from './services/types';
 
 // ---------------------------------------------------------------------------
@@ -24,6 +24,7 @@ const TOOL_MEMORIES_STORE = 'memories_store';
 const TOOL_MEMORIES_SEARCH = 'memories_search';
 const TOOL_TAGS_ADD = 'tags_add';
 const TOOL_TAGS_REMOVE = 'tags_remove';
+const TOOL_WORKSPACES_LIST = 'workspaces_list';
 
 // ---------------------------------------------------------------------------
 // Zod v4 input schemas
@@ -56,6 +57,10 @@ const TagsAddSchema = z.object({
 const TagsRemoveSchema = z.object({
   memory_slug: z.string(),
   tag_name: z.string(),
+});
+
+const WorkspacesListSchema = z.object({
+  limit: z.number().optional(),
 });
 
 // ---------------------------------------------------------------------------
@@ -103,17 +108,25 @@ const TAGS_REMOVE_INPUT_SCHEMA = {
   required: ['memory_slug', 'tag_name'],
 };
 
+const WORKSPACES_LIST_INPUT_SCHEMA = {
+  type: 'object' as const,
+  properties: {
+    limit: { type: 'number' as const },
+  },
+};
+
 // ---------------------------------------------------------------------------
 // Factory: createMCPServer
 // ---------------------------------------------------------------------------
 
 /**
- * Creates a configured `Server` instance with 4 MCP tools:
+ * Creates a configured `Server` instance with 5 MCP tools:
  *
- * - memories_store   – Create a memory with auto-generated embedding
- * - memories_search  – Hybrid search across memories
- * - tags_add         – Create a tag and attach to a memory
- * - tags_remove      – Detach a tag from a memory
+ * - memories_store    – Create a memory with auto-generated embedding
+ * - memories_search   – Hybrid search across memories
+ * - tags_add          – Create a tag and attach to a memory
+ * - tags_remove       – Detach a tag from a memory
+ * - workspaces_list   – List all workspaces
  */
 export function createMCPServer(): Server {
   const server = new Server(
@@ -144,9 +157,14 @@ export function createMCPServer(): Server {
         description: 'Detach a tag from a memory',
         inputSchema: TAGS_REMOVE_INPUT_SCHEMA,
       },
+      {
+        name: TOOL_WORKSPACES_LIST,
+        description: 'List all workspaces',
+        inputSchema: WORKSPACES_LIST_INPUT_SCHEMA,
+      },
     ];
 
-    const log = getLog(['dali-memory', 'mcp']);
+    const log = createLogger(['dali-memory', 'mcp']);
     log.debug(`ListTools: ${tools.map((t) => t.name).join(', ')}`);
     return { tools };
   });
@@ -154,7 +172,7 @@ export function createMCPServer(): Server {
   // ---- tools/call ----
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const { name, arguments: args } = request.params;
-    const log = getLog(['dali-memory', 'mcp']);
+    const log = createLogger(['dali-memory', 'mcp']);
     log.info(`Tool called: ${name}`);
 
     try {
@@ -170,6 +188,9 @@ export function createMCPServer(): Server {
 
         case TOOL_TAGS_REMOVE:
           return await handleTagsRemove(args ?? {});
+
+        case TOOL_WORKSPACES_LIST:
+          return await handleWorkspacesList();
 
         default:
           throw new McpError(ErrorCode.MethodNotFound, `Unknown tool: ${name}`);
@@ -316,6 +337,50 @@ async function handleTagsAdd(
   return {
     content: [{ type: 'text', text: JSON.stringify({ tag_id: tagId }) }],
   };
+}
+
+async function handleWorkspacesList(): Promise<{
+  content: { type: 'text'; text: string }[];
+  isError?: boolean;
+}> {
+  await connect();
+  const db = getDB();
+
+  try {
+    const result = await db.query<{
+      id: string;
+      name: string;
+      description: string | null;
+      is_personal: boolean;
+      created_at: string;
+    }>('SELECT id, name, description, is_personal, created_at FROM workspaces ORDER BY name ASC');
+
+    const workspaces = (result ?? []).map((ws) => {
+      const rawCreated = ws.created_at;
+      const created_at =
+        rawCreated && typeof rawCreated === 'object'
+          ? (rawCreated as Date).toISOString?.() ?? String(rawCreated)
+          : String(rawCreated);
+
+      return {
+        id: String(ws.id),
+        name: ws.name,
+        description: ws.description,
+        is_personal: ws.is_personal,
+        created_at,
+      };
+    });
+
+    return {
+      content: [{ type: 'text', text: JSON.stringify(workspaces) }],
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    return {
+      content: [{ type: 'text', text: `Failed to list workspaces: ${message}` }],
+      isError: true,
+    };
+  }
 }
 
 async function handleTagsRemove(

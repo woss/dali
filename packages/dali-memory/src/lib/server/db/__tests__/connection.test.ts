@@ -43,7 +43,7 @@ vi.mock('$env/dynamic/private', () => ({
 }));
 
 vi.mock('../logger', () => ({
-  getLog: vi.fn(() => ({
+  createLogger: vi.fn(() => ({
     info: vi.fn(),
     debug: vi.fn(),
     error: vi.fn(),

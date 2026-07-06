@@ -6,7 +6,18 @@ import { EmbedderService } from '$lib/server/embedder';
 import { MemoryService } from '$lib/server/services/memory';
 import { TagService } from '$lib/server/services/tag';
 import { toPlain } from '../../../../../lib/utils/serialization';
-import { getLog } from '$lib/server/logger';
+import { createLogger } from '$lib/server/logger';
+
+/**
+ * Extract clean workspace ID string from a RecordId or qualified string.
+ * memory.workspace_id is a RecordId('workspaces', '...') from the DB,
+ * but params.id is a bare slug like "rqhh4az3tj18qndosaw3".
+ */
+function wsId(ws: unknown): string {
+  if (ws instanceof RecordId) return String(ws.id);
+  const s = String(ws);
+  return s.includes(':') ? s.split(':').pop()! : s;
+}
 
 export const load: PageServerLoad = async ({ params }) => {
   const workspaceId = params.id;
@@ -35,7 +46,7 @@ export const load: PageServerLoad = async ({ params }) => {
     error(404, 'Memory not found');
   }
 
-  if (memory.workspace_id !== workspaceId) {
+  if (wsId(memory.workspace_id) !== workspaceId) {
     error(404, 'Memory not found in this workspace');
   }
 
@@ -58,7 +69,7 @@ export const actions: Actions = {
     if (!memory) {
       return fail(404, { error: 'Memory not found' });
     }
-    if (memory.workspace_id !== params.id) {
+    if (wsId(memory.workspace_id) !== params.id) {
       return fail(404, { error: 'Memory not found in this workspace' });
     }
 
@@ -67,7 +78,7 @@ export const actions: Actions = {
     const content = data.get('content')?.toString();
 
     if (!name || !content) {
-      getLog(['dali-memory', 'http']).warn('edit action validation failed: missing fields', { name: !!name, content: !!content });
+      createLogger(['dali-memory', 'http']).warn('edit action validation failed: missing fields', { name: !!name, content: !!content });
       return fail(400, { error: 'Name and content are required' });
     }
 
@@ -76,7 +87,7 @@ export const actions: Actions = {
       return { success: true, action: 'edit' };
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Failed to update memory';
-      getLog(['dali-memory', 'http']).error('edit action failed', { error: msg, slug: params.slug });
+      createLogger(['dali-memory', 'http']).error('edit action failed', { error: msg, slug: params.slug });
       return fail(400, { error: msg });
     }
   },
@@ -92,7 +103,7 @@ export const actions: Actions = {
     if (!memory) {
       return fail(404, { error: 'Memory not found' });
     }
-    if (memory.workspace_id !== params.id) {
+    if (wsId(memory.workspace_id) !== params.id) {
       return fail(404, { error: 'Memory not found in this workspace' });
     }
 
@@ -100,7 +111,7 @@ export const actions: Actions = {
       await memoryService.deleteMemory(params.slug);
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Failed to delete memory';
-      getLog(['dali-memory', 'http']).error('delete action failed', { error: msg, slug: params.slug });
+      createLogger(['dali-memory', 'http']).error('delete action failed', { error: msg, slug: params.slug });
       return fail(400, { error: msg });
     }
 
@@ -117,7 +128,7 @@ export const actions: Actions = {
     if (!memory) {
       return fail(404, { error: 'Memory not found' });
     }
-    if (memory.workspace_id !== params.id) {
+    if (wsId(memory.workspace_id) !== params.id) {
       return fail(404, { error: 'Memory not found in this workspace' });
     }
 
@@ -146,7 +157,7 @@ export const actions: Actions = {
       return { success: true };
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Failed to add tag';
-      getLog(['dali-memory', 'http']).error('add_tag action failed', { error: msg });
+      createLogger(['dali-memory', 'http']).error('add_tag action failed', { error: msg });
       return fail(400, { error: msg });
     }
   },
@@ -161,7 +172,7 @@ export const actions: Actions = {
     if (!memory) {
       return fail(404, { error: 'Memory not found' });
     }
-    if (memory.workspace_id !== params.id) {
+    if (wsId(memory.workspace_id) !== params.id) {
       return fail(404, { error: 'Memory not found in this workspace' });
     }
 
@@ -178,7 +189,7 @@ export const actions: Actions = {
       return { success: true };
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Failed to remove tag';
-      getLog(['dali-memory', 'http']).error('remove_tag action failed', { error: msg });
+      createLogger(['dali-memory', 'http']).error('remove_tag action failed', { error: msg });
       return fail(400, { error: msg });
     }
   },

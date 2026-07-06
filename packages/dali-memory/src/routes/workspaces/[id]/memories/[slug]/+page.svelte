@@ -1,7 +1,9 @@
 <script lang="ts">
+  import { page } from '$app/stores';
+
   let { data, form } = $props();
   let memory = $derived(data.memory);
-  let workspaceId = $derived(data.workspace?.id);
+  let workspaceId = $derived($page.params.id);
   let showEditForm = $state(false);
 
   // Close edit form on successful save

@@ -1,9 +1,10 @@
 <script lang="ts">
   import { goto } from '$app/navigation';
+  import { page } from '$app/stores';
 
   let { data, form } = $props();
 
-  let workspaceId = $derived(data.workspace?.id || '');
+  let workspaceId = $derived($page.params.id || '');
   let workspaceName = $derived(data.workspace?.name || '');
   let searchQuery = $derived(data.searchQuery ?? '');
   let allTags = $derived(data.allTags ?? []);

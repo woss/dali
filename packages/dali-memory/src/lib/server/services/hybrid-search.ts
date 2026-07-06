@@ -41,19 +41,20 @@ export class HybridSearch {
     const driver = db.getDriver();
     const { workspaceId, limit = 10, threshold = 0 } = options ?? {};
 
+    // Convert string workspaceId to RecordId for proper record-type comparison
+    const wsRid: RecordId | null = workspaceId
+      ? new RecordId('workspaces', workspaceId.includes(':') ? workspaceId.split(':').pop()! : workspaceId)
+      : null;
+
     // 1. Generate embedding from query text
     const { embedding } = await this.embedder.embed(query);
 
     // 2. Vector search on embeddings table → traverse has_embedding edge to memory
     const vLimit = limit * 3;
     let vSql = `SELECT id, vector::similarity::cosine(vector, $queryEmbedding) AS vector_score
-FROM embeddings`;
-    const vParams: Record<string, unknown> = { queryEmbedding: embedding, vLimit };
-
-    if (workspaceId) {
-      vSql += '\nWHERE ->has_embedding.out.workspace_id = $ws';
-      vParams.ws = workspaceId;
-    }
+FROM embeddings
+WHERE ->has_embedding.out.workspace_id CONTAINS $wsRid OR $wsRid IS NONE`;
+    const vParams: Record<string, unknown> = { queryEmbedding: embedding, vLimit, wsRid };
 
     vSql += '\nORDER BY vector_score DESC\nLIMIT $vLimit';
 
@@ -86,11 +87,10 @@ FROM embeddings`;
     let ftSql = `SELECT id, name, content, memory_type, metadata, workspace_id, created_at,
 search::score(${DEFAULT_FT_INDEX}) AS ft_score
 FROM memories WHERE content @${DEFAULT_FT_INDEX}@ $searchText`;
-    const ftParams: Record<string, unknown> = { searchText: query, fLimit: limit * 3 };
+    const ftParams: Record<string, unknown> = { searchText: query, fLimit: limit * 3, wsRid };
 
     if (workspaceId) {
-      ftSql += ' AND workspace_id = $ws';
-      ftParams.ws = workspaceId;
+      ftSql += ' AND workspace_id = $wsRid';
     }
 
     ftSql += ' ORDER BY ft_score DESC LIMIT $fLimit';

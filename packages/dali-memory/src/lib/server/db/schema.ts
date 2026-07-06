@@ -62,6 +62,9 @@ export const embeddingsTable = defineTable(
     vector: array('vector'),
     model: record('models'),
     dimensions: int('dimensions'),
+    chunk_index: int('chunk_index').optional(),
+    chunk_text: string('chunk_text').optional(),
+    section: string('section').optional(),
     created_at: datetime('created_at').defaultNow(),
   },
   // No HNSW index here — created dynamically per model dimension at model registration time (option 2)

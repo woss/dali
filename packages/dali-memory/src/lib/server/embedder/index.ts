@@ -1,4 +1,4 @@
-import { getLog } from '../logger';
+import { createLogger } from '../logger';
 import type { EmbedderProvider, EmbedderResult, EmbedderProviderType } from './types';
 import { getConfig } from '../config';
 import { LocalEmbedder } from './local';
@@ -11,7 +11,7 @@ export class EmbedderService {
     const config = getConfig();
     const type: EmbedderProviderType = config.DALI_MEMORY_EMBEDDING_PROVIDER;
 
-    getLog(['dali-memory', 'embedder']).info('Initializing embedder with provider: ' + type);
+    createLogger(['dali-memory', 'embedder']).info('Initializing embedder with provider: ' + type);
 
     if (type === 'local') {
       const local = new LocalEmbedder();
@@ -25,7 +25,7 @@ export class EmbedderService {
   async embed(text: string): Promise<EmbedderResult> {
     if (!this.provider) throw new Error('Embedder not initialized');
 
-    const log = getLog(['dali-memory', 'embedder']);
+    const log = createLogger(['dali-memory', 'embedder']);
     log.debug(`Embedding text of length ${text.length}`);
 
     try {
@@ -57,7 +57,7 @@ export async function initEmbedder(): Promise<void> {
   const svc = new EmbedderService();
   await svc.initialize();
   instance = svc;
-  getLog(['dali-memory', 'embedder']).info('Embedder singleton initialized');
+  createLogger(['dali-memory', 'embedder']).info('Embedder singleton initialized');
 }
 
 /**

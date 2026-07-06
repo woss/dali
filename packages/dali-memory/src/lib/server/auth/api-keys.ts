@@ -1,4 +1,4 @@
-import { getLog } from '../logger';
+import { createLogger } from '../logger';
 import { getConfig } from '../config';
 import { getDB } from '../db/connection';
 import { select, update } from '@woss/dali-orm/query';
@@ -14,22 +14,26 @@ export async function hashApiKey(key: string): Promise<string> {
 }
 
 export async function validateApiKey(key: string | null | undefined): Promise<boolean> {
-  if (!key) return false;
-  if (!getConfig().DALI_MEMORY_AUTH_ENABLED) return true;
-
+  if (!key) {
+    return false;
+  }
+  if (!getConfig().DALI_MEMORY_AUTH_ENABLED) {
+    return true;
+  }
   const db = getDB();
   const hash = await hashApiKey(key);
+  console.log('Validating API key:', key, hash);
 
   const results = await select(db, apiKeysTable)
     .where((w) => w.eq('key_hash', hash))
     .execute();
 
   if (results.length === 0) {
-    getLog(['dali-memory', 'auth']).warn('Invalid API key attempt');
+    createLogger(['dali-memory', 'auth']).warn('Invalid API key attempt');
     return false;
   }
 
-  getLog(['dali-memory', 'auth']).debug('API key validated successfully');
+  createLogger(['dali-memory', 'auth']).debug('API key validated successfully');
 
   const record = results[0];
   const rawId = record.id;

@@ -30,6 +30,7 @@ const envSchema = z.object({
 
   // Logging
   DALI_MEMORY_LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
+  DALI_MEMORY_LOG_DIR: z.string().default('logs'),
 });
 
 export type DaliMemoryConfig = z.infer<typeof envSchema>;

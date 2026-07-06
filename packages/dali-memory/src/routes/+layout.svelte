@@ -4,7 +4,7 @@
   let { children } = $props();
 
   // Derive workspace context for nav
-  let workspaceName = $derived<string | null>(null);
+  let workspaceName = $state<string | null>(null);
   $effect(() => {
     const path = $page.url.pathname;
     const wsMatch = path.match(/^\/workspaces\/([^/]+)/);
@@ -17,11 +17,7 @@
     }
   });
 
-  let memoriesHref = $derived(
-    $page.data.defaultWorkspaceId
-      ? `/workspaces/${$page.data.defaultWorkspaceId}/memories`
-      : '/workspaces'
-  );
+  let memoriesHref = $derived('/memories');
 </script>
 
 <div>

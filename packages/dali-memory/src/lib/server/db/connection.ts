@@ -1,4 +1,4 @@
-import { getLog } from '../logger';
+import { createLogger } from '../logger';
 import { DaliORM } from '@woss/dali-orm';
 import { generateAndApplyMigration } from '@woss/dali-orm/migration/api';
 import { schema } from './schema';
@@ -10,7 +10,7 @@ let instance: DaliORM | null = null;
 export async function connect() {
   if (instance) return instance;
 
-  const log = getLog(['dali-memory', 'db']);
+  const log = createLogger(['dali-memory', 'db']);
   const url = process.env.DALI_MEMORY_SURREAL_URL || 'ws://localhost:10101';
   log.info('Connecting to SurrealDB at ' + url);
 
@@ -63,7 +63,7 @@ export async function disconnect() {
     await instance.disconnect();
     instance = null;
   }
-  getLog(['dali-memory', 'db']).debug('Disconnected from SurrealDB');
+  createLogger(['dali-memory', 'db']).debug('Disconnected from SurrealDB');
 }
 
 export function getDB(): DaliORM {

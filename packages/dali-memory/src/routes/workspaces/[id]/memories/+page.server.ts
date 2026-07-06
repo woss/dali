@@ -46,7 +46,11 @@ export const load: PageServerLoad = async ({ params, url }) => {
   let memories: (MemoryRecord & { matched_on?: 'vector' | 'fulltext' | 'both' })[];
   if (activeTag) {
     const tagged = await tagService.unionTags([activeTag]);
-    memories = tagged.filter(m => m.workspace_id === workspaceId);
+    memories = tagged.filter(m => {
+      const wid = m.workspace_id;
+      const widStr = typeof wid === 'string' ? wid : String((wid as unknown as RecordId).id);
+      return widStr === workspaceId;
+    });
   } else if (searchQuery) {
     const hybridSearch = new HybridSearch(embedder);
     const results = await hybridSearch.search(searchQuery, {

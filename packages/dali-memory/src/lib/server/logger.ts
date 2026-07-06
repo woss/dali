@@ -1,16 +1,16 @@
 import {
-  configureSync,
+  configure,
   getConsoleSink,
-  getTextFormatter,
-  getAnsiColorFormatter,
   getLogger,
+  getJsonLinesFormatter,
   type Logger,
   type LogLevel,
 } from '@logtape/logtape';
-import { getFileSink } from '@logtape/file';
+import { getRotatingFileSink } from '@logtape/file';
+import { getPrettyFormatter } from '@logtape/pretty';
 import { getConfig } from './config';
+import { contextLocalStorage } from './trace-context';
 
-// Map our config log levels to LogTape log levels
 const LOG_LEVEL_MAP: Record<string, LogLevel> = {
   debug: 'debug',
   info: 'info',
@@ -18,62 +18,67 @@ const LOG_LEVEL_MAP: Record<string, LogLevel> = {
   error: 'error',
 };
 
-// ---------------------------------------------------------------------------
-// Logger module — LogTape with console + rotating file sinks
-// ---------------------------------------------------------------------------
-
 let configured = false;
+export type Category = [string, string];
 
-export type LogCategory =
-  | ['dali-memory']
-  | ['dali-memory', 'mcp']
-  | ['dali-memory', 'auth']
-  | ['dali-memory', 'db']
-  | ['dali-memory', 'embedder']
-  | ['dali-memory', 'http'];
+export const CAT = {
+  app: ['dali-memory', 'app'] as Category,
+  db: ['dali-memory', 'db'] as Category,
+  api: ['dali-memory', 'api'] as Category,
+  llm: ['dali-memory', 'llm'] as Category,
+  mcp: ['dali-memory', 'mcp'] as Category,
+  auth: ['dali-memory', 'auth'] as Category,
+  embedder: ['dali-memory', 'embedder'] as Category,
+  http: ['dali-memory', 'http'] as Category,
+  search: ['dali-memory', 'search'] as Category,
+  hooks: ['dali-memory', 'hooks'] as Category,
+};
 
-/**
- * Initialize LogTape once at app start. Safe to call multiple times.
- */
-export function initLogger(): void {
-  if (configured) return;
+export async function initLogger(): Promise<void> {
+  console.log('configuring logger...', configured);
+  if (configured) {
+    return;
+  }
 
   const level = (LOG_LEVEL_MAP[getConfig().DALI_MEMORY_LOG_LEVEL] ?? 'info') as LogLevel;
-  const logsDir = process.env.DALI_MEMORY_LOG_DIR || 'logs';
+  const logsDir = getConfig().DALI_MEMORY_LOG_DIR || 'logs';
 
   try {
-    configureSync({
+    await configure({
+      contextLocalStorage,
+      reset: true,
       sinks: {
-        console: getConsoleSink({ formatter: getAnsiColorFormatter() }),
-        file: getFileSink(`${logsDir}/dali-memory.log`, {
-          formatter: getTextFormatter(),
+        console: getConsoleSink({
+          formatter: getPrettyFormatter({
+            timestamp: 'time',
+            inspectOptions: { colors: true },
+            wordWrap: 400,
+          }),
+        }),
+        file: getRotatingFileSink(`${logsDir}/dali-memory.log`, {
+          maxSize: 10 * 1024 * 1024,
+          maxFiles: 70,
+          formatter: getJsonLinesFormatter({ properties: 'flatten' }),
         }),
       },
       loggers: [
         { category: ['logtape', 'meta'], lowestLevel: 'warning', sinks: [] },
         { category: ['dali-memory'], lowestLevel: level, sinks: ['console', 'file'] },
-        { category: ['dali-memory', 'mcp'], lowestLevel: level, sinks: ['console', 'file'] },
-        { category: ['dali-memory', 'auth'], lowestLevel: level, sinks: ['console', 'file'] },
-        { category: ['dali-memory', 'db'], lowestLevel: level, sinks: ['console', 'file'] },
-        { category: ['dali-memory', 'embedder'], lowestLevel: level, sinks: ['console', 'file'] },
-        { category: ['dali-memory', 'http'], lowestLevel: level, sinks: ['console', 'file'] },
       ],
     });
-
     configured = true;
-  } catch {
-    // Already configured — happens in dev/HMR when this module is hot-reloaded
-    // but LogTape's internal state survives. Safe to ignore.
+  } catch (error) {
+    console.error('Failed to configure logger:', error);
   }
 }
 
 /**
- * Get a scoped logger by category.
- * Call initLogger() once before using this in production.
+ * Create a category-scoped logger.
+ *
+ * Usage:
+ *   const log = logger(CAT.db);
+ *   log.debug`Query took ${duration}ms`;
  */
-export function getLog(category: LogCategory): Logger {
-  if (!configured) {
-    initLogger();
-  }
+export function createLogger(category: Category): Logger {
   return getLogger(category);
 }

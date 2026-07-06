@@ -1,4 +1,4 @@
-import { describe, test, expect, vi, beforeAll, afterAll } from 'vitest';
+import { describe, test, expect, vi, beforeAll, afterAll, beforeEach } from 'vitest';
 
 // ---------------------------------------------------------------------------
 // Hoisted mocks — referenced inside vi.mock() factories
@@ -43,6 +43,7 @@ vi.mock('$env/dynamic/private', () => ({
 // ---------------------------------------------------------------------------
 // Imports
 // ---------------------------------------------------------------------------
+import { RecordId } from 'surrealdb';
 import { DaliORM } from '@woss/dali-orm';
 import { pushSchemaFromTableDefs } from '@woss/dali-orm/migration/api';
 import { schema } from '../../db/schema';
@@ -145,9 +146,7 @@ describe('MemoryService', () => {
   test('rejects duplicate content in same workspace', async () => {
     const content = `dedup-ws-${Date.now()}`;
     await seedMemory(service, content, wsId);
-    // The ORM's parameterized WHERE doesn't match record-typed workspace_id,
-    // so the dedup check falls through and the DB unique index catches it.
-    await expect(seedMemory(service, content, wsId)).rejects.toThrow(/already contains/i);
+    await expect(seedMemory(service, content, wsId)).rejects.toThrow(/already exists in workspace/i);
   });
 
   test('allows same content in different workspace', async () => {
@@ -229,6 +228,118 @@ describe('MemoryService', () => {
       expect(results[0]).toHaveProperty('score');
       expect(results[0]).toHaveProperty('matched_on');
     }
+  });
+
+  // -------------------------------------------------------------------------
+  // Multi-chunk (content chunking) integration tests
+  // -------------------------------------------------------------------------
+
+  const makeChunkContent = (label: string) =>
+    `${label}: ` + 'This is sufficiently long text that will trigger content chunking. '.repeat(70);
+
+  test('createMemory with long content creates multiple embeddings', async () => {
+    const content = makeChunkContent(`create-lc-${Date.now()}`);
+    const name = `chunk-create-${Date.now()}`;
+    const mem: any = await seedMemory(service, content, wsId, name);
+    expect(mem).toBeDefined();
+    expect(mem.slug).toBeDefined();
+
+    // Debug: check what searchSimilar returns
+    const results: any[] = await service.searchSimilar(EMBEDDING_384, {
+      workspaceId: wsId,
+      limit: 10,
+    });
+    const match = results.find((r: any) => r.memory.name === name);
+    expect(match).toBeDefined();
+    expect(match!.score).toBeGreaterThan(0);
+    expect(match!.matched_on).toBe('vector');
+  });
+
+  test('searchSimilar deduplicates multi-chunk memories', async () => {
+    const name = `chunk-dedup-${Date.now()}`;
+    const content = makeChunkContent(name);
+    await seedMemory(service, content, wsId, name);
+
+    const results: any[] = await service.searchSimilar(EMBEDDING_384, {
+      workspaceId: wsId,
+      limit: 10,
+    });
+    // Should return the deduped memory exactly once
+    const memMatches = results.filter((r: any) => r.memory.name === name);
+    expect(memMatches).toHaveLength(1);
+    expect(memMatches[0].score).toBeGreaterThan(0);
+    expect(memMatches[0].matched_on).toBe('vector');
+  });
+
+  test('updateMemory replaces old embeddings with new chunked embeddings', async () => {
+    const name = `chunk-update-${Date.now()}`;
+    const shortContent = `short-${Date.now()}`;
+    const longContent = makeChunkContent(`long-${Date.now()}`);
+    const mem: any = await seedMemory(service, shortContent, wsId, name);
+
+    // searchSimilar finds short memory
+    const before: any[] = await service.searchSimilar(EMBEDDING_384, {
+      workspaceId: wsId,
+      limit: 10,
+    });
+    expect(before.find((r: any) => r.memory.name === name)).toBeDefined();
+
+    // Update with long content
+    const updated: any = await service.updateMemory(String(mem.id), { content: longContent });
+    expect(updated.content).toBe(longContent);
+
+    // searchSimilar finds memory after update
+    const after: any[] = await service.searchSimilar(EMBEDDING_384, {
+      workspaceId: wsId,
+      limit: 10,
+    });
+    const match = after.find((r: any) => r.memory.name === name);
+    expect(match).toBeDefined();
+    expect(match!.score).toBeGreaterThan(0);
+  });
+
+  test('deleteMemory with chunks removes all embeddings', async () => {
+    const name = `chunk-delete-${Date.now()}`;
+    const content = makeChunkContent(name);
+    const mem: any = await seedMemory(service, content, wsId, name);
+
+    // searchSimilar finds the memory before deletion
+    const before: any[] = await service.searchSimilar(EMBEDDING_384, {
+      workspaceId: wsId,
+      limit: 10,
+    });
+    expect(before.find((r: any) => r.memory.name === name)).toBeDefined();
+
+    // Delete the memory
+    await service.deleteMemory(String(mem.id));
+
+    // searchSimilar should NOT return the deleted memory
+    const after: any[] = await service.searchSimilar(EMBEDDING_384, {
+      workspaceId: wsId,
+      limit: 10,
+    });
+    expect(after.find((r: any) => r.memory.name === name)).toBeUndefined();
+  });
+
+  test('short and long memories both returned by searchSimilar', async () => {
+    const shortName = `chunk-short-${Date.now()}`;
+    const longName = `chunk-long-${Date.now()}`;
+    const shortContent = `short-side-by-side-${Date.now()}`;
+    const longContent = makeChunkContent(longName);
+
+    await seedMemory(service, shortContent, wsId, shortName);
+    await seedMemory(service, longContent, wsId, longName);
+
+    const results: any[] = await service.searchSimilar(EMBEDDING_384, {
+      workspaceId: wsId,
+      limit: 10,
+    });
+    const shortMatch = results.find((r: any) => r.memory.name === shortName);
+    const longMatch = results.find((r: any) => r.memory.name === longName);
+    expect(shortMatch).toBeDefined();
+    expect(longMatch).toBeDefined();
+    expect(shortMatch!.score).toBeGreaterThan(0);
+    expect(longMatch!.score).toBeGreaterThan(0);
   });
 });
 

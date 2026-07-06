@@ -1,7 +1,4 @@
-import type { InferSelectResult } from '@woss/dali-orm/query/types';
-import { select, insert, delete_ } from '@woss/dali-orm/query';
 import { RecordId } from 'surrealdb';
-import { relate } from '@woss/dali-orm/query/relate';
 import { getDB } from '../db/connection';
 import { tagsTable, memoryTagsTable } from '../db/schema';
 import type { TagRecord, MemoryRecord } from './types';
@@ -27,26 +24,26 @@ function normalizeId(id: string): string {
 export class TagService {
   async createTag(name: string): Promise<TagRecord> {
     const db = getDB();
-    const driver = db.getDriver();
 
     // Check for existing tag with same name (unique constraint in schema)
-    const existing = await select(db, tagsTable)
+    const existing = await db.model(tagsTable)
+      .select()
       .where((w) => w.eq('name', name))
       .execute();
     if (existing.length > 0) {
       return existing[0] as unknown as TagRecord;
     }
 
-    const result = await insert(db, tagsTable).one({ name }).execute();
+    const result = await db.model(tagsTable).insert().one({ name }).execute();
 
     return result[0] as unknown as TagRecord;
   }
 
   async getTag(id: string): Promise<TagRecord | null> {
     const db = getDB();
-    const driver = db.getDriver();
 
-    const result = await select(db, tagsTable)
+    const result = await db.model(tagsTable)
+      .select()
       .where((w) => w.eq('id', rawId(id)))
       .execute();
 
@@ -55,9 +52,9 @@ export class TagService {
 
   async findByName(name: string): Promise<TagRecord | null> {
     const db = getDB();
-    const driver = db.getDriver();
 
-    const result = await select(db, tagsTable)
+    const result = await db.model(tagsTable)
+      .select()
       .where((w) => w.eq('name', name))
       .execute();
 
@@ -66,23 +63,21 @@ export class TagService {
 
   async listTags(): Promise<TagRecord[]> {
     const db = getDB();
-    const driver = db.getDriver();
 
-    const result = await select(db, tagsTable).orderBy('name', 'ASC').execute();
+    const result = await db.model(tagsTable).select().orderBy('name', 'ASC').execute();
 
     return result as unknown as TagRecord[];
   }
 
   async addTagToMemory(memoryId: string, tagId: string): Promise<void> {
     const db = getDB();
-    const driver = db.getDriver();
 
     // Format record IDs for RELATE — strip any SurrealQL escaping
     const memId = normalizeId(memoryId);
     const tagNorm = stripBrackets(tagId);
     const tagIdFormatted = tagNorm.includes(':') ? tagNorm : `tags:${rawId(tagNorm)}`;
 
-    await relate(db, memoryTagsTable).from(memId).to(tagIdFormatted).execute();
+    await db.model(memoryTagsTable).relate().from(memId).to(tagIdFormatted).execute();
   }
 
   async removeTagFromMemory(memoryId: string, tagId: string): Promise<void> {
