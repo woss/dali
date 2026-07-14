@@ -51,8 +51,20 @@ afterEach(() => {
 describe('Workspaces page — load', () => {
   test('returns workspaces with slug extracted from record IDs', async () => {
     mockDBQuery.mockResolvedValueOnce([
-      { id: 'workspace:ws_001', name: 'Alpha', description: null, is_personal: true, created_at: '2026-01-01T00:00:00Z' },
-      { id: 'workspace:ws_002', name: 'Beta', description: 'Team workspace', is_personal: false, created_at: '2026-02-15T00:00:00Z' },
+      {
+        id: 'workspace:ws_001',
+        name: 'Alpha',
+        description: null,
+        is_personal: true,
+        created_at: '2026-01-01T00:00:00Z',
+      },
+      {
+        id: 'workspace:ws_002',
+        name: 'Beta',
+        description: 'Team workspace',
+        is_personal: false,
+        created_at: '2026-02-15T00:00:00Z',
+      },
     ]);
 
     const result = await pageModule.load();
@@ -78,7 +90,13 @@ describe('Workspaces page — load', () => {
 
   test('extracts slug from record IDs with SurrealDB angle brackets', async () => {
     mockDBQuery.mockResolvedValueOnce([
-      { id: '⟨workspace:ws_abc⟩', name: 'Alpha', description: null, is_personal: true, created_at: '2026-01-01T00:00:00Z' },
+      {
+        id: '⟨workspace:ws_abc⟩',
+        name: 'Alpha',
+        description: null,
+        is_personal: true,
+        created_at: '2026-01-01T00:00:00Z',
+      },
     ]);
 
     const result = await pageModule.load();
@@ -88,7 +106,13 @@ describe('Workspaces page — load', () => {
 
   test('slug falls back to full id when no colon present', async () => {
     mockDBQuery.mockResolvedValueOnce([
-      { id: 'plainid', name: 'Plain', description: null, is_personal: false, created_at: '2026-03-01T00:00:00Z' },
+      {
+        id: 'plainid',
+        name: 'Plain',
+        description: null,
+        is_personal: false,
+        created_at: '2026-03-01T00:00:00Z',
+      },
     ]);
 
     const result = await pageModule.load();
@@ -98,7 +122,13 @@ describe('Workspaces page — load', () => {
 
   test('slug falls back to raw id when pop returns empty string', async () => {
     mockDBQuery.mockResolvedValueOnce([
-      { id: 'workspace:', name: 'Empty', description: null, is_personal: false, created_at: '2026-03-01T00:00:00Z' },
+      {
+        id: 'workspace:',
+        name: 'Empty',
+        description: null,
+        is_personal: false,
+        created_at: '2026-03-01T00:00:00Z',
+      },
     ]);
 
     const result = await pageModule.load();
@@ -132,7 +162,13 @@ describe('Workspaces page — load', () => {
 
   test('preserves backward-compatible workspace shape', async () => {
     mockDBQuery.mockResolvedValueOnce([
-      { id: 'workspace:ws_001', name: 'Alpha', description: 'Desc', is_personal: true, created_at: '2026-01-01T00:00:00Z' },
+      {
+        id: 'workspace:ws_001',
+        name: 'Alpha',
+        description: 'Desc',
+        is_personal: true,
+        created_at: '2026-01-01T00:00:00Z',
+      },
     ]);
 
     const result = await pageModule.load();
@@ -148,16 +184,63 @@ describe('Workspaces page — load', () => {
     expect(ws).toHaveProperty('slug', 'ws_001');
   });
 
+  test('handles memory_count from graph traversal count()', async () => {
+    mockDBQuery.mockResolvedValueOnce([
+      {
+        id: 'workspace:ws_001',
+        name: 'Test',
+        description: null,
+        is_personal: false,
+        created_at: '2026-01-01T00:00:00Z',
+        memory_count: 7,
+      },
+    ]);
+
+    const result = await pageModule.load();
+    const ws = result.workspaces[0];
+    expect(ws).toHaveProperty('memory_count', 7);
+  });
+
+  test('omits memory_count when not returned by DB', async () => {
+    mockDBQuery.mockResolvedValueOnce([
+      {
+        id: 'workspace:ws_001',
+        name: 'Test',
+        description: null,
+        is_personal: false,
+        created_at: '2026-01-01T00:00:00Z',
+      },
+    ]);
+
+    const result = await pageModule.load();
+    const ws = result.workspaces[0];
+    expect(ws.memory_count).toBeUndefined();
+  });
+
   // ── Query verification ────────────────────────────────────────
 
-  test('queries workspaces with correct fields and ordering', async () => {
+  test('queries workspaces with correct fields, memory_count via graph traversal, and ordering', async () => {
     mockDBQuery.mockResolvedValueOnce([]);
 
     await pageModule.load();
 
     expect(mockDBQuery).toHaveBeenCalledWith(
-      'SELECT id, name, description, is_personal, created_at FROM workspaces ORDER BY name ASC',
+      'SELECT id, name, description, is_personal, created_at, count(<-workspace_id) AS memory_count FROM workspaces ORDER BY name ASC',
+      {},
     );
+  });
+
+  test('queries workspaces with memory_count for authenticated user', async () => {
+    // First call: getUserIdByEmail returns a userId
+    mockDBQuery.mockResolvedValueOnce([{ id: 'user:abc123' }]);
+    // Second call: workspaces query
+    mockDBQuery.mockResolvedValueOnce([]);
+
+    await pageModule.load({ locals: { userEmail: 'user@test.com' } } as any);
+
+    // Verify the workspace query (second call) includes user filtering
+    const workspaceCall = mockDBQuery.mock.calls[1];
+    expect(workspaceCall[0]).toContain('memory_count FROM workspaces WHERE user_id = $userId');
   });
 });
 
@@ -265,10 +348,10 @@ describe('Workspaces page — create action', () => {
 
     await pageModule.actions.create({ request } as any);
 
-    expect(mockDBQuery).toHaveBeenCalledWith(
-      expect.stringContaining('CREATE workspaces'),
-      { name: 'No Desc', description: '' },
-    );
+    expect(mockDBQuery).toHaveBeenCalledWith(expect.stringContaining('CREATE workspaces'), {
+      name: 'No Desc',
+      description: '',
+    });
   });
 });
 
@@ -286,10 +369,9 @@ describe('Workspaces page — delete action', () => {
 
     const result = await pageModule.actions.delete({ request } as any);
 
-    expect(mockDBQuery).toHaveBeenCalledWith(
-      'DELETE workspaces WHERE id = $id',
-      { id: 'workspace:ws_001' },
-    );
+    expect(mockDBQuery).toHaveBeenCalledWith('DELETE workspaces WHERE id = $id', {
+      id: 'workspace:ws_001',
+    });
     expect(result).toEqual({ success: true });
   });
 

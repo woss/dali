@@ -1,3 +1,4 @@
+import { performance } from 'node:perf_hooks';
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
 import {
@@ -16,6 +17,7 @@ import { validateApiKey } from './auth/api-keys';
 import { connect, getDB } from './db/connection';
 import { createLogger } from './logger';
 import type { SearchOptions } from './services/types';
+import type { Logger } from '@logtape/logtape';
 
 // ---------------------------------------------------------------------------
 // Tool name constants
@@ -173,24 +175,33 @@ export function createMCPServer(): Server {
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const { name, arguments: args } = request.params;
     const log = createLogger(['dali-memory', 'mcp']);
-    log.info(`Tool called: ${name}`);
 
     try {
       switch (name) {
         case TOOL_MEMORIES_STORE:
-          return await handleMemoriesStore(args ?? {});
+          return await timedTool(
+            log,
+            TOOL_MEMORIES_STORE,
+            () => handleMemoriesStore(args ?? {}),
+            args,
+          );
 
         case TOOL_MEMORIES_SEARCH:
-          return await handleMemoriesSearch(args ?? {});
+          return await timedTool(
+            log,
+            TOOL_MEMORIES_SEARCH,
+            () => handleMemoriesSearch(args ?? {}),
+            args,
+          );
 
         case TOOL_TAGS_ADD:
-          return await handleTagsAdd(args ?? {});
+          return await timedTool(log, TOOL_TAGS_ADD, () => handleTagsAdd(args ?? {}), args);
 
         case TOOL_TAGS_REMOVE:
-          return await handleTagsRemove(args ?? {});
+          return await timedTool(log, TOOL_TAGS_REMOVE, () => handleTagsRemove(args ?? {}), args);
 
         case TOOL_WORKSPACES_LIST:
-          return await handleWorkspacesList();
+          return await timedTool(log, TOOL_WORKSPACES_LIST, () => handleWorkspacesList(), args);
 
         default:
           throw new McpError(ErrorCode.MethodNotFound, `Unknown tool: ${name}`);
@@ -230,6 +241,28 @@ export async function runMCPServer(): Promise<void> {
 // ---------------------------------------------------------------------------
 // Tool handlers
 // ---------------------------------------------------------------------------
+
+type ToolResult = { content: { type: 'text'; text: string }[]; isError?: boolean };
+
+async function timedTool(
+  log: Logger,
+  name: string,
+  fn: () => Promise<ToolResult>,
+  args?: Record<string, unknown>,
+): Promise<ToolResult> {
+  const start = performance.now();
+  try {
+    const result = await fn();
+    const duration_ms = +(performance.now() - start).toFixed(2);
+    log.info('Tool {name} completed', { tool: name, duration_ms, status: 'ok' });
+    return result;
+  } catch (error) {
+    const duration_ms = +(performance.now() - start).toFixed(2);
+    const msg = error instanceof Error ? error.message : String(error);
+    log.error('Tool {name} failed', { tool: name, duration_ms, status: 'error', error: msg });
+    throw error;
+  }
+}
 
 async function handleMemoriesStore(
   rawArgs: Record<string, unknown>,
@@ -359,7 +392,7 @@ async function handleWorkspacesList(): Promise<{
       const rawCreated = ws.created_at;
       const created_at =
         rawCreated && typeof rawCreated === 'object'
-          ? (rawCreated as Date).toISOString?.() ?? String(rawCreated)
+          ? ((rawCreated as Date).toISOString?.() ?? String(rawCreated))
           : String(rawCreated);
 
       return {

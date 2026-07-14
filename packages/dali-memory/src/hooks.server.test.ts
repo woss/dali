@@ -4,20 +4,25 @@ import { describe, test, expect, vi, beforeEach } from 'vitest';
 // Hoisted mocks — referenced inside vi.mock() factories
 // =============================================================================
 
-const { mockInitLogger, mockGetLog, mockGetConfig, mockInitEmbedder, mockVerifyCookie } = vi.hoisted(() => {
-  const mockDebug = vi.fn();
-  return {
-    mockInitLogger: vi.fn(),
-    mockGetLog: vi.fn(() => ({ debug: mockDebug })),
-    mockGetConfig: vi.fn(),
-    mockInitEmbedder: vi.fn().mockResolvedValue(undefined),
-    mockVerifyCookie: vi.fn(),
-  };
-});
+const { mockInitLogger, mockGetLog, mockGetConfig, mockInitEmbedder, mockVerifyCookie } =
+  vi.hoisted(() => {
+    const mockDebug = vi.fn();
+    return {
+      mockInitLogger: vi.fn().mockResolvedValue(undefined),
+      mockGetLog: vi.fn(() => ({ debug: mockDebug })),
+      mockGetConfig: vi.fn(),
+      mockInitEmbedder: vi.fn().mockResolvedValue(undefined),
+      mockVerifyCookie: vi.fn(),
+    };
+  });
 
 // =============================================================================
 // Module mocks — hoisted before imports
 // =============================================================================
+
+vi.mock('$lib/server/trace-context', () => ({
+  requestStorage: { run: vi.fn((_store: unknown, fn: () => unknown) => fn()), getStore: vi.fn() },
+}));
 
 vi.mock('$lib/server/logger', () => ({
   initLogger: mockInitLogger,

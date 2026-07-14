@@ -40,11 +40,14 @@ describe('chunkContent', () => {
   it('applies overlap at the start of the second chunk', () => {
     // Build content that splits into multiple chunks
     const para = 'This is a test paragraph with enough text to fill multiple chunks. ';
-    const content = Array.from({ length: 40 }, (_, i) => `${para}Paragraph ${i + 1}.`)
-      .join('\n\n');
+    const content = Array.from({ length: 40 }, (_, i) => `${para}Paragraph ${i + 1}.`).join('\n\n');
 
     const overlapSize = 60;
-    const result = chunkContent(content, { maxChunkSize: 400, overlap: overlapSize, minChunkSize: 1 });
+    const result = chunkContent(content, {
+      maxChunkSize: 400,
+      overlap: overlapSize,
+      minChunkSize: 1,
+    });
 
     expect(result.length).toBeGreaterThanOrEqual(2);
 
@@ -116,8 +119,8 @@ describe('chunkContent', () => {
   // 8. Section propagation — subsequent chunks inherit the heading
   // ---------------------------------------------------------------------------
   it('propagates section to subsequent chunks after a heading', () => {
-    const p1 = 'A. '.repeat(60);   // ~180 chars — under heading
-    const p2 = 'B. '.repeat(60);   // ~180 chars — also under same heading
+    const p1 = 'A. '.repeat(60); // ~180 chars — under heading
+    const p2 = 'B. '.repeat(60); // ~180 chars — also under same heading
     const content = `# Persisting Section\n\n${p1}\n\n${p2}`;
     const result = chunkContent(content, { maxChunkSize: 400, minChunkSize: 1, overlap: 0 });
 
@@ -139,7 +142,7 @@ describe('chunkContent', () => {
   // 10. Custom options — maxChunkSize and overlap produce expected sizes
   // ---------------------------------------------------------------------------
   it('respects custom maxChunkSize and overlap options', () => {
-    const content = 'word '.repeat(200);  // ~1000 chars
+    const content = 'word '.repeat(200); // ~1000 chars
     const result = chunkContent(content, {
       maxChunkSize: 100,
       overlap: 20,

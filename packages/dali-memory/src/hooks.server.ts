@@ -31,7 +31,10 @@ export const handle: Handle = async ({ event, resolve }) => {
     }
 
     if (isProtected(event.url.pathname)) {
-      const email = await verifyCookie(event.cookies.get('dali_session'), config.DALI_MEMORY_SECRET);
+      const email = await verifyCookie(
+        event.cookies.get('dali_session'),
+        config.DALI_MEMORY_SECRET,
+      );
       if (!email) return Response.redirect(new URL('/login', event.url), 303);
       event.locals.authenticated = true;
       event.locals.userEmail = email;

@@ -144,11 +144,7 @@ const sampleTags = [
 // Helpers
 // =============================================================================
 
-function createEditRequest(overrides?: {
-  name?: string;
-  content?: string;
-  id?: string;
-}): Request {
+function createEditRequest(overrides?: { name?: string; content?: string; id?: string }): Request {
   const form = new FormData();
   form.set('name', overrides?.name ?? 'Updated Name');
   form.set('content', overrides?.content ?? 'Updated content');
@@ -595,9 +591,7 @@ describe('Workspace memory detail page — add_tag action', () => {
   test('comma-separated tags create multiple tags', async () => {
     mockGetMemory.mockResolvedValue(sampleMemory);
     mockAddTagToMemory.mockReset();
-    mockFindByName
-      .mockResolvedValueOnce(null)
-      .mockResolvedValueOnce(null);
+    mockFindByName.mockResolvedValueOnce(null).mockResolvedValueOnce(null);
     mockCreateTag
       .mockResolvedValueOnce({ id: 'tag_a', name: 'alpha' })
       .mockResolvedValueOnce({ id: 'tag_b', name: 'beta' });

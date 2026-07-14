@@ -46,17 +46,17 @@ until the PR is merged or closed.
 The worker detects nine event types. Each is gated by a `pr_monitor` config
 flag; a disabled flag means the event is dropped silently, not queued.
 
-| Event type | Config gate | Default | Meaning |
-|---|---|---|---|
-| `pr.ci.failed` | `notify_ci_failure` | `true` | A CI check on the PR head failed |
-| `pr.ci.passed` | `notify_ci_success` | `false` | CI recovered / all checks green (quiet by default) |
-| `pr.new.comment` | `notify_new_comments` | `true` | New PR comment or review comment |
-| `pr.review.changes_requested` | `notify_review_activity` | `true` | A reviewer requested changes |
-| `pr.review.approved` | `notify_review_activity` | `true` | A reviewer approved the PR |
-| `pr.merge.conflict` | `notify_merge_conflict` | `true` | The PR became unmergeable against its base |
-| `pr.merge.conflict_resolved` | `notify_merge_conflict` | `true` | A previously detected conflict cleared |
-| `pr.merged` | `notify_merged` | `true` | **TERMINAL** — the PR merged; monitoring ends |
-| `pr.closed` | `notify_closed` | `true` | **TERMINAL** — the PR closed without merge; monitoring ends |
+| Event type                    | Config gate              | Default | Meaning                                                     |
+| ----------------------------- | ------------------------ | ------- | ----------------------------------------------------------- |
+| `pr.ci.failed`                | `notify_ci_failure`      | `true`  | A CI check on the PR head failed                            |
+| `pr.ci.passed`                | `notify_ci_success`      | `false` | CI recovered / all checks green (quiet by default)          |
+| `pr.new.comment`              | `notify_new_comments`    | `true`  | New PR comment or review comment                            |
+| `pr.review.changes_requested` | `notify_review_activity` | `true`  | A reviewer requested changes                                |
+| `pr.review.approved`          | `notify_review_activity` | `true`  | A reviewer approved the PR                                  |
+| `pr.merge.conflict`           | `notify_merge_conflict`  | `true`  | The PR became unmergeable against its base                  |
+| `pr.merge.conflict_resolved`  | `notify_merge_conflict`  | `true`  | A previously detected conflict cleared                      |
+| `pr.merged`                   | `notify_merged`          | `true`  | **TERMINAL** — the PR merged; monitoring ends               |
+| `pr.closed`                   | `notify_closed`          | `true`  | **TERMINAL** — the PR closed without merge; monitoring ends |
 
 ## Event Intake
 
@@ -159,11 +159,11 @@ Wake prompts and advisories are machine-injected, lower-privilege input:
 
 ## Command Reference
 
-| Command | Purpose |
-|---|---|
-| `/swarm pr subscribe <pr-url\|owner/repo#N\|N>` | Subscribe the current session to a PR (idempotent; lazy-starts the polling worker). With `auto_subscribe_on_pr_create` (default `true`) this happens automatically after `gh pr create`. |
-| `/swarm pr unsubscribe <pr-url\|owner/repo#N\|N>` | Remove the subscription and stop notifications for that PR. |
-| `/swarm pr status` | Show the session's active subscriptions: PR URL, last-checked time, watching state, error count. |
+| Command                                           | Purpose                                                                                                                                                                                  |
+| ------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/swarm pr subscribe <pr-url\|owner/repo#N\|N>`   | Subscribe the current session to a PR (idempotent; lazy-starts the polling worker). With `auto_subscribe_on_pr_create` (default `true`) this happens automatically after `gh pr create`. |
+| `/swarm pr unsubscribe <pr-url\|owner/repo#N\|N>` | Remove the subscription and stop notifications for that PR.                                                                                                                              |
+| `/swarm pr status`                                | Show the session's active subscriptions: PR URL, last-checked time, watching state, error count.                                                                                         |
 
 ## Final Output Per Event Batch
 

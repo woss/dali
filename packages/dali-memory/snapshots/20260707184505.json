@@ -1,7 +1,7 @@
 {
-  "version": "20260629230423",
+  "version": "20260707184505",
   "name": "init",
-  "createdAt": "2026-06-29T21:04:23.382Z",
+  "createdAt": "2026-07-07T16:45:05.286Z",
   "tables": [
     {
       "name": "workspaces",
@@ -27,6 +27,14 @@
           "config": {
             "type": "bool",
             "default": "false"
+          }
+        },
+        {
+          "name": "user_id",
+          "tableName": "workspaces",
+          "config": {
+            "type": "record",
+            "optional": true
           }
         },
         {
@@ -80,14 +88,6 @@
           "tableName": "memories",
           "config": {
             "type": "object",
-            "optional": true
-          }
-        },
-        {
-          "name": "embedding",
-          "tableName": "memories",
-          "config": {
-            "type": "array",
             "optional": true
           }
         },
@@ -148,10 +148,27 @@
           }
         },
         {
-          "name": "dimensions",
+          "name": "chunk_index",
           "tableName": "embeddings",
           "config": {
-            "type": "int"
+            "type": "int",
+            "optional": true
+          }
+        },
+        {
+          "name": "chunk_text",
+          "tableName": "embeddings",
+          "config": {
+            "type": "string",
+            "optional": true
+          }
+        },
+        {
+          "name": "section",
+          "tableName": "embeddings",
+          "config": {
+            "type": "string",
+            "optional": true
           }
         },
         {
@@ -287,6 +304,16 @@
       }
     },
     {
+      "name": "has_memory",
+      "columns": [],
+      "config": {
+        "schema": "full",
+        "type": "relation",
+        "in": "users",
+        "out": "memories"
+      }
+    },
+    {
       "name": "api_keys",
       "columns": [
         {
@@ -362,6 +389,14 @@
           "tableName": "users",
           "config": {
             "type": "string",
+            "optional": true
+          }
+        },
+        {
+          "name": "default_workspace_id",
+          "tableName": "users",
+          "config": {
+            "type": "record",
             "optional": true
           }
         },

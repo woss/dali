@@ -26,7 +26,8 @@ export class TagService {
     const db = getDB();
 
     // Check for existing tag with same name (unique constraint in schema)
-    const existing = await db.model(tagsTable)
+    const existing = await db
+      .model(tagsTable)
       .select()
       .where((w) => w.eq('name', name))
       .execute();
@@ -42,7 +43,8 @@ export class TagService {
   async getTag(id: string): Promise<TagRecord | null> {
     const db = getDB();
 
-    const result = await db.model(tagsTable)
+    const result = await db
+      .model(tagsTable)
       .select()
       .where((w) => w.eq('id', rawId(id)))
       .execute();
@@ -53,7 +55,8 @@ export class TagService {
   async findByName(name: string): Promise<TagRecord | null> {
     const db = getDB();
 
-    const result = await db.model(tagsTable)
+    const result = await db
+      .model(tagsTable)
       .select()
       .where((w) => w.eq('name', name))
       .execute();

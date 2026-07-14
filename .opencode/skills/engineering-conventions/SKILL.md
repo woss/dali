@@ -80,6 +80,7 @@ Dynamic `import('web-tree-sitter')` only defers loading at runtime if `--externa
 ### Verification checklist
 
 For any import-chain change touching `src/lang/`, `runtime`, or `web-tree-sitter`:
+
 1. Trace the transitive chain from `src/index.ts` to verify no heavy module loads at init.
 2. Rebuild dist: `bun run build` (stale dist gives false regressions).
 3. Run `node scripts/repro-704.mjs` — T1 must be under 400ms.
@@ -90,6 +91,7 @@ For any import-chain change touching `src/lang/`, `runtime`, or `web-tree-sitter
 **Tool versions must match CI.** When `package.json` pins a tool version (e.g., `@biomejs/biome@2.3.14`, `@biomejs/biome@^2`, or any other versioned dev dependency), invoke it **with the pinned version** during local validation. Unversioned `bunx biome` resolves to a different version than the CI gate uses, and a CI-blocking failure can be invisible to local pre-commit validation.
 
 Examples:
+
 - Pinned biome: `bunx @biomejs/biome@<version> ci .` (substitute `<version>` from `package.json`).
 - Unversioned `bunx biome ci .` resolves to whatever Bun's `bunx` registry returns at run time — historically 0.3.x vs the pinned 2.x.
 
@@ -102,8 +104,73 @@ The `commit-pr` skill Tier 1 - quality section pins the biome command to the pac
 The cross-tree skill mirror contract is the authoritative registry at `src/config/skill-mirrors.ts`. If your PR modifies `.opencode/skills/<X>/SKILL.md` or `.claude/skills/<X>/SKILL.md`, consult that file to determine the contract kind for skill `<X>`:
 
 - **`identical`:** `.opencode` and `.claude` SKILL.md must be byte-identical (the `canonical` field records which side wins when they drift). Update both trees byte-for-byte in the same commit. Verify with `bun run drift:check`. PR #1512 (lane-dispatch) introduced drift in council/deep-dive by only updating `.opencode` — a contract violation.
-- **`divergent`:** both must exist but content intentionally differs per runtime. Examples: `engineering-conventions` is divergent (different frontmatter, different conventions per Claude Code vs OpenCode); `writing-tests` is divergent pending maintainer confirmation (#1497).
+- **`divergent`:** both must exist but content intentionally differs per runtime. Examples: `engineering-conventions` is divergent (different frontmatter, different conventions per Claude Code vs OpenCode). `writing-tests` is classified divergent because the additional-contract model does not yet have an adapter kind, but operationally `.opencode/skills/writing-tests/SKILL.md` is canonical and `.claude/skills/writing-tests/SKILL.md` delegates to it.
 - **`opencode-only`:** `.opencode` exists; no `.claude` mirror expected. Examples: `loop` (would shadow Claude Code's built-in `/loop`), `running-tests` (OpenCode-runtime guidance).
 - **Adapter shim pattern:** for architect MODE skills like `swarm-pr-review` and `swarm-pr-feedback`, the `.claude` and `.agents` files are thin adapter shims that delegate to the canonical `.opencode` file via `expectedCanonicalRef`. When updating these, the canonical content goes in `.opencode`; the adapter shim typically needs no change unless the cross-tree delegation interface changes.
 
 **If your PR modifies a `.opencode/skills/<X>/SKILL.md` file:** check `src/config/skill-mirrors.ts` for the contract, then run `bun run drift:check` locally before pushing. Mirror drift is currently a soft-warn (`DRIFT_CHECK_ENFORCE=1` would make it hard-fail). The drift-check CI job surfaces drift as an issue comment, not a blocking check — but a drift between canonical and mirror means Claude Code agents reading the mirror get stale instructions.
+
+## Sandbox env overrides (subprocess-safety deep-dive)
+
+When a sandbox executor (`src/sandbox/{linux,macos,win32}/*.ts`) interpolates environment variables into a sandbox profile, a bwrap rule, or a PowerShell `-EnvironmentVariables` block, the following rules apply — they exist because a future shell-injection regression in any new sandbox path would be a security vulnerability, not just a bug:
+
+- **Keys must match POSIX env-var name syntax.** Every env key must be validated against the regex `/^[A-Za-z_][A-Za-z0-9_]*$/` (a leading letter or underscore, then letters/digits/underscores) before being interpolated. Define or reuse a single `isValidEnvKey(key: string): boolean` helper colocated with the `SandboxExecutor` interface in `src/sandbox/executor.ts` (around line 24+); do not duplicate the regex inline at every call site. Keys that fail validation must be silently dropped (not raised) so that one bad caller cannot wedge the sandbox path — but the drop must be observable in the advisory/observability layer (`pendingAdvisoryMessages` or structured log), never silent.
+- **Values must be shell-quoted or treated as opaque single tokens.** On POSIX, prepend a leading single quote, escape any embedded single quotes by replacing `'` with `'\''`, and append a trailing single quote. On Windows PowerShell, **prefer single-quoted literal contexts (e.g. `'$env:NAME'`) and run values through a `psStringEscape`-style helper that escapes backtick, `$`, `"`, and `` ` ``** (the special characters in double-quoted PowerShell strings). Single-quoted PowerShell strings are literal — only `'` needs escaping, doubling it to `''`. If a context requires double-quoted PS values, escape embedded `"` as `` ` ``, backtick as ` ` ``, and `$` as `` ` `` (backtick is the PS escape character in double-quoted strings; `$`must be escaped to prevent variable expansion). On bwrap, always pass values as separate argv tokens after the`--setenv` flag (`--setenv KEY VALUE`, two tokens), never as a single concatenated `KEY=VALUE` token that an intermediate shell would interpret.
+- **Use the array-form argv for every sandbox subprocess.** Never `shell:`-interpolate. The same invariant-3 rules (`array-form spawn`, `stdin: 'ignore'`, `cwd`, `timeout`, `proc.kill()` in `finally`) apply to sandbox spawns as to any other subprocess — see the `subprocess-safety` cross-link.
+
+## Sandbox fallback parity (Windows and Linux)
+
+`sandbox/{linux,macos,win32}/*.ts` has primary executors plus legacy fallbacks (Windows `NativeWindowsSandboxExecutor` + `RestrictedEnvironmentExecutor` / PowerShell wrapper, Linux `BubblewrapSandboxExecutor` + no-sandbox fallback). When you modify any of the following on the primary executor, you MUST update the fallback path in the same change to keep behavior parity and add a parity test:
+
+- `getEnvOverrides` signature or merge semantics.
+- `wrapCommand` scoping rules (allowed roots, read-only mounts, temp-dir allocation).
+- `isAvailable()` / capability probe logic.
+- Failure-mode handling (does a missing sandbox envelope hard-fail or soft-fail to env-only isolation?).
+- Scope-materialization for lane-scoped resources.
+
+A divergence between primary and fallback that is not exercised by a parity test is a regression. The existing per-OS test files `tests/unit/sandbox/{linux,macos,win32}.test.ts` must continue to cover both the primary and fallback paths after every env-affecting change — extend these tests rather than relying on dedicated sandbox-envoverride test files that may or may not exist in your branch.
+
+## SAST baseline capturing (differential scanning)
+
+The `sast_scan` tool supports `capture_baseline: true` with a `phase` parameter
+to snapshot pre-existing findings. Subsequent scans with the same `phase` value
+perform differential checking — they only fail on **new** findings, not
+pre-existing ones.
+
+### When to capture a baseline
+
+- **Before Phase 1 code changes.** The baseline must reflect the state of the
+  codebase _before_ any new work is done. This ensures the differential scan
+  catches findings introduced by the current session's changes.
+
+### Critical safety guard
+
+**NEVER capture a baseline after code changes have been made in a phase.**
+A baseline captured post-edit silently encodes the very bugs the scan is meant
+to catch as "pre-existing," suppressing them indefinitely. This turns the SAST
+gate into theater.
+
+### How to use it
+
+1. Identify the files to scan. In a phase, use the union of declared task-scope
+   files plus files the coder is expected to touch. Derive the list from
+   `declare_scope` outputs, `git diff --name-only`, or the phase's task specs.
+2. Before any coder delegation in Phase 1, capture the baseline:
+   ```
+   sast_scan(directory, changed_files=[...], capture_baseline=true, phase=1)
+   ```
+3. After coder work, scan the same file set:
+   ```
+   sast_scan(directory, changed_files=[...], phase=1)
+   ```
+   This returns only NEW findings (absent from the baseline).
+4. If a pre-existing finding is legitimately fixed, the baseline can be
+   re-captured at the start of the next phase with the updated file list.
+
+### Why this matters
+
+During PR #1704 review, SAST flagged `RegExp.prototype.exec()` as
+"command injection via child_process.exec()" — a false positive that blocked
+the gate. With a baseline captured before the phase, this pre-existing false
+positive would have been suppressed, and only genuinely new findings would
+surface.

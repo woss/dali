@@ -22,7 +22,6 @@ function memKey(rid: RecordId): string {
   return `${rid.table.name}:${rid.id}`;
 }
 
-
 export class HybridSearch {
   private embedder: EmbedderService;
   private vectorWeight: number;
@@ -43,7 +42,10 @@ export class HybridSearch {
 
     // Convert string workspaceId to RecordId for proper record-type comparison
     const wsRid: RecordId | null = workspaceId
-      ? new RecordId('workspaces', workspaceId.includes(':') ? workspaceId.split(':').pop()! : workspaceId)
+      ? new RecordId(
+          'workspaces',
+          workspaceId.includes(':') ? workspaceId.split(':').pop()! : workspaceId,
+        )
       : null;
 
     // 1. Generate embedding from query text

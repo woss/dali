@@ -1,10 +1,5 @@
 import { describe, test, expect } from 'vitest';
-import {
-  memoriesTable,
-  workspacesTable,
-  usersTable,
-  schema,
-} from '../schema';
+import { memoriesTable, workspacesTable, usersTable, schema } from '../schema';
 
 describe('memoriesTable schema', () => {
   test('exports memoriesTable without errors', () => {
@@ -39,13 +34,7 @@ describe('workspacesTable schema', () => {
 
   test('all columns are present (backward compatible)', () => {
     const columnNames = workspacesTable.columns.map((c) => c.name).sort();
-    expect(columnNames).toEqual([
-      'created_at',
-      'description',
-      'is_personal',
-      'name',
-      'user_id',
-    ]);
+    expect(columnNames).toEqual(['created_at', 'description', 'is_personal', 'name', 'user_id']);
   });
 
   test('existing string columns keep correct types', () => {
@@ -84,13 +73,7 @@ describe('usersTable schema', () => {
 
   test('all columns are present (backward compatible)', () => {
     const columnNames = usersTable.columns.map((c) => c.name).sort();
-    expect(columnNames).toEqual([
-      'created_at',
-      'default_workspace_id',
-      'email',
-      'name',
-      'pass',
-    ]);
+    expect(columnNames).toEqual(['created_at', 'default_workspace_id', 'email', 'name', 'pass']);
   });
 
   test('existing columns keep correct types', () => {
@@ -109,17 +92,21 @@ describe('usersTable schema', () => {
 describe('complete OrmSchema', () => {
   test('schema is created without errors and exports as OrmSchema', () => {
     expect(schema).toBeDefined();
-    expect(schema.tableCount).toBe(9);
+    expect(schema.tableCount).toBe(10);
     expect(schema.getAccess()).toHaveLength(1);
     expect(schema.getAnalyzers()).toHaveLength(1);
   });
 
   test('schema contains all tables', () => {
-    const tableNames = schema.getTables().map((t) => t.name).sort();
+    const tableNames = schema
+      .getTables()
+      .map((t) => t.name)
+      .sort();
     expect(tableNames).toEqual([
       'api_keys',
       'embeddings',
       'has_embedding',
+      'has_memory',
       'memories',
       'memory_tags',
       'models',

@@ -11,7 +11,13 @@ import { json } from '@sveltejs/kit';
 // This handler accepts JSON and creates user + personal workspace.
 // ---------------------------------------------------------------------------
 
-export const POST = async ({ request, cookies }: { request: Request; cookies: any }): Promise<Response> => {
+export const POST = async ({
+  request,
+  cookies,
+}: {
+  request: Request;
+  cookies: any;
+}): Promise<Response> => {
   let body: { name?: string; email?: string; password?: string; confirm_password?: string };
 
   try {
@@ -75,7 +81,11 @@ export const POST = async ({ request, cookies }: { request: Request; cookies: an
         { status: 409 },
       );
     }
-    if (msg.includes('UNIQUE') || msg.includes('already exists') || msg.includes('already contains')) {
+    if (
+      msg.includes('UNIQUE') ||
+      msg.includes('already exists') ||
+      msg.includes('already contains')
+    ) {
       return json({ error: 'An account with this email already exists' }, { status: 409 });
     }
     return json({ error: 'Registration failed. Please try again.' }, { status: 500 });

@@ -4,35 +4,43 @@ import { describe, test, expect, vi, beforeEach } from 'vitest';
 // Hoisted mocks
 // =============================================================================
 
-const { mockGetConfig, mockConnect, mockGetDB, mockFail, mockRedirect, mockTx, mockDriver, mockSignSession } =
-  vi.hoisted(() => {
-    const mockTx = {
-      query: vi.fn(),
-    };
+const {
+  mockGetConfig,
+  mockConnect,
+  mockGetDB,
+  mockFail,
+  mockRedirect,
+  mockTx,
+  mockDriver,
+  mockSignSession,
+} = vi.hoisted(() => {
+  const mockTx = {
+    query: vi.fn(),
+  };
 
-    const mockDriver = {
-      transaction: vi.fn(),
-      query: vi.fn(),
-    };
+  const mockDriver = {
+    transaction: vi.fn(),
+    query: vi.fn(),
+  };
 
-    return {
-      mockGetConfig: vi.fn(),
-      mockConnect: vi.fn().mockResolvedValue(undefined),
-      mockGetDB: vi.fn(() => ({
-        getDriver: () => mockDriver,
-      })),
-      mockFail: vi.fn((status: number, data: any) => ({ status, data })),
-      mockRedirect: vi.fn((status: number, location: string) => {
-        const err: any = new Error(`Redirect: ${status} -> ${location}`);
-        err.status = status;
-        err.location = location;
-        throw err;
-      }),
-      mockDriver,
-      mockTx,
-      mockSignSession: vi.fn().mockResolvedValue('mock-signed-token'),
-    };
-  });
+  return {
+    mockGetConfig: vi.fn(),
+    mockConnect: vi.fn().mockResolvedValue(undefined),
+    mockGetDB: vi.fn(() => ({
+      getDriver: () => mockDriver,
+    })),
+    mockFail: vi.fn((status: number, data: any) => ({ status, data })),
+    mockRedirect: vi.fn((status: number, location: string) => {
+      const err: any = new Error(`Redirect: ${status} -> ${location}`);
+      err.status = status;
+      err.location = location;
+      throw err;
+    }),
+    mockDriver,
+    mockTx,
+    mockSignSession: vi.fn().mockResolvedValue('mock-signed-token'),
+  };
+});
 
 // =============================================================================
 // Module mocks — hoisted before imports
@@ -146,7 +154,11 @@ describe('register actions.default — input validation', () => {
     expect(mockFail).toHaveBeenCalledWith(400, expect.objectContaining({ weak: true }));
     expect(result).toEqual({
       status: 400,
-      data: { error: 'Password must be at least 8 characters with at least 1 uppercase, 1 lowercase, and 1 digit', weak: true },
+      data: {
+        error:
+          'Password must be at least 8 characters with at least 1 uppercase, 1 lowercase, and 1 digit',
+        weak: true,
+      },
     });
     expect(mockDriver.transaction).not.toHaveBeenCalled();
   });
@@ -467,9 +479,7 @@ describe('register actions.default — redirect and sign-in', () => {
 
   test('sign-in cookie uses email as session payload', async () => {
     mockTx.query
-      .mockResolvedValueOnce([
-        { id: USER_RECORD_ID, name: 'User', email: 'user+tag@example.com' },
-      ])
+      .mockResolvedValueOnce([{ id: USER_RECORD_ID, name: 'User', email: 'user+tag@example.com' }])
       .mockResolvedValueOnce([{ id: WORKSPACE_RECORD_ID }])
       .mockResolvedValueOnce(undefined);
 

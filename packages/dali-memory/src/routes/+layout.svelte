@@ -1,6 +1,8 @@
 <script lang="ts">
   import '../app.css';
+  import { goto } from '$app/navigation';
   import { page } from '$app/stores';
+  import ToastContainer from '$lib/components/ToastContainer.svelte';
   let { children } = $props();
 
   // Derive workspace context for nav
@@ -18,19 +20,119 @@
   });
 
   let memoriesHref = $derived('/memories');
+
+  // Dynamic document title based on current route
+  let pageTitle = $derived.by(() => {
+    const path = $page.url.pathname;
+    if (path === '/') return 'dali-memory';
+    if (path.includes('/memories')) return 'Memories - dali-memory';
+    if (path.startsWith('/workspaces')) return 'Workspaces - dali-memory';
+    if (path === '/settings') return 'Settings - dali-memory';
+    if (path === '/login') return 'Sign In - dali-memory';
+    if (path === '/register') return 'Register - dali-memory';
+    return 'dali-memory';
+  });
+
+  // Keyboard shortcuts
+  let helpDialog: HTMLDialogElement | undefined = $state(undefined);
+  let pendingG: string | null = $state(null);
+  let gTimer: ReturnType<typeof setTimeout> | undefined;
+
+  function isEditable(el: EventTarget | null): boolean {
+    if (!el || !(el instanceof HTMLElement)) return false;
+    const tag = el.tagName;
+    return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || el.isContentEditable;
+  }
+
+  function cancelG() {
+    pendingG = null;
+    if (gTimer) clearTimeout(gTimer);
+    gTimer = undefined;
+  }
+
+  function handleKeydown(e: KeyboardEvent) {
+    // Never intercept when typing in editable elements
+    if (isEditable(e.target)) return;
+
+    // Help dialog: ? or Cmd+/
+    if (e.key === '?' || (e.key === '/' && (e.metaKey || e.ctrlKey))) {
+      e.preventDefault();
+      helpDialog?.showModal();
+      cancelG();
+      return;
+    }
+
+    // Slash navigation: focus search input on page
+    if (e.key === '/' && !e.metaKey && !e.ctrlKey && !e.altKey) {
+      e.preventDefault();
+      const searchInput = document.querySelector<HTMLInputElement>(
+        'input[type="text"][placeholder*="Search" i]'
+      ) ?? document.querySelector<HTMLInputElement>('input[type="text"]');
+      searchInput?.focus();
+      cancelG();
+      return;
+    }
+
+    // Cmd/Ctrl+K — focus search
+    if (e.key === 'k' && (e.metaKey || e.ctrlKey)) {
+      e.preventDefault();
+      const searchInput = document.querySelector<HTMLInputElement>(
+        'input[type="text"][placeholder*="Search" i]'
+      ) ?? document.querySelector<HTMLInputElement>('input[type="text"]');
+      searchInput?.focus();
+      cancelG();
+      return;
+    }
+
+    // "g then X" navigation
+    if (e.key === 'g' && !e.metaKey && !e.ctrlKey && !e.altKey) {
+      e.preventDefault();
+      cancelG();
+      pendingG = 'g';
+      gTimer = setTimeout(() => {
+        pendingG = null;
+        gTimer = undefined;
+      }, 1000);
+      return;
+    }
+
+    if (pendingG === 'g') {
+      cancelG();
+      if (e.key === 'h') {
+        e.preventDefault();
+        goto('/');
+        return;
+      }
+      if (e.key === 'm') {
+        e.preventDefault();
+        goto('/memories');
+        return;
+      }
+      if (e.key === 'w') {
+        e.preventDefault();
+        goto('/workspaces');
+        return;
+      }
+      if (e.key === 's') {
+        e.preventDefault();
+        goto('/settings');
+        return;
+      }
+    }
+  }
 </script>
 
 <div>
   <!-- Glass navbar — fixed top, full width -->
   <div class="glass fixed top-0 left-0 right-0 z-50 rounded-none border-b border-white/5 shadow-lg shadow-amber-500/5">
-    <div class="navbar max-w-6xl mx-auto">
+    <div class="navbar max-w-7xl mx-auto">
       <div class="navbar-start">
         <a href="/" class="btn btn-ghost text-xl font-heading">🧠 dali-memory</a>
       </div>
       <div class="navbar-center hidden sm:flex">
-        <a href={memoriesHref} class="btn btn-ghost" class:btn-active={$page.url.pathname.includes('/memories') || $page.url.pathname.startsWith('/workspaces') && $page.url.pathname !== '/workspaces'}>Memories</a>
-        <a href="/workspaces" class="btn btn-ghost" class:btn-active={$page.url.pathname === '/workspaces'}>Workspaces</a>
-        <a href="/settings" class="btn btn-ghost" class:btn-active={$page.url.pathname === '/settings'}>Settings</a>
+        <a href={memoriesHref} class="btn btn-ghost relative nav-link" class:btn-active={$page.url.pathname.includes('/memories') || $page.url.pathname.startsWith('/workspaces') && $page.url.pathname !== '/workspaces'}>Memories</a>
+        <a href="/workspaces" class="btn btn-ghost relative nav-link" class:btn-active={$page.url.pathname === '/workspaces'}>Workspaces</a>
+        <a href="/settings" class="btn btn-ghost relative nav-link" class:btn-active={$page.url.pathname === '/settings'}>Settings</a>
       </div>
       <div class="navbar-end">
         <!-- Workspace context pill -->
@@ -72,12 +174,84 @@
   </div>
 
   <!-- Main content — animated entrance -->
-  <main class="animate-fade-in animate-slide-up mx-auto max-w-6xl px-6 py-8 pt-24 min-h-screen">
+  <main class="animate-fade-in animate-slide-up mx-auto max-w-7xl px-6 py-8 pt-24 min-h-screen">
     {@render children()}
   </main>
+
+  <ToastContainer />
+
+  <!-- Keyboard shortcuts help dialog -->
+  <dialog bind:this={helpDialog} class="modal">
+    <div class="modal-box">
+      <form method="dialog">
+        <button class="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
+      </form>
+      <h3 class="mb-4 text-lg font-bold">Keyboard Shortcuts</h3>
+      <div class="overflow-x-auto">
+        <table class="table table-sm">
+          <thead>
+            <tr>
+              <th class="w-1/3">Shortcut</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><kbd class="kbd kbd-sm">?</kbd></td>
+              <td>Show this help</td>
+            </tr>
+            <tr>
+              <td><kbd class="kbd kbd-sm">g</kbd> then <kbd class="kbd kbd-sm">h</kbd></td>
+              <td>Go to Home</td>
+            </tr>
+            <tr>
+              <td><kbd class="kbd kbd-sm">g</kbd> then <kbd class="kbd kbd-sm">m</kbd></td>
+              <td>Go to Memories</td>
+            </tr>
+            <tr>
+              <td><kbd class="kbd kbd-sm">g</kbd> then <kbd class="kbd kbd-sm">w</kbd></td>
+              <td>Go to Workspaces</td>
+            </tr>
+            <tr>
+              <td><kbd class="kbd kbd-sm">g</kbd> then <kbd class="kbd kbd-sm">s</kbd></td>
+              <td>Go to Settings</td>
+            </tr>
+            <tr>
+              <td><kbd class="kbd kbd-sm">⌘</kbd> / <kbd class="kbd kbd-sm">Ctrl</kbd> + <kbd class="kbd kbd-sm">K</kbd></td>
+              <td>Search memories</td>
+            </tr>
+            <tr>
+              <td><kbd class="kbd kbd-sm">Escape</kbd></td>
+              <td>Close dialogs</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <form method="dialog" class="modal-backdrop">
+      <button>close</button>
+    </form>
+  </dialog>
 </div>
 
+<svelte:head>
+  <title>{pageTitle}</title>
+</svelte:head>
+
+<svelte:window onkeydown={handleKeydown} />
+
 <style>
+  .nav-link.btn-active::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0.5rem;
+    right: 0.5rem;
+    height: 0.125rem;
+    border-radius: 9999px;
+    background-color: oklch(var(--p));
+  }
+
   @media (prefers-reduced-motion: reduce) {
     .animate-fade-in,
     .animate-slide-up {

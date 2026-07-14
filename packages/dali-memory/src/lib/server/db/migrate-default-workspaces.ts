@@ -25,9 +25,7 @@ export interface MigrationResult {
  * @param driver - Connected SurrealDriver instance
  * @returns MigrationResult with stats and per-user errors
  */
-export async function migrateDefaultWorkspaces(
-  driver: SurrealDriver,
-): Promise<MigrationResult> {
+export async function migrateDefaultWorkspaces(driver: SurrealDriver): Promise<MigrationResult> {
   const result: MigrationResult = {
     usersProcessed: 0,
     workspacesCreated: 0,
@@ -46,9 +44,7 @@ export async function migrateDefaultWorkspaces(
     throw new Error(`Migration failed: ${message}`);
   }
 
-  const usersWithoutDefault = users.filter(
-    (u) => u.default_workspace_id == null,
-  );
+  const usersWithoutDefault = users.filter((u) => u.default_workspace_id == null);
 
   result.usersProcessed = usersWithoutDefault.length;
 
@@ -58,8 +54,7 @@ export async function migrateDefaultWorkspaces(
   );
 
   for (const user of usersWithoutDefault) {
-    const userIdStr =
-      user.id instanceof RecordId ? String(user.id) : String(user.id ?? 'unknown');
+    const userIdStr = user.id instanceof RecordId ? String(user.id) : String(user.id ?? 'unknown');
 
     console.log(`[migrate-default-workspaces] Processing user ${userIdStr}...`);
 
@@ -79,10 +74,10 @@ export async function migrateDefaultWorkspaces(
         );
 
         await driver.transaction(async (tx) => {
-          await tx.query(
-            'UPDATE $userId SET default_workspace_id = $workspaceId',
-            { userId: user.id, workspaceId: ws.id },
-          );
+          await tx.query('UPDATE $userId SET default_workspace_id = $workspaceId', {
+            userId: user.id,
+            workspaceId: ws.id,
+          });
         });
 
         console.log(
@@ -106,10 +101,10 @@ export async function migrateDefaultWorkspaces(
             throw new Error('create returned empty result');
           }
 
-          await tx.query(
-            'UPDATE $userId SET default_workspace_id = $workspaceId',
-            { userId: user.id, workspaceId: workspace.id },
-          );
+          await tx.query('UPDATE $userId SET default_workspace_id = $workspaceId', {
+            userId: user.id,
+            workspaceId: workspace.id,
+          });
         });
 
         result.workspacesCreated++;
@@ -121,10 +116,7 @@ export async function migrateDefaultWorkspaces(
       }
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : String(err);
-      console.error(
-        `[migrate-default-workspaces] Error processing user ${userIdStr}:`,
-        errorMsg,
-      );
+      console.error(`[migrate-default-workspaces] Error processing user ${userIdStr}:`, errorMsg);
       result.errors.push({
         userId: userIdStr,
         error: errorMsg,

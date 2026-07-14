@@ -22,7 +22,6 @@ export async function validateApiKey(key: string | null | undefined): Promise<bo
   }
   const db = getDB();
   const hash = await hashApiKey(key);
-  console.log('Validating API key:', key, hash);
 
   const results = await select(db, apiKeysTable)
     .where((w) => w.eq('key_hash', hash))
@@ -51,7 +50,8 @@ export async function validateApiKey(key: string | null | undefined): Promise<bo
       .id(shortId)
       .set('last_used_at', new Date().toISOString())
       .execute()
-      .catch(() => {
+      .catch((e) => {
+        console.error('Failed to update last_used_at for API key:', e);
         // Best-effort — failure to touch last_used_at is non-critical
       });
   }

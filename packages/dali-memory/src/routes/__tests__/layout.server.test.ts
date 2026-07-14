@@ -52,9 +52,7 @@ describe('Layout server load', () => {
 
   test('returns full shape when authenticated with default workspace', async () => {
     mockDriverQuery
-      .mockResolvedValueOnce([
-        { name: 'Alice', default_workspace_id: 'workspace:ws_abc' },
-      ])
+      .mockResolvedValueOnce([{ name: 'Alice', default_workspace_id: 'workspace:ws_abc' }])
       .mockResolvedValueOnce([
         { id: 'workspace:ws_abc', name: 'Personal' },
         { id: 'workspace:ws_xyz', name: 'Team' },
@@ -78,9 +76,7 @@ describe('Layout server load', () => {
 
   test('returns name as null when userResult has no name', async () => {
     mockDriverQuery
-      .mockResolvedValueOnce([
-        { default_workspace_id: 'workspace:ws_abc' },
-      ])
+      .mockResolvedValueOnce([{ default_workspace_id: 'workspace:ws_abc' }])
       .mockResolvedValueOnce([]);
 
     const result = await load({
@@ -94,12 +90,8 @@ describe('Layout server load', () => {
 
   test('defaultWorkspaceId is null when user has no default_workspace_id', async () => {
     mockDriverQuery
-      .mockResolvedValueOnce([
-        { name: 'Bob', default_workspace_id: null },
-      ])
-      .mockResolvedValueOnce([
-        { id: 'workspace:ws_bob', name: 'Bobs Workspace' },
-      ]);
+      .mockResolvedValueOnce([{ name: 'Bob', default_workspace_id: null }])
+      .mockResolvedValueOnce([{ id: 'workspace:ws_bob', name: 'Bobs Workspace' }]);
 
     const result = await load({
       locals: { authenticated: true, userEmail: 'bob@test.com' },
@@ -190,9 +182,7 @@ describe('Layout server load', () => {
 
   test('gracefully handles driver query failure on workspace list', async () => {
     mockDriverQuery
-      .mockResolvedValueOnce([
-        { name: 'Alice', default_workspace_id: 'workspace:ws_abc' },
-      ])
+      .mockResolvedValueOnce([{ name: 'Alice', default_workspace_id: 'workspace:ws_abc' }])
       .mockRejectedValueOnce(new Error('Workspace query failed'));
 
     const result = await load({
@@ -209,9 +199,7 @@ describe('Layout server load', () => {
 
   test('extracts defaultWorkspaceId from record string with angle brackets', async () => {
     mockDriverQuery
-      .mockResolvedValueOnce([
-        { name: 'Charlie', default_workspace_id: '⟨workspace:ch_789⟩' },
-      ])
+      .mockResolvedValueOnce([{ name: 'Charlie', default_workspace_id: '⟨workspace:ch_789⟩' }])
       .mockResolvedValueOnce([]);
 
     const result = await load({
@@ -223,9 +211,7 @@ describe('Layout server load', () => {
 
   test('extracts defaultWorkspaceId from record without angle brackets', async () => {
     mockDriverQuery
-      .mockResolvedValueOnce([
-        { name: 'Diana', default_workspace_id: 'workspace:di_999' },
-      ])
+      .mockResolvedValueOnce([{ name: 'Diana', default_workspace_id: 'workspace:di_999' }])
       .mockResolvedValueOnce([]);
 
     const result = await load({
@@ -237,9 +223,7 @@ describe('Layout server load', () => {
 
   test('extracts workspace slugs from record IDs with angle brackets', async () => {
     mockDriverQuery
-      .mockResolvedValueOnce([
-        { name: 'Eve', default_workspace_id: 'workspace:e_111' },
-      ])
+      .mockResolvedValueOnce([{ name: 'Eve', default_workspace_id: 'workspace:e_111' }])
       .mockResolvedValueOnce([
         { id: '⟨workspace:e_111⟩', name: 'Eves Space' },
         { id: '⟨workspace:e_222⟩', name: 'Second Space' },
@@ -257,31 +241,21 @@ describe('Layout server load', () => {
 
   test('workspace slug extracted from id without colon falls back to full id', async () => {
     mockDriverQuery
-      .mockResolvedValueOnce([
-        { name: 'Frank', default_workspace_id: 'ws_plain' },
-      ])
-      .mockResolvedValueOnce([
-        { id: 'nocolon', name: 'No Colon' },
-      ]);
+      .mockResolvedValueOnce([{ name: 'Frank', default_workspace_id: 'ws_plain' }])
+      .mockResolvedValueOnce([{ id: 'nocolon', name: 'No Colon' }]);
 
     const result = await load({
       locals: { authenticated: true, userEmail: 'frank@test.com' },
     } as any);
 
     expect(result.defaultWorkspaceId).toBe('ws_plain');
-    expect(result.workspaces).toEqual([
-      { name: 'No Colon', id: 'nocolon' },
-    ]);
+    expect(result.workspaces).toEqual([{ name: 'No Colon', id: 'nocolon' }]);
   });
 
   test('workspace slug falls back to empty string when pop returns null/undefined', async () => {
     mockDriverQuery
-      .mockResolvedValueOnce([
-        { name: 'Grace', default_workspace_id: null },
-      ])
-      .mockResolvedValueOnce([
-        { id: 'workspace:', name: 'Empty Slug' },
-      ]);
+      .mockResolvedValueOnce([{ name: 'Grace', default_workspace_id: null }])
+      .mockResolvedValueOnce([{ id: 'workspace:', name: 'Empty Slug' }]);
 
     const result = await load({
       locals: { authenticated: true, userEmail: 'grace@test.com' },
@@ -295,9 +269,7 @@ describe('Layout server load', () => {
 
   test('deduplicates workspaces with same slug', async () => {
     mockDriverQuery
-      .mockResolvedValueOnce([
-        { name: 'Hank', default_workspace_id: 'workspace:h_333' },
-      ])
+      .mockResolvedValueOnce([{ name: 'Hank', default_workspace_id: 'workspace:h_333' }])
       .mockResolvedValueOnce([
         { id: 'workspace:h_333', name: 'Personal' },
         { id: 'workspace:h_333', name: 'Personal Duplicate' },
@@ -327,9 +299,7 @@ describe('Layout server load', () => {
 
   test('handles undefined workspace result gracefully', async () => {
     mockDriverQuery
-      .mockResolvedValueOnce([
-        { name: 'Ivan', default_workspace_id: 'workspace:i_444' },
-      ])
+      .mockResolvedValueOnce([{ name: 'Ivan', default_workspace_id: 'workspace:i_444' }])
       .mockResolvedValueOnce(undefined);
 
     const result = await load({
@@ -342,9 +312,7 @@ describe('Layout server load', () => {
 
   test('handles null workspace result gracefully', async () => {
     mockDriverQuery
-      .mockResolvedValueOnce([
-        { name: 'Judy', default_workspace_id: 'workspace:j_555' },
-      ])
+      .mockResolvedValueOnce([{ name: 'Judy', default_workspace_id: 'workspace:j_555' }])
       .mockResolvedValueOnce(null);
 
     const result = await load({
@@ -356,9 +324,7 @@ describe('Layout server load', () => {
 
   test('returns empty workspaces list when no workspaces exist', async () => {
     mockDriverQuery
-      .mockResolvedValueOnce([
-        { name: 'Karl', default_workspace_id: 'workspace:k_666' },
-      ])
+      .mockResolvedValueOnce([{ name: 'Karl', default_workspace_id: 'workspace:k_666' }])
       .mockResolvedValueOnce([]);
 
     const result = await load({
@@ -372,9 +338,7 @@ describe('Layout server load', () => {
 
   test('queries user by email', async () => {
     mockDriverQuery
-      .mockResolvedValueOnce([
-        { name: 'Laura', default_workspace_id: 'workspace:l_777' },
-      ])
+      .mockResolvedValueOnce([{ name: 'Laura', default_workspace_id: 'workspace:l_777' }])
       .mockResolvedValueOnce([]);
 
     await load({
@@ -390,9 +354,7 @@ describe('Layout server load', () => {
 
   test('queries workspaces ordered by name', async () => {
     mockDriverQuery
-      .mockResolvedValueOnce([
-        { name: 'Mike', default_workspace_id: 'workspace:m_888' },
-      ])
+      .mockResolvedValueOnce([{ name: 'Mike', default_workspace_id: 'workspace:m_888' }])
       .mockResolvedValueOnce([]);
 
     await load({

@@ -3,11 +3,11 @@ import { describe, test, expect, vi, beforeEach } from 'vitest';
 const {
   mockConfigure,
   mockGetConsoleSink,
-  mockGetJsonLinesFormatter,
   mockGetLogger,
   mockGetRotatingFileSink,
   mockGetPrettyFormatter,
   mockContextLocalStorage,
+  mockCreateDatadogSink,
   mockConfig,
 } = vi.hoisted(() => {
   const mockGetLogger = vi.fn(() => ({
@@ -19,14 +19,20 @@ const {
   return {
     mockConfigure: vi.fn<(...args: any[]) => Promise<void>>(),
     mockGetConsoleSink: vi.fn(() => vi.fn()),
-    mockGetJsonLinesFormatter: vi.fn(() => ({})),
     mockGetLogger,
     mockGetRotatingFileSink: vi.fn(() => vi.fn()),
     mockGetPrettyFormatter: vi.fn(() => ({})),
     mockContextLocalStorage: {} as Record<string, unknown>,
+    mockCreateDatadogSink: vi.fn<(...args: any[]) => any>(() => null),
     mockConfig: {
       DALI_MEMORY_LOG_LEVEL: 'info',
       DALI_MEMORY_LOG_DIR: 'logs',
+      DALI_MEMORY_DD_API_KEY: undefined,
+      DALI_MEMORY_DD_SITE: 'datadoghq.eu',
+      DALI_MEMORY_DD_SERVICE: 'dali-memory',
+      DALI_MEMORY_DD_HOSTNAME: undefined,
+      DALI_MEMORY_DD_TAGS: '',
+      DALI_MEMORY_DD_SOURCE: 'nodejs',
     },
   };
 });
@@ -34,9 +40,9 @@ const {
 vi.mock('@logtape/logtape', () => ({
   configure: mockConfigure,
   getConsoleSink: mockGetConsoleSink,
-  getJsonLinesFormatter: mockGetJsonLinesFormatter,
   getLogger: mockGetLogger,
 }));
+vi.mock('./datadog-sink', () => ({ createDatadogSink: mockCreateDatadogSink }));
 vi.mock('@logtape/file', () => ({ getRotatingFileSink: mockGetRotatingFileSink }));
 vi.mock('@logtape/pretty', () => ({ getPrettyFormatter: mockGetPrettyFormatter }));
 vi.mock('./config', () => ({ getConfig: () => mockConfig }));
@@ -45,6 +51,12 @@ vi.mock('./trace-context', () => ({ contextLocalStorage: mockContextLocalStorage
 function resetMockConfig() {
   mockConfig.DALI_MEMORY_LOG_LEVEL = 'info';
   mockConfig.DALI_MEMORY_LOG_DIR = 'logs';
+  mockConfig.DALI_MEMORY_DD_API_KEY = undefined;
+  mockConfig.DALI_MEMORY_DD_SITE = 'datadoghq.eu';
+  mockConfig.DALI_MEMORY_DD_SERVICE = 'dali-memory';
+  mockConfig.DALI_MEMORY_DD_HOSTNAME = undefined;
+  mockConfig.DALI_MEMORY_DD_TAGS = '';
+  mockConfig.DALI_MEMORY_DD_SOURCE = 'nodejs';
 }
 
 describe('CAT', () => {
@@ -69,7 +81,6 @@ describe('initLogger()', () => {
     [
       mockConfigure,
       mockGetConsoleSink,
-      mockGetJsonLinesFormatter,
       mockGetLogger,
       mockGetRotatingFileSink,
       mockGetPrettyFormatter,
@@ -88,14 +99,18 @@ describe('initLogger()', () => {
     });
   });
 
-  test('configures file with rotating JSON lines', async () => {
+  test('configures file with rotating pretty format', async () => {
     const { initLogger } = await import('./logger');
     await initLogger();
     expect(mockGetRotatingFileSink).toHaveBeenCalledWith(
       'logs/dali-memory.log',
       expect.objectContaining({ maxSize: 10 * 1024 * 1024, maxFiles: 70 }),
     );
-    expect(mockGetJsonLinesFormatter).toHaveBeenCalledWith({ properties: 'flatten' });
+    expect(mockGetPrettyFormatter).toHaveBeenCalledWith({
+      timestamp: 'time',
+      inspectOptions: { colors: true },
+      wordWrap: 400,
+    });
   });
 
   test('uses single parent category', async () => {
@@ -144,6 +159,30 @@ describe('initLogger()', () => {
     await initLogger();
     await initLogger();
     expect(mockConfigure).toHaveBeenCalledTimes(1);
+  });
+
+  test('includes datadog sink when enabled', async () => {
+    mockCreateDatadogSink.mockReturnValue(vi.fn());
+    const { initLogger } = await import('./logger');
+    await initLogger();
+    const sinks = mockConfigure.mock.calls[0][0].loggers.find(
+      (l: any) => l.category[0] === 'dali-memory',
+    ).sinks;
+    expect(sinks).toContain('datadog');
+    expect(sinks).toContain('console');
+    expect(sinks).toContain('file');
+  });
+
+  test('excludes datadog sink when disabled', async () => {
+    mockCreateDatadogSink.mockReturnValue(null);
+    const { initLogger } = await import('./logger');
+    await initLogger();
+    const sinks = mockConfigure.mock.calls[0][0].loggers.find(
+      (l: any) => l.category[0] === 'dali-memory',
+    ).sinks;
+    expect(sinks).not.toContain('datadog');
+    expect(sinks).toContain('console');
+    expect(sinks).toContain('file');
   });
 
   test('passes contextLocalStorage', async () => {

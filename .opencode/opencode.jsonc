@@ -8,18 +8,13 @@
       "enabled": true,
       "url": "http://localhost:7777/api/mcp",
       "headers": {
-        "Authorization": "Bearer fa41257da51c444097ac7c2b653d5e05-68a146651c5740e5b3b98384e5e3bad2",
+        "Authorization": "Bearer 8d2583772c854424b102afb9da7aef8f-7410acaef8954e4f8f1f422054d75a6c",
       },
     },
     "task-manager": {
       "type": "local",
       "enabled": true,
-      "command": [
-        "deno",
-        "run",
-        "-A",
-        "/Users/woss/projects/woss/mcp-task-manager/main.ts",
-      ],
+      "command": ["deno", "run", "-A", "/Users/woss/projects/woss/mcp-task-manager/main.ts"],
     },
     "mcp-fetch-server": {
       "type": "local",
@@ -27,11 +22,7 @@
       "enabled": true,
     },
     "sequential-thinking": {
-      "command": [
-        "npx",
-        "-y",
-        "@modelcontextprotocol/server-sequential-thinking",
-      ],
+      "command": ["npx", "-y", "@modelcontextprotocol/server-sequential-thinking"],
       "type": "local",
       "enabled": true,
     },

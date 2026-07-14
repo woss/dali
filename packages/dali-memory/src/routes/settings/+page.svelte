@@ -1,5 +1,6 @@
 <script lang="ts">
   import { page } from '$app/stores';
+  import { enhance } from '$app/forms';
 
   let { data, form } = $props();
   let config = $derived(data.config || {});
@@ -40,7 +41,7 @@
     <div class="glass rounded-2xl animate-fade-in animate-slide-up p-6">
       <div class="space-y-4">
         <h2 class="text-lg font-bold">Profile</h2>
-        <form method="POST" action="?/update-profile" class="space-y-3">
+        <form method="POST" action="?/update-profile" class="space-y-3" use:enhance>
           <div>
             <label for="name" class="mb-1 block text-sm font-medium">Name</label>
             <input name="name" id="name" type="text" value={$page.data.name ?? ''} required class="input input-bordered w-full" />
@@ -90,7 +91,7 @@
       <h2 class="text-lg font-bold">API Keys</h2>
 
       <!-- Generate key form -->
-      <form method="POST" action="?/generate-key" class="flex items-end gap-3 mb-4">
+      <form method="POST" action="?/generate-key" class="flex items-end gap-3 mb-4" use:enhance>
         <div class="flex-1">
           <label for="key-name" class="mb-1 block text-sm font-medium">New Key Name</label>
           <input name="name" id="key-name" type="text" bind:value={newKeyName} placeholder="e.g. my-claude-client" class="input input-bordered w-full" />
@@ -110,7 +111,7 @@
                     <p class="text-sm font-medium">{key.name}</p>
                     <p class="text-xs opacity-50">Created: {formatDate(key.created_at)} | Last used: {formatDate(key.last_used_at)}</p>
                   </div>
-                  <form method="POST" action="?/delete-key" onsubmit={(e) => { if (!confirm('Delete this API key?')) e.preventDefault(); }}>
+                  <form method="POST" action="?/delete-key" use:enhance={({ cancel }) => { if (!confirm('Delete this API key?')) cancel(); }}>
                     <input type="hidden" name="id" value={key.id} />
                     <button type="submit" class="btn btn-ghost btn-xs text-error">Revoke</button>
                   </form>

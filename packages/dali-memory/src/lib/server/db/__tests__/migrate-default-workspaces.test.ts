@@ -368,10 +368,7 @@ describe('migrateDefaultWorkspaces', () => {
     expect(result.errors).toEqual([]);
 
     // userId in error should be the string form
-    expect(mockDriver.query).toHaveBeenCalledWith(
-      expect.any(String),
-      { userId: 'users:plain' },
-    );
+    expect(mockDriver.query).toHaveBeenCalledWith(expect.any(String), { userId: 'users:plain' });
   });
 
   // ---------------------------------------------------------------------------

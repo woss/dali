@@ -1,7 +1,7 @@
 {
-  "version": "20260629092647",
-  "name": "add_user_name",
-  "createdAt": "2026-06-29T07:26:47.935Z",
+  "version": "20260708172312",
+  "name": "init",
+  "createdAt": "2026-07-08T15:23:13.651Z",
   "tables": [
     {
       "name": "workspaces",
@@ -27,6 +27,14 @@
           "config": {
             "type": "bool",
             "default": "false"
+          }
+        },
+        {
+          "name": "user_id",
+          "tableName": "workspaces",
+          "config": {
+            "type": "record",
+            "optional": true
           }
         },
         {
@@ -144,6 +152,30 @@
           "tableName": "embeddings",
           "config": {
             "type": "int"
+          }
+        },
+        {
+          "name": "chunk_index",
+          "tableName": "embeddings",
+          "config": {
+            "type": "int",
+            "optional": true
+          }
+        },
+        {
+          "name": "chunk_text",
+          "tableName": "embeddings",
+          "config": {
+            "type": "string",
+            "optional": true
+          }
+        },
+        {
+          "name": "section",
+          "tableName": "embeddings",
+          "config": {
+            "type": "string",
+            "optional": true
           }
         },
         {
@@ -354,6 +386,14 @@
           "tableName": "users",
           "config": {
             "type": "string",
+            "optional": true
+          }
+        },
+        {
+          "name": "default_workspace_id",
+          "tableName": "users",
+          "config": {
+            "type": "record",
             "optional": true
           }
         },

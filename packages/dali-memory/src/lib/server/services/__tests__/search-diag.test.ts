@@ -57,7 +57,9 @@ beforeAll(async () => {
   wsId = 'workspaces:default';
   mockState.orm = orm;
   mockState.embed.mockResolvedValue({ embedding: EMBED, model: 'test-model', dimensions: 384 });
-  mockState.embedBatch.mockResolvedValue([{ embedding: EMBED, model: 'test-model', dimensions: 384 }]);
+  mockState.embedBatch.mockResolvedValue([
+    { embedding: EMBED, model: 'test-model', dimensions: 384 },
+  ]);
 });
 
 afterAll(async () => {
@@ -70,9 +72,16 @@ describe('searchSimilar diagnostics', () => {
     await orm.query('DELETE embeddings');
     await orm.query('DELETE memories');
 
-    await orm.query("CREATE models:test SET provider_id = 'test', model_id = 'test', dimensions = 384");
-    await orm.query("CREATE memories:m1 SET content = 'test', workspace_id = workspaces:default, name = 'mem1', memory_type = 'fact', metadata = {}, created_at = time::now()");
-    await orm.query("CREATE embeddings:e1 SET vector = $emb, model = models:test, dimensions = 384, chunk_index = NONE, chunk_text = NONE, section = NONE", { emb: EMBED });
+    await orm.query(
+      "CREATE models:test SET provider_id = 'test', model_id = 'test', dimensions = 384",
+    );
+    await orm.query(
+      "CREATE memories:m1 SET content = 'test', workspace_id = workspaces:default, name = 'mem1', memory_type = 'fact', metadata = {}, created_at = time::now()",
+    );
+    await orm.query(
+      'CREATE embeddings:e1 SET vector = $emb, model = models:test, chunk_index = NONE, chunk_text = NONE, section = NONE',
+      { emb: EMBED },
+    );
     await orm.query('RELATE embeddings:e1 -> has_embedding -> memories:m1');
 
     // Direct query without workspace filter — works in embedded engine
@@ -87,7 +96,9 @@ FROM embeddings ORDER BY score DESC LIMIT 10`;
     await orm.query('DELETE embeddings');
     await orm.query('DELETE memories');
 
-    const service = new MemoryService(new (await vi.importMock('../../embedder/index').then((m: any) => m.EmbedderService))());
+    const service = new MemoryService(
+      new (await vi.importMock('../../embedder/index').then((m: any) => m.EmbedderService))(),
+    );
     const mem: any = await service.createMemory({
       name: 'diag-test',
       content: 'diagnostic test content for search',
@@ -103,7 +114,10 @@ FROM embeddings ORDER BY score DESC LIMIT 10`;
 FROM embeddings
 WHERE ->has_embedding.out.workspace_id = $workspaceId OR $workspaceId IS NONE
 ORDER BY score DESC LIMIT 10`;
-      const rows = await orm.query(sql, { queryEmbedding: EMBED, workspaceId: 'workspaces:default' });
+      const rows = await orm.query(sql, {
+        queryEmbedding: EMBED,
+        workspaceId: 'workspaces:default',
+      });
       console.log('   Raw query results:', rows.length);
       if (rows.length > 0) console.log('   Raw first:', JSON.stringify(rows[0]));
 
@@ -117,9 +131,11 @@ ORDER BY score DESC LIMIT 10`;
       // Check edges
       const edges = await orm.query('SELECT * FROM has_embedding');
       console.log('   Edges:', JSON.stringify(edges));
-      
+
       // Check traverse
-      const tr = await orm.query("SELECT ->has_embedding.out.workspace_id AS ws FROM embeddings LIMIT 5");
+      const tr = await orm.query(
+        'SELECT ->has_embedding.out.workspace_id AS ws FROM embeddings LIMIT 5',
+      );
       console.log('   Traverse:', JSON.stringify(tr));
     }
     expect(results.length).toBeGreaterThanOrEqual(1);

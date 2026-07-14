@@ -25,12 +25,24 @@ const envSchema = z.object({
   DALI_MEMORY_SURREAL_URL: z.string().default('ws://localhost:10101'),
   DALI_MEMORY_SURREAL_NS: z.string().default('memory'),
   DALI_MEMORY_SURREAL_DB: z.string().default('memory'),
-  DALI_MEMORY_SURREAL_USER: z.string().min(1, 'DALI_MEMORY_SURREAL_USER is required and must be set'),
-  DALI_MEMORY_SURREAL_PASS: z.string().min(1, 'DALI_MEMORY_SURREAL_PASS is required and must be set'),
+  DALI_MEMORY_SURREAL_USER: z
+    .string()
+    .min(1, 'DALI_MEMORY_SURREAL_USER is required and must be set'),
+  DALI_MEMORY_SURREAL_PASS: z
+    .string()
+    .min(1, 'DALI_MEMORY_SURREAL_PASS is required and must be set'),
 
   // Logging
   DALI_MEMORY_LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
   DALI_MEMORY_LOG_DIR: z.string().default('logs'),
+
+  // Datadog
+  DALI_MEMORY_DD_API_KEY: z.string().optional(),
+  DALI_MEMORY_DD_SITE: z.string().default('datadoghq.eu'),
+  DALI_MEMORY_DD_SERVICE: z.string().default('dali-memory'),
+  DALI_MEMORY_DD_HOSTNAME: z.string().optional(),
+  DALI_MEMORY_DD_TAGS: z.string().default(''),
+  DALI_MEMORY_DD_SOURCE: z.string().default('nodejs'),
 });
 
 export type DaliMemoryConfig = z.infer<typeof envSchema>;

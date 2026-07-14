@@ -133,6 +133,7 @@ If scope cannot be determined, review the narrowest safe scope available and sta
 ### Pre-flight git ref availability
 
 Before launching explorers (Phase 3), confirm the PR branch refs are available:
+
 - If `head_ref` is a remote branch that is not checked out locally, fetch it via `git fetch origin <head_ref>`
 - **Check out the head branch locally.** Explorer agents read files from the working tree, not from git history — passing the commit range in the delegation prompt is not sufficient because `Read` / `Glob` / `Grep` tools operate on the filesystem. Without a checkout, explorers silently read the base branch's version of changed files and produce invalid candidates. **Before checking out, verify the working tree is clean (`git status --porcelain`). If uncommitted changes exist, stash them or abort the checkout to prevent data loss.**
 - Explicitly pass the commit range (`base_ref..head_ref`) in every explorer delegation so explorers have the revision context for `git show` commands if they need to inspect specific versions.
@@ -186,19 +187,20 @@ gh api repos/{owner}/{repo}/pulls/{PR_NUMBER}/comments --jq '.[] | select((.user
 ```
 
 For general PR comments (not inline), use the issue comments endpoint:
+
 ```bash
 gh api repos/{owner}/{repo}/issues/{PR_NUMBER}/comments --jq '.[] | select((.user.type // "") == "Bot" or (.user.login // "" | test("bot|copilot|coderabbit|codex"; "i")))'
 ```
 
 ### Step 2 — Classify each comment
 
-| Category | Action |
-|----------|--------|
-| **Human review with file:line evidence** | Add as candidate finding with `source: existing-review` — still needs reviewer validation |
+| Category                                               | Action                                                                                             |
+| ------------------------------------------------------ | -------------------------------------------------------------------------------------------------- |
+| **Human review with file:line evidence**               | Add as candidate finding with `source: existing-review` — still needs reviewer validation          |
 | **Bot/automated finding with specific code reference** | Add as candidate finding with `source: bot-review` — high false-positive rate, treat as unverified |
-| **General feedback / style preference** | Add as advisory obligation |
-| **Resolved/outdated comment** | Skip — note in report under "Ingested Resolved Comments" |
-| **Requested changes not yet addressed** | Add as HIGH-priority obligation |
+| **General feedback / style preference**                | Add as advisory obligation                                                                         |
+| **Resolved/outdated comment**                          | Skip — note in report under "Ingested Resolved Comments"                                           |
+| **Requested changes not yet addressed**                | Add as HIGH-priority obligation                                                                    |
 
 ### Step 3 — Merge into review pipeline
 
@@ -208,11 +210,13 @@ NOT pre-confirmed — they still require independent reviewer validation per the
 Anti-Self-Review Rule.
 
 **Comment-ledger output:**
+
 ```
 [INGESTED] | source | category | file:line (if applicable) | original_author | status: PENDING_VALIDATION / SKIPPED_OUTDATED / ADVISORY
 ```
 
 ### Anti-patterns
+
 - ✗ Ignoring bot reviews because "bots produce false positives" — they also catch real issues
 - ✗ Pre-confirming human review comments without independent validation — even senior reviewers make mistakes
 - ✗ Skipping inline review comments and only reading the summary — inline comments contain the evidence
@@ -253,6 +257,7 @@ The response has two independent fields. Handle each:
 When the PR has merge conflicts:
 
 1. **Determine the PR's base branch and verify the state:**
+
    ```bash
    BASE_REF=$(gh pr view <PR_NUMBER> --json baseRefName --jq '.baseRefName')
    git fetch origin $BASE_REF
@@ -275,6 +280,7 @@ When the PR has merge conflicts:
    review, and what `swarm-pr-feedback` must verify before it edits code.
 
 ### Conflict resolution anti-patterns
+
 - ✗ Accepting "ours" or "theirs" for all conflicts without reading them
 - ✗ Resolving semantic conflicts without understanding both sides
 - ✗ Pushing resolution without running tests on the merged result
@@ -422,6 +428,60 @@ The context pack must include, when available:
 
 ---
 
+## Review Finding Persistence
+
+Do not rely on conversation context to preserve review findings. Create a run
+artifact under `.swarm/pr-review/<run_id>/findings.jsonl` when file writes are
+allowed, or under `.swarm/evidence/pr-review-<run_id>-findings.jsonl` when the
+review already uses the evidence tree.
+
+Each persisted finding record must include at least:
+
+```json
+{
+  "finding_id": "F-001",
+  "status": "PENDING",
+  "file_line": "src/file.ts:123",
+  "evidence": "quote, command output, lane id, or reviewer rationale",
+  "next_action": "route_to_reviewer"
+}
+```
+
+Minimum field contract:
+
+- `finding_id`: stable ID from the candidate/reviewer/critic ledger.
+- `status`: one of `PENDING`, `CONFIRMED`, `DISPROVED`, or `PRE_EXISTING`.
+- `file_line`: exact `file:line` reference, or `N/A` with reason when the
+  finding is cross-file or artifact-only.
+- `evidence`: compact source-backed proof, including lane/reviewer/critic IDs or
+  command output references when available.
+- `next_action`: the next required action, such as `route_to_reviewer`,
+  `route_to_critic`, `report`, `suppress_with_reason`, or `handoff_to_feedback`.
+
+Persist after every major validation boundary:
+
+1. **Post-explorer:** after Phase 3/4 candidate parsing and before reviewer
+   dispatch, write all candidates as `PENDING` with their lane provenance.
+2. **Post-reviewer:** after Phase 6 reviewer validation, update each reviewed
+   record to `CONFIRMED`, `DISPROVED`, `PRE_EXISTING`, or keep `PENDING` with a
+   concrete `next_action` if more evidence is required.
+3. **Post-critic:** after Phase 8 critic challenge, update final status,
+   severity/action notes in `evidence`, and final reporting or handoff action.
+
+Resume/reload procedure:
+
+1. Before continuing any compacted or resumed review, read the latest
+   `findings.jsonl` artifact and reconstruct the candidate/reviewer/critic
+   ledger from disk before dispatching more lanes.
+2. If the artifact is missing but a review context says prior lanes ran, stop and
+   surface the missing artifact as a coverage gap instead of reclassifying from
+   memory.
+3. Append new records rather than overwriting history unless the artifact format
+   explicitly tracks revisions; latest record for a `finding_id` wins during
+   reload.
+
+---
+
 ## Phase 1: Intent Reconstruction / Obligation Extraction
 
 Reconstruct what the PR is obligated to deliver before looking for bugs.
@@ -464,6 +524,7 @@ PR body numerical claims (test counts, coverage percentages, assertion counts, p
 4. If the claim is disproved by evidence, create a finding linking the discrepancy.
 
 Common patterns to verify:
+
 - "N tests pass" → count actual test results from CI logs or test runner output
 - "N% coverage" → compare against coverage report
 - "No regressions" → verify against test runner failure count
@@ -518,10 +579,12 @@ Launch all base lanes with `dispatch_lanes_async` when available. Pass the six l
 Before Phase 4 or synthesis, all base lanes must be settled. `dispatch_lanes_async` accepts a maximum of 8 lanes per call; base lanes (6) and micro-lanes (Phase 4) are dispatched in separate calls by design. Do not let one lane's conclusions bias another lane.
 
 **COVERAGE GATE — zero tolerance for unclosed gaps.** After `collect_lane_results`, verify every lane produced validated output. Two failure modes exist:
+
 - **Mode A (empty output):** Lane returns 0 chars, `status: cancelled`, `output_digest` matches SHA-256 of empty string (`e3b0c442...b855`).
 - **Mode B (intermediate reasoning only):** Lane reports `status: completed` with non-empty output, but the output is preliminary reasoning ("Now let me check...") with zero `[CANDIDATE]` rows. The `output_digest` does NOT match the empty-string hash. `parse_lane_candidates` returns 0 candidates. This mode is MORE dangerous — the lane appears successful but produced no findings.
 
 For ANY lane that failed (either mode):
+
 1. **Retry** (max 2 attempts) with materially different parameters — different session, different prompt decomposition, or blocking `dispatch_lanes`.
 2. If retries fail, **deploy an equivalent alternative** and **verify equivalence**: same agent type, same prompt, same scope, same isolation. Fallback order is explicit: retry or re-collect `dispatch_lanes_async` first, use blocking `dispatch_lanes` when async dispatch or collection cannot close coverage, then use the Task tool as the last-resort equivalent dispatch mechanism when lane tools do not work. State the Task fallback equivalence verification explicitly. Task is not an early-poll or empty-partial-output fallback; use `retrieve_lane_output` to inspect the full artifact before declaring equivalence or failure.
 3. If no equivalent alternative can be verified, **STOP and surface the lane failure to the user as BLOCKED** with the lane id, scope, failure mode, retry attempts, and why equivalence could not be proven. Do not present partial findings, do not issue a review verdict, and do not synthesize from successful lanes. A low-quality partial review is worse than no review.
@@ -551,6 +614,10 @@ rather than preview-text extraction:
 
 If a lane has `output_degraded: true`, `transcript_incomplete: true`, or no usable `output_ref`, apply the COVERAGE GATE from Phase 3: retry (max 2) with materially different parameters, then use blocking `dispatch_lanes` or the Task tool as verified-equivalent fallbacks when lane tools do not work. If the gap cannot be closed, stop and surface the lane failure to the user as BLOCKED. Do not mark affected candidates UNVERIFIED to proceed past the gap. Never infer candidate absence from a preview.
 
+After candidate parsing and before reviewer dispatch, persist the post-explorer
+candidate ledger using the Review Finding Persistence contract. This is the
+durable recovery point for context compaction before Phase 6.
+
 **Fallback convention:** If the parser is unavailable, the explorer MAY emit
 `[CANDIDATE]` rows in the lane output as a fallback convention (see the
 Explorer Prompt Template at the end of this skill), but the orchestrator
@@ -566,14 +633,14 @@ Explorers optimize for recall. Over-reporting is expected. Explorers produce can
 
 The six lanes are a fixed **check-type** partition (correctness / security / deps / docs / tests / performance), not an area partition: the count is intentionally constant — every PR needs all six review dimensions — and the lanes deliberately overlap by file, each receiving the same diff via `common_prompt` and viewing it through a different lens. This is the deliberate exception to surface-scaled fan-out: the base wave is a fixed six by design, never collapsed or expanded with the size of the change. Coverage is guaranteed by the six dimensions each reading the whole diff, not by partitioning files across lanes — so the disjoint-partition rule that governs area-split fan-outs does not apply to these check-type lanes.
 
-| Lane | Focus | Required checks |
-|---|---|---|
-| Lane 1: Correctness and edge cases | Logic errors, null/undefined handling, incorrect operators, async ordering, races, off-by-one, error paths | input domain, nullability, async/await, loop termination, exception behavior, backward compatibility |
-| Lane 2: Security and trust boundaries | Injection, authz/authn bypass, SSRF, path traversal, secret exposure, unsafe deserialization, prompt injection | untrusted input sources, sanitization, credential handling, permission boundary, private network access, output escaping |
-| Lane 3: Dependencies and deployment safety | Import changes, version bumps, lockfile drift, breaking APIs, package scripts, runtime assumptions | lockfile consistency, new transitive deps, Node/Bun/runtime compatibility, platform assumptions, license red flags |
-| Lane 4: Docs, intent, and drift | PR claims vs implementation, docs mismatch, migration/changelog gaps, stale examples | obligation mapping, changed behavior not documented, docs promising behavior not implemented |
-| Lane 5: Tests and falsifiability | Weak assertions, missing edge tests, flaky patterns, mock leakage, fixture drift | assertion strength, tautology patterns (`expect(true).toBe(true)`, `expect(res).toBeDefined()` without further checks), `assertDoesNotThrow` wrapping trivial code), negative paths, isolation, deterministic timing, cross-platform path coverage |
-| Lane 6: Performance and architecture | Complexity regressions, memory leaks, over-coupling, inefficient graph scans, global mutable state | algorithmic deltas, caching, resource lifecycle, state ownership, architectural boundary violations |
+| Lane                                       | Focus                                                                                                          | Required checks                                                                                                                                                                                                                                    |
+| ------------------------------------------ | -------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Lane 1: Correctness and edge cases         | Logic errors, null/undefined handling, incorrect operators, async ordering, races, off-by-one, error paths     | input domain, nullability, async/await, loop termination, exception behavior, backward compatibility                                                                                                                                               |
+| Lane 2: Security and trust boundaries      | Injection, authz/authn bypass, SSRF, path traversal, secret exposure, unsafe deserialization, prompt injection | untrusted input sources, sanitization, credential handling, permission boundary, private network access, output escaping                                                                                                                           |
+| Lane 3: Dependencies and deployment safety | Import changes, version bumps, lockfile drift, breaking APIs, package scripts, runtime assumptions             | lockfile consistency, new transitive deps, Node/Bun/runtime compatibility, platform assumptions, license red flags                                                                                                                                 |
+| Lane 4: Docs, intent, and drift            | PR claims vs implementation, docs mismatch, migration/changelog gaps, stale examples                           | obligation mapping, changed behavior not documented, docs promising behavior not implemented                                                                                                                                                       |
+| Lane 5: Tests and falsifiability           | Weak assertions, missing edge tests, flaky patterns, mock leakage, fixture drift                               | assertion strength, tautology patterns (`expect(true).toBe(true)`, `expect(res).toBeDefined()` without further checks), `assertDoesNotThrow` wrapping trivial code), negative paths, isolation, deterministic timing, cross-platform path coverage |
+| Lane 6: Performance and architecture       | Complexity regressions, memory leaks, over-coupling, inefficient graph scans, global mutable state             | algorithmic deltas, caching, resource lifecycle, state ownership, architectural boundary violations                                                                                                                                                |
 
 ### Explorer context contract
 
@@ -624,21 +691,21 @@ Each micro-lane receives:
 
 ### Swarm plugin risk trigger map
 
-| Trigger in diff or context pack | Launch micro-lane | Invariants to check |
-|---|---|---|
-| `agents`, `prompts`, `templates`, prompt interpolation, role text | Architect prompt integrity | no scope escape, no system prompt leakage, safe `{{variable}}` interpolation, untrusted text isolated from instructions |
-| `council`, `verdict`, `quorum`, `veto`, synthesis | Council orchestration | quorum math correct, veto enforced, evidence not lost, dissent preserved, no explorer result treated as final |
-| `guardrail`, `gate`, `delegation`, `rate limit`, approval checks | Guardrail bypass paths | gates cannot be skipped, delegation cannot bypass policy, rate limits cannot be reset by user-controlled state |
-| `schema`, `evidence`, JSONL, migrations, serializers | Evidence schema drift | backward compatibility, required fields preserved, version migration safe, malformed evidence rejected |
-| `knowledge`, `curator`, `hive`, `quarantine`, memory | Knowledge base contract | project vs hive tiers not confused, quarantine honored, CRUD semantics stable, stale knowledge not injected as fact |
-| `phase`, `state`, `plan`, `.swarm/state`, completion markers | Phase transition validation | ordering enforced, retro requirements handled, no premature completion, rollback safe |
-| `model`, `role`, `prefix`, `tool`, agent config | Model-to-role mapping | role prefix enforced, tool permissions least-privilege, unauthorized tools impossible, model fallback safe |
-| `config`, defaults, ratchet, locks, policy flags | Config ratchet semantics | once-enabled gates cannot silently disable, downgrade attempts detected, lock-state integrity preserved |
-| `url`, `fetch`, `http`, GitHub PR/issue parsing, package fetch | URL sanitization and external fetch | scheme allowlist, credential stripping, private IP / localhost / metadata IP blocking, redirect handling, timeout safe |
-| `git`, branch, checkout, reset, worktree, `.git` | Git safety | branch detection reliable, no unsafe `reset --hard`, .git protected, path normalization cross-platform, worktree state preserved |
-| `shell`, `exec`, command parser, file writes, delete/move/copy | Shell/write authority and path containment | destructive commands gated, dry-run preferred, symlink/path escape blocked, writes scoped, command injection impossible |
-| `test`, `bun`, mocks, fixtures, CI matrix | Test infrastructure | `bun:test` API correct, mock isolation, cross-platform paths, no hidden dependency on test order, fixtures reset |
-| `metrics`, telemetry, logs, serialized traces | Metrics and evidence privacy | no secrets in logs, evidence reproducible, privacy preserved, counts cannot be gamed, metrics schema stable |
+| Trigger in diff or context pack                                   | Launch micro-lane                          | Invariants to check                                                                                                              |
+| ----------------------------------------------------------------- | ------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------- |
+| `agents`, `prompts`, `templates`, prompt interpolation, role text | Architect prompt integrity                 | no scope escape, no system prompt leakage, safe `{{variable}}` interpolation, untrusted text isolated from instructions          |
+| `council`, `verdict`, `quorum`, `veto`, synthesis                 | Council orchestration                      | quorum math correct, veto enforced, evidence not lost, dissent preserved, no explorer result treated as final                    |
+| `guardrail`, `gate`, `delegation`, `rate limit`, approval checks  | Guardrail bypass paths                     | gates cannot be skipped, delegation cannot bypass policy, rate limits cannot be reset by user-controlled state                   |
+| `schema`, `evidence`, JSONL, migrations, serializers              | Evidence schema drift                      | backward compatibility, required fields preserved, version migration safe, malformed evidence rejected                           |
+| `knowledge`, `curator`, `hive`, `quarantine`, memory              | Knowledge base contract                    | project vs hive tiers not confused, quarantine honored, CRUD semantics stable, stale knowledge not injected as fact              |
+| `phase`, `state`, `plan`, `.swarm/state`, completion markers      | Phase transition validation                | ordering enforced, retro requirements handled, no premature completion, rollback safe                                            |
+| `model`, `role`, `prefix`, `tool`, agent config                   | Model-to-role mapping                      | role prefix enforced, tool permissions least-privilege, unauthorized tools impossible, model fallback safe                       |
+| `config`, defaults, ratchet, locks, policy flags                  | Config ratchet semantics                   | once-enabled gates cannot silently disable, downgrade attempts detected, lock-state integrity preserved                          |
+| `url`, `fetch`, `http`, GitHub PR/issue parsing, package fetch    | URL sanitization and external fetch        | scheme allowlist, credential stripping, private IP / localhost / metadata IP blocking, redirect handling, timeout safe           |
+| `git`, branch, checkout, reset, worktree, `.git`                  | Git safety                                 | branch detection reliable, no unsafe `reset --hard`, .git protected, path normalization cross-platform, worktree state preserved |
+| `shell`, `exec`, command parser, file writes, delete/move/copy    | Shell/write authority and path containment | destructive commands gated, dry-run preferred, symlink/path escape blocked, writes scoped, command injection impossible          |
+| `test`, `bun`, mocks, fixtures, CI matrix                         | Test infrastructure                        | `bun:test` API correct, mock isolation, cross-platform paths, no hidden dependency on test order, fixtures reset                 |
+| `metrics`, telemetry, logs, serialized traces                     | Metrics and evidence privacy               | no secrets in logs, evidence reproducible, privacy preserved, counts cannot be gamed, metrics schema stable                      |
 
 Micro-lane output format:
 
@@ -652,16 +719,16 @@ Micro-lane output format:
 
 Use Swarm-native agents and artifacts when available. If exact agent names are unavailable, route the same task to the closest equivalent reviewer/critic role.
 
-| Swarm verifier / artifact | When to use | Purpose |
-|---|---|---|
-| `critic_drift_verifier` | obligation-vs-code, docs-vs-code, phase/gate changes, schema/config changes | detect drift between stated behavior and actual implementation |
-| `critic_hallucination_verifier` | external APIs, package claims, URLs, CLI flags, GitHub behavior, model/tool names | verify claims against source or mark as unverified |
-| `curator_phase` | before exploration and after synthesis | retrieve relevant lessons; write back confirmed true positives / false positives |
-| `test_engineer` | confirmed/borderline correctness, security, state, schema, or config findings | propose or run falsification probes and regression tests |
-| `prm_scorer` | long or contentious reviews | score whether review trajectory is drifting toward unsupported speculation |
-| `.swarm/repo-graph.json` | all nontrivial code changes | build impact cones and sibling-pattern checks |
-| `.swarm/evidence/` | schema, phase, state, council, and guardrail changes | verify evidence compatibility and serialized provenance |
-| `/swarm metrics` or stored metrics | after synthesis | record review quality and recurring false positives |
+| Swarm verifier / artifact          | When to use                                                                       | Purpose                                                                          |
+| ---------------------------------- | --------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| `critic_drift_verifier`            | obligation-vs-code, docs-vs-code, phase/gate changes, schema/config changes       | detect drift between stated behavior and actual implementation                   |
+| `critic_hallucination_verifier`    | external APIs, package claims, URLs, CLI flags, GitHub behavior, model/tool names | verify claims against source or mark as unverified                               |
+| `curator_phase`                    | before exploration and after synthesis                                            | retrieve relevant lessons; write back confirmed true positives / false positives |
+| `test_engineer`                    | confirmed/borderline correctness, security, state, schema, or config findings     | propose or run falsification probes and regression tests                         |
+| `prm_scorer`                       | long or contentious reviews                                                       | score whether review trajectory is drifting toward unsupported speculation       |
+| `.swarm/repo-graph.json`           | all nontrivial code changes                                                       | build impact cones and sibling-pattern checks                                    |
+| `.swarm/evidence/`                 | schema, phase, state, council, and guardrail changes                              | verify evidence compatibility and serialized provenance                          |
+| `/swarm metrics` or stored metrics | after synthesis                                                                   | record review quality and recurring false positives                              |
 
 Verifier output is advisory until incorporated by the independent reviewer or critic.
 
@@ -679,6 +746,7 @@ directly.
 ### Noise budget and universal validation
 
 Before reviewer dispatch, the orchestrator may suppress candidates that are ALL of:
+
 - purely stylistic without correctness, security, test, maintainability, or user-impact implications,
 - exact duplicates of a candidate already queued for validation,
 - explorer-stated confidence=LOW with zero structural evidence (no file:line, no code path, no invariant reference).
@@ -704,21 +772,21 @@ For each candidate, the reviewer must determine:
 
 ### Reviewer classifications
 
-| Classification | Meaning |
-|---|---|
-| `CONFIRMED` | Evidence is real, reachable or structurally proven, and introduced or exposed by this PR |
-| `DISPROVED` | Candidate claim is incorrect, unreachable, mitigated, or based on a misunderstanding |
-| `UNVERIFIED` | Available evidence is insufficient to determine validity |
-| `PRE_EXISTING` | Issue exists on the base branch and is not materially worsened by this PR |
+| Classification | Meaning                                                                                  |
+| -------------- | ---------------------------------------------------------------------------------------- |
+| `CONFIRMED`    | Evidence is real, reachable or structurally proven, and introduced or exposed by this PR |
+| `DISPROVED`    | Candidate claim is incorrect, unreachable, mitigated, or based on a misunderstanding     |
+| `UNVERIFIED`   | Available evidence is insufficient to determine validity                                 |
+| `PRE_EXISTING` | Issue exists on the base branch and is not materially worsened by this PR                |
 
 ### Evidence classifications
 
-| Type | Definition |
-|---|---|
-| `STRUCTURALLY_PROVEN` | File:line evidence directly demonstrates the bug or violated invariant |
-| `EXECUTION_PROVEN` | A test, trace, reproduction, or command demonstrates failure |
-| `STATIC_TRACE_PROVEN` | Static analysis plus reviewed path/context demonstrates reachability |
-| `PLAUSIBLE_BUT_UNVERIFIED` | Pattern suggests risk, but reachability or mitigation is unresolved |
+| Type                       | Definition                                                             |
+| -------------------------- | ---------------------------------------------------------------------- |
+| `STRUCTURALLY_PROVEN`      | File:line evidence directly demonstrates the bug or violated invariant |
+| `EXECUTION_PROVEN`         | A test, trace, reproduction, or command demonstrates failure           |
+| `STATIC_TRACE_PROVEN`      | Static analysis plus reviewed path/context demonstrates reachability   |
+| `PLAUSIBLE_BUT_UNVERIFIED` | Pattern suggests risk, but reachability or mitigation is unresolved    |
 
 Reviewer output format:
 
@@ -727,6 +795,11 @@ Reviewer output format:
 ```
 
 `DISPROVED` findings must include the reason. `PRE_EXISTING` findings must include the base-branch evidence if available.
+
+After reviewer lanes settle, persist the post-reviewer finding ledger before
+critic routing or synthesis. The artifact must preserve `CONFIRMED`,
+`DISPROVED`, `PRE_EXISTING`, and still-`PENDING` records with reviewer IDs and
+next actions.
 
 ---
 
@@ -781,6 +854,10 @@ The `[CRITIC]` row in the format above is **mandatory contract**, not advisory o
 **COVERAGE GATE alignment:** Critic lane failures follow the same COVERAGE GATE as explorer lanes: retry (max 2 attempts) with materially different parameters. If retries fail, deploy a verified equivalent alternative (same agent type, same prompt, same scope, same isolation), including Task-tool dispatch as the final fallback when lane tools do not work. If no equivalent can be verified, stop and surface the critic-lane failure to the user as BLOCKED — do NOT mark findings UNVERIFIED or continue past the gap. The orchestrator NEVER fabricates a critic verdict by parsing prose, by tolerating a planning preamble, by presenting partial findings, or by silently accepting reduced coverage.
 
 Refuted findings become `DISPROVED` or `ADVISORY`, depending on critic rationale. Downgrades must be listed in the final validation provenance.
+
+After critic lanes settle, persist the post-critic finding ledger before final
+synthesis. This artifact is the source of truth for resumed reporting and for
+any later `swarm-pr-feedback` handoff.
 
 ---
 
@@ -1017,10 +1094,10 @@ The parser returns a `ParseResultWithSidecar`. On success, `error` and `error_co
     "parentSessionId": "ses_01HABC...",
     "producer": "swarm-pr-review",
     "produced_at": "2025-06-22T14:30:00.000Z",
-     "format_families_detected": ["base_explorer"],
-     "candidate_count": 2,
-     "parse_errors": 2,
-     "malformed_rows": 0
+    "format_families_detected": ["base_explorer"],
+    "candidate_count": 2,
+    "parse_errors": 2,
+    "malformed_rows": 0
   },
   "diagnostics": {
     "candidate_count": 2,
@@ -1042,10 +1119,11 @@ The parser returns a `ParseResultWithSidecar`. On success, `error` and `error_co
     "duplicate_id_warnings": [],
     "degraded_source_count": 0,
     "incomplete_source_count": 0,
-     "format_families_detected": ["base_explorer"]
-   }
+    "format_families_detected": ["base_explorer"]
+  }
 }
 ```
+
 > **Note**: `parse_errors: 2` reflects FR-017/SC-017 position-based detection: when a `[CANDIDATE]` row has both `evidence_summary` and `impact_context` populated, the parser emits a `parse_error_details` entry per row with `field: "row"` and `message: "Both format-family discriminators present; defaulting to base_explorer"`. This is documented behavior, not a parser bug. To get `parse_errors: 0` with the row format, leave one of the two fields empty; to silence the warning entirely, emit structured JSON candidate records.
 
 On refusal (e.g. `output_ref` does not exist), `error` and `error_code` are present; `candidates` is `[]`; `invocation_envelope` and `diagnostics` are populated with empty fields for traceability:
@@ -1079,8 +1157,8 @@ On refusal (e.g. `output_ref` does not exist), `error` and `error_code` are pres
     "duplicate_id_warnings": [],
     "degraded_source_count": 0,
     "incomplete_source_count": 0,
-     "format_families_detected": []
-   }
+    "format_families_detected": []
+  }
 }
 ```
 
@@ -1180,12 +1258,12 @@ Council findings are supplementary, not authoritative overrides. Do not adopt co
 
 # Merge Recommendation Table
 
-| Verdict | Condition |
-|---|---|
-| `APPROVE` | zero unresolved CRITICAL findings, zero unresolved HIGH findings, all blocking obligations MET, no required validation phase failed |
-| `APPROVE_WITH_NOTES` | zero unresolved CRITICAL findings, HIGH findings are downgraded/advisory only, obligations MET or explicitly non-blocking |
-| `REQUEST_CHANGES` | any unresolved HIGH finding, any NOT_MET blocking obligation, multiple MEDIUM findings with the same root cause, or validation/probe evidence indicates user-impacting risk |
-| `BLOCK` | any unresolved CRITICAL finding, unsafe write/git/security issue, evidence integrity break, role/tool permission bypass, or config ratchet violation that can disable required protections |
+| Verdict              | Condition                                                                                                                                                                                  |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `APPROVE`            | zero unresolved CRITICAL findings, zero unresolved HIGH findings, all blocking obligations MET, no required validation phase failed                                                        |
+| `APPROVE_WITH_NOTES` | zero unresolved CRITICAL findings, HIGH findings are downgraded/advisory only, obligations MET or explicitly non-blocking                                                                  |
+| `REQUEST_CHANGES`    | any unresolved HIGH finding, any NOT_MET blocking obligation, multiple MEDIUM findings with the same root cause, or validation/probe evidence indicates user-impacting risk                |
+| `BLOCK`              | any unresolved CRITICAL finding, unsafe write/git/security issue, evidence integrity break, role/tool permission bypass, or config ratchet violation that can disable required protections |
 
 ---
 
@@ -1270,7 +1348,7 @@ Summarize what changed, including major files, public APIs, schemas, configs, te
 ## Intended vs actual mapping
 
 | Obligation | Source | Actual evidence | Status | Linked finding |
-|---|---|---|---|---|
+| ---------- | ------ | --------------- | ------ | -------------- |
 
 Use `MET`, `PARTIALLY_MET`, `NOT_MET`, or `UNVERIFIABLE`.
 

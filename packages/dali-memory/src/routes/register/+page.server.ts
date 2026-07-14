@@ -26,7 +26,8 @@ export const actions: Actions = {
     const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
     if (!passwordRegex.test(password)) {
       return fail(400, {
-        error: 'Password must be at least 8 characters with at least 1 uppercase, 1 lowercase, and 1 digit',
+        error:
+          'Password must be at least 8 characters with at least 1 uppercase, 1 lowercase, and 1 digit',
         weak: true,
       });
     }
@@ -56,23 +57,22 @@ export const actions: Actions = {
         if (!workspace) throw new Error('Failed to create workspace');
 
         // Step 3: Set the workspace as the user's default
-        await tx.query(
-          'UPDATE $userId SET default_workspace_id = $workspaceId',
-          { userId: user.id, workspaceId: workspace.id },
-        );
+        await tx.query('UPDATE $userId SET default_workspace_id = $workspaceId', {
+          userId: user.id,
+          workspaceId: workspace.id,
+        });
       });
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       // Check email uniqueness first — the 'already contains' pattern also matches workspace name collisions
-      if (
-        msg.includes('idx_users_email')
-      ) {
+      if (msg.includes('idx_users_email')) {
         return fail(409, { error: 'An account with this email already exists', duplicate: true });
       }
-      if (
-        msg.includes('idx_workspaces_name')
-      ) {
-        return fail(409, { error: 'A workspace with this name already exists. Please choose a different name.', workspaceNameTaken: true });
+      if (msg.includes('idx_workspaces_name')) {
+        return fail(409, {
+          error: 'A workspace with this name already exists. Please choose a different name.',
+          workspaceNameTaken: true,
+        });
       }
       if (
         msg.includes('UNIQUE') ||

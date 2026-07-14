@@ -91,8 +91,15 @@ const [newUser] = await insert(driver, usersTable)
 import { createModel } from '@woss/dali-orm/query';
 
 const userModel = createModel(orm, usersTable);
-const verified = await userModel.select().where((w) => w.eq('verified', true)).limit(10).execute();
-const [newUser] = await userModel.insert().one({ name: 'Bob', email: 'bob@example.com', verified: true }).execute();
+const verified = await userModel
+  .select()
+  .where((w) => w.eq('verified', true))
+  .limit(10)
+  .execute();
+const [newUser] = await userModel
+  .insert()
+  .one({ name: 'Bob', email: 'bob@example.com', verified: true })
+  .execute();
 
 // 6. Raw SQL for complex queries
 await orm.query('SELECT * FROM users WHERE email = $email', { email: 'a@b.com' });
@@ -136,15 +143,15 @@ const users = defineTable('user', { name: string('name') });
 const userModel = createModel(orm, users); // → Model<typeof users>
 
 // 8 builder methods — each returns a fresh builder instance
-userModel.select();   // → SelectBuilder<TDef>
-userModel.insert();   // → InsertBuilder<TDef>
-userModel.update();   // → UpdateBuilder<TDef>
-userModel.delete();   // → DeleteBuilder<TDef>
-userModel.relate();   // → RelateBuilder<TDef>
-userModel.create();   // → CreateBuilder<TDef>
-userModel.upsert();   // → UpsertBuilder<TDef>
-userModel.live();     // → LiveQueryBuilder<TDef>
-userModel.orm;        // → DaliORM (getter)
+userModel.select(); // → SelectBuilder<TDef>
+userModel.insert(); // → InsertBuilder<TDef>
+userModel.update(); // → UpdateBuilder<TDef>
+userModel.delete(); // → DeleteBuilder<TDef>
+userModel.relate(); // → RelateBuilder<TDef>
+userModel.create(); // → CreateBuilder<TDef>
+userModel.upsert(); // → UpsertBuilder<TDef>
+userModel.live(); // → LiveQueryBuilder<TDef>
+userModel.orm; // → DaliORM (getter)
 ```
 
 ### Renamed export from barrel
@@ -162,23 +169,23 @@ import { Model, createModel } from '@woss/dali-orm/query/model';
 `orm.model(tableDef)` wraps `createModel`:
 
 ```typescript
-const userModel = orm.model(users);  // same as createModel(orm, users)
+const userModel = orm.model(users); // same as createModel(orm, users)
 ```
 
 ### Usage
 
 ```typescript
-const activeUsers = await userModel.select()
+const activeUsers = await userModel
+  .select()
   .where((w) => w.eq('active', true))
   .orderBy('name', 'ASC')
   .limit(10)
   .execute();
 
-const [newUser] = await userModel.insert()
-  .one({ name: 'Alice' })
-  .execute();
+const [newUser] = await userModel.insert().one({ name: 'Alice' }).execute();
 
-await userModel.update()
+await userModel
+  .update()
   .where((w) => w.eq('name', 'Alice'))
   .data({ name: 'Alice Updated' })
   .execute();
@@ -215,28 +222,28 @@ Each method call creates a **fresh** builder — safe to reuse the same model ac
 
 ## Export Map
 
-| Import Path                                        | Exports                                                                                                                                          |
-| -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `@woss/dali-orm`                                   | DaliORM, OrmSchema, createOrmSchema, connect, SurrealDriver, TableDefinition, ColumnDefinition                                                   |
+| Import Path                                        | Exports                                                                                                                                                              |
+| -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@woss/dali-orm`                                   | DaliORM, OrmSchema, createOrmSchema, connect, SurrealDriver, TableDefinition, ColumnDefinition                                                                       |
 | `@woss/dali-orm/query`                             | select, insert, update, delete\_, upsert, create, relate, live, bindTable, Model, createModel, all condition helpers, InferSelectResult, InferInsertInput, ColumnRef |
-| `@woss/dali-orm/query/select`                      | SelectBuilder, WhereBuilder, select                                                                                                              |
-| `@woss/dali-orm/query/insert`                      | InsertBuilder, insert                                                                                                                            |
-| `@woss/dali-orm/query/update`                      | UpdateBuilder, update                                                                                                                            |
-| `@woss/dali-orm/query/delete`                      | DeleteBuilder, delete\_                                                                                                                          |
-| `@woss/dali-orm/query/relate`                      | RelateBuilder, GraphPath, relate, graphPath                                                                                                      |
-| `@woss/dali-orm/query/conditions`                  | eq, ne, gt, gte, lt, lte, and, or, not, isNull, raw, etc.                                                                                        |
-| `@woss/dali-orm/query/types`                       | InferSelectResult, InferInsertInput, InferUpdateInput, ColumnRef, InferTypedRecord                                                               |
-| `@woss/dali-orm/query/binding`                     | bindTable, TableBinding                                                                                                                          |
-| `@woss/dali-orm/query/model`                      | Model, createModel                                                                                                                                 |
-| `@woss/dali-orm/migration/api`                     | migrateToDatabase, rollbackMigrations, getMigrationStatus, generateAndApplyMigration, pushSchemaFromTableDefs                                    |
-| `@woss/dali-orm/migration/core/shadow`             | connectToShadow, destroyShadow, validateWithShadow, ShadowConfig, ShadowValidationResult                                                         |
-| `@woss/dali-orm/sdk/table`                         | defineTable, defineRelationTable, TableDefinition, ColumnBuilder, IndexDefinition                                                                |
-| `@woss/dali-orm/sdk/schema/column/simple-builders` | string, int, float, bool, datetime, duration, decimal, array, object, uuid, createBuilder                                                        |
-| `@woss/dali-orm/sdk/schema/column/record`          | record                                                                                                                                           |
-| `@woss/dali-orm/sdk/schema/column/base`            | BaseColumnBuilder                                                                                                                                |
-| `@woss/dali-orm/sdk/dali-orm`                      | DaliORM, DaliORMConfig, DaliORMTransaction                                                                                                       |
-| `@woss/dali-orm/sdk/orm-schema`                    | OrmSchema, createOrmSchema, OrmSchemaConfig                                                                                                      |
-| `@woss/dali-orm/sdk/driver/types`                  | SurrealDriver, DriverConfig, EmbeddedConfig, AuthType, ReconnectOptions                                                                          |
+| `@woss/dali-orm/query/select`                      | SelectBuilder, WhereBuilder, select                                                                                                                                  |
+| `@woss/dali-orm/query/insert`                      | InsertBuilder, insert                                                                                                                                                |
+| `@woss/dali-orm/query/update`                      | UpdateBuilder, update                                                                                                                                                |
+| `@woss/dali-orm/query/delete`                      | DeleteBuilder, delete\_                                                                                                                                              |
+| `@woss/dali-orm/query/relate`                      | RelateBuilder, GraphPath, relate, graphPath                                                                                                                          |
+| `@woss/dali-orm/query/conditions`                  | eq, ne, gt, gte, lt, lte, and, or, not, isNull, raw, etc.                                                                                                            |
+| `@woss/dali-orm/query/types`                       | InferSelectResult, InferInsertInput, InferUpdateInput, ColumnRef, InferTypedRecord                                                                                   |
+| `@woss/dali-orm/query/binding`                     | bindTable, TableBinding                                                                                                                                              |
+| `@woss/dali-orm/query/model`                       | Model, createModel                                                                                                                                                   |
+| `@woss/dali-orm/migration/api`                     | migrateToDatabase, rollbackMigrations, getMigrationStatus, generateAndApplyMigration, pushSchemaFromTableDefs                                                        |
+| `@woss/dali-orm/migration/core/shadow`             | connectToShadow, destroyShadow, validateWithShadow, ShadowConfig, ShadowValidationResult                                                                             |
+| `@woss/dali-orm/sdk/table`                         | defineTable, defineRelationTable, TableDefinition, ColumnBuilder, IndexDefinition                                                                                    |
+| `@woss/dali-orm/sdk/schema/column/simple-builders` | string, int, float, bool, datetime, duration, decimal, array, object, uuid, createBuilder                                                                            |
+| `@woss/dali-orm/sdk/schema/column/record`          | record                                                                                                                                                               |
+| `@woss/dali-orm/sdk/schema/column/base`            | BaseColumnBuilder                                                                                                                                                    |
+| `@woss/dali-orm/sdk/dali-orm`                      | DaliORM, DaliORMConfig, DaliORMTransaction                                                                                                                           |
+| `@woss/dali-orm/sdk/orm-schema`                    | OrmSchema, createOrmSchema, OrmSchemaConfig                                                                                                                          |
+| `@woss/dali-orm/sdk/driver/types`                  | SurrealDriver, DriverConfig, EmbeddedConfig, AuthType, ReconnectOptions                                                                                              |
 
 ## Cross-Skill References
 

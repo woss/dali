@@ -15,23 +15,25 @@ description: >
 
 **`test_runner` scope safety — one rule, no exceptions:**
 
-| Scope | Files param | Safe? |
-|-------|------------|-------|
-| `'convention'` | single source file | ✅ Safe |
+| Scope          | Files param               | Safe?                                                                           |
+| -------------- | ------------------------- | ------------------------------------------------------------------------------- |
+| `'convention'` | single source file        | ✅ Safe                                                                         |
 | `'convention'` | **multiple source files** | ❌ **Rejected** — guard fires (`scope_exceeded`) before fan-out; use shell loop |
-| `'convention'` | direct test file paths | ✅ Safe — exempt from source-file limit |
-| `'graph'` | single file | ✅ Safe |
-| `'graph'` | **multiple files** | ❌ **Rejected** (`scope_exceeded`) — guard fires before import-graph traversal |
-| `'impact'` | multiple files | ❌ **Rejected** (`scope_exceeded`) — same reason |
-| `'all'` | any | ❌ **Never in agent context** |
+| `'convention'` | direct test file paths    | ✅ Safe — exempt from source-file limit                                         |
+| `'graph'`      | single file               | ✅ Safe                                                                         |
+| `'graph'`      | **multiple files**        | ❌ **Rejected** (`scope_exceeded`) — guard fires before import-graph traversal  |
+| `'impact'`     | multiple files            | ❌ **Rejected** (`scope_exceeded`) — same reason                                |
+| `'all'`        | any                       | ❌ **Never in agent context**                                                   |
 
 **If you need to run tests across multiple source files: use a per-file shell loop, not `test_runner`.**
 
 **Truncated output recovery:** When `bun test` output exceeds the bash tool buffer it is saved to a file whose ID (`tool_abc123...`) cannot be retrieved via `retrieve_summary` (which only accepts `S1`, `S2` format). Workaround — pipe to a temp file instead:
+
 ```powershell
 # PowerShell (Windows)
 bun --smol test tests/unit/agents --timeout 60000 | Out-File "$env:TEMP\test_out.txt"; Get-Content "$env:TEMP\test_out.txt" | Select-Object -Last 30
 ```
+
 ```bash
 # bash (Linux/macOS)
 bun --smol test tests/unit/agents --timeout 60000 2>&1 | tee /tmp/test_out.txt | tail -30
@@ -47,12 +49,12 @@ import { describe, test, expect, beforeEach, afterEach } from 'bun:test';
 
 Bun provides a vitest compatibility layer (`vi.mock`, `vi.fn`, `vi.spyOn`) that works on Linux and macOS. However, `vi.mock()` has critical isolation bugs in Bun when multiple test directories run in the same process. Prefer `bun:test` native APIs:
 
-| vitest API | bun:test equivalent | Notes |
-|-----------|-------------------|-------|
-| `vi.fn()` | `mock(() => ...)` | Import `mock` from `bun:test` |
-| `vi.spyOn(obj, method)` | `spyOn(obj, method)` | Import `spyOn` from `bun:test` |
-| `vi.mock('module', factory)` | `mock.module('module', factory)` | Import `mock` from `bun:test` |
-| `vi.restoreAllMocks()` | `mock.restore()` | Call in `afterEach` |
+| vitest API                   | bun:test equivalent              | Notes                          |
+| ---------------------------- | -------------------------------- | ------------------------------ |
+| `vi.fn()`                    | `mock(() => ...)`                | Import `mock` from `bun:test`  |
+| `vi.spyOn(obj, method)`      | `spyOn(obj, method)`             | Import `spyOn` from `bun:test` |
+| `vi.mock('module', factory)` | `mock.module('module', factory)` | Import `mock` from `bun:test`  |
+| `vi.restoreAllMocks()`       | `mock.restore()`                 | Call in `afterEach`            |
 
 ## Mock Isolation Rules
 
@@ -65,27 +67,33 @@ Bun's `--smol` mode shares the module cache between test files in the same worke
 ### Rules
 
 1. **Spread the real module when mocking.** Only override the specific export you need:
+
 ```typescript
 import * as realChildProcess from 'node:child_process';
 const mockExecFileSync = mock(() => '');
 mock.module('node:child_process', () => ({
-  ...realChildProcess,          // preserve all other exports
+  ...realChildProcess, // preserve all other exports
   execFileSync: mockExecFileSync, // override only what you test
 }));
 ```
+
 This prevents tests from accidentally nullifying exports that other code depends on. **This is mandatory for Node built-ins** (`node:fs`, `node:fs/promises`, `node:child_process`, etc.) because other code imports the full module — returning a partial mock without spreading real exports breaks unrelated imports.
 
 2. **Use lazy binding in source code.** Import the namespace, call methods at invocation time:
+
 ```typescript
 // GOOD — mockable via mock.module
 import * as child_process from 'node:child_process';
-function run() { return child_process.execFileSync('git', ['status']); }
+function run() {
+  return child_process.execFileSync('git', ['status']);
+}
 
 // BAD — binds at module load, mock.module can't intercept
 import { execFileSync } from 'node:child_process';
 ```
 
 3. **Always add `afterEach(mock.restore())` for cross-module mocks.** Even though it is unreliable in Bun v1.3.11, it provides best-effort cleanup and reduces the window of cross-file contamination. Without it, the mock persists until the process exits:
+
 ```typescript
 import { afterEach, mock } from 'bun:test';
 
@@ -93,9 +101,11 @@ afterEach(() => {
   mock.restore();
 });
 ```
+
 **Exception — Windows EBUSY:** Test files that spawn async child processes (e.g. `pre-check-batch` tests) must **NOT** call `mock.restore()` on Windows. Child process handles can hold directory locks, and `mock.restore()` triggers cleanup that causes `EBUSY` errors. These files must use `describe.skipIf(process.platform === 'win32')` or `test.skipIf(process.platform === 'win32')` for affected tests.
 
 Intentionally skipped on Windows (async child process handles cause EBUSY):
+
 - `tests/unit/tools/pre-check-batch-sast-preexisting.test.ts`
 - `tests/unit/tools/pre-check-batch.adversarial.test.ts`
 - `tests/unit/tools/pre-check-batch-cwd.test.ts`
@@ -105,19 +115,22 @@ Intentionally skipped on Windows (async child process handles cause EBUSY):
 - `tests/unit/tools/pre-check-batch.test.ts`
 
 4. **Never create circular mock imports.** This pattern deadlocks Bun:
+
 ```typescript
 // BROKEN — imports from the module it's about to mock
 import { realFn } from '../../src/module.js';
 vi.mock('../../src/module.js', () => ({
-  realFn: (...args) => realFn(...args),  // circular!
+  realFn: (...args) => realFn(...args), // circular!
   otherFn: vi.fn(),
 }));
 ```
+
 Instead, inline the function logic or extract the real functions into a separate utility module.
 
 5. **Prefer constructor/parameter injection over module mocking.** The swarm's hook factories (`createScopeGuardHook`, `createDelegationLedgerHook`, etc.) accept injected dependencies — test them by passing mock callbacks, not by replacing modules.
 
 6. **Mock `validateDirectory` when testing with Windows temp paths.** The `path-security.ts` validator rejects Windows absolute paths (`C:\...`). If your test uses `os.tmpdir()` and passes that path to a function that calls `validateDirectory`, mock it:
+
 ```typescript
 mock.module('../../../src/utils/path-security', () => ({
   validateDirectory: () => {},
@@ -148,7 +161,7 @@ When test files pass individually but fail when run together, follow this protoc
 
 The codebase uses a two-tier strategy for mock isolation, plus a zero-mock testing pattern:
 
-### Tier 0: _test_exports Pure Function Testing (Zero Mocks)
+### Tier 0: \_test_exports Pure Function Testing (Zero Mocks)
 
 When a module contains internal utility functions (formatters, normalizers, transformers) that don't need external dependencies, export them via a `_test_exports` object for direct unit testing. This avoids `mock.module` entirely and produces tests that are deterministic, fast, and immune to Bun's cross-file mock leakage:
 
@@ -186,25 +199,29 @@ describe('formatEntry', () => {
 ```
 
 **When to use Tier 0 vs Tier 1:**
+
 - **Tier 0 (`_test_exports`)**: The function is a pure utility (formatter, normalizer, transformer) that doesn't call external modules. No mocking needed — test it directly.
 - **Tier 1 (`_internals`)**: You need to mock a function within the same module to test the caller in isolation. The function has side effects or calls external APIs.
 - **Tier 2 (`mock.module`)**: You need to mock a dependency from another module (Node built-ins, other application modules).
 
 **Benefits of Tier 0:**
+
 - Zero mock pollution — no `mock.module` calls, no `mock.restore()` needed
 - Works in batch test runs without per-file isolation
 - Type-safe (the exported object carries the real TypeScript types)
 - No filesystem dependencies (no tmpDir, no chdir, no existsSync)
 - Deterministic on all platforms and CI environments
 
-### Tier 1: _internals DI Seams (Within-Module)
+### Tier 1: \_internals DI Seams (Within-Module)
 
 For mocking functions within the same module, source files export an `_internals` object that wraps key functions. Tests can replace individual functions without using `mock.module`:
 
 ```typescript
 // In source file (src/services/my-service.ts)
 export const _internals = {
-  helperFn: () => { /* real implementation */ }
+  helperFn: () => {
+    /* real implementation */
+  },
 };
 
 export function mainFn() {
@@ -225,6 +242,7 @@ test('mainFn uses mocked helper', () => {
 ```
 
 **Benefits:**
+
 - No process-global mock pollution
 - Type-safe
 - Fast (no module re-parsing)
@@ -256,7 +274,7 @@ When mocking dependencies from other modules (especially Node built-ins), use `m
 import * as realFs from 'node:fs/promises';
 
 mock.module('node:fs/promises', () => ({
-  ...realFs,  // MUST spread real exports
+  ...realFs, // MUST spread real exports
   readFile: mock(() => Promise.resolve('mocked')),
 }));
 
@@ -264,18 +282,19 @@ afterEach(() => mock.restore());
 ```
 
 **Critical rules for cross-module mocks:**
+
 1. **Always spread real exports** for Node built-ins — other code depends on exports you don't mock
 2. **Always add `afterEach(mock.restore())`** — provides best-effort cleanup
 3. **Run in per-file isolation** — CI runs each file in its own process (`for f in *.test.ts; do bun --smol test "$f"; done`)
 
 ### Choosing Between Tiers
 
-| Scenario | Pattern | Example |
-|----------|---------|--------|
-| Mocking a function in the same module you're testing | `_internals` seam | `src/state.ts` `_internals.loadSnapshot` |
-| Mocking a Node built-in (fs, child_process, etc.) | `mock.module` + spread real | `mock.module('node:fs/promises', () => ({ ...realFs, readFile: mockFn }))` |
-| Mocking another application module | `mock.module` + cleanup | `mock.module('../../../src/utils/logger', ...)` + `afterEach(mock.restore())` |
-| File-scoped mock (applies to all tests in file) | `mock.module` at top level + `mockReset()` in `beforeEach` | Preflight tests with `mockLoadPlan.mockReset()` |
+| Scenario                                             | Pattern                                                    | Example                                                                       |
+| ---------------------------------------------------- | ---------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| Mocking a function in the same module you're testing | `_internals` seam                                          | `src/state.ts` `_internals.loadSnapshot`                                      |
+| Mocking a Node built-in (fs, child_process, etc.)    | `mock.module` + spread real                                | `mock.module('node:fs/promises', () => ({ ...realFs, readFile: mockFn }))`    |
+| Mocking another application module                   | `mock.module` + cleanup                                    | `mock.module('../../../src/utils/logger', ...)` + `afterEach(mock.restore())` |
+| File-scoped mock (applies to all tests in file)      | `mock.module` at top level + `mockReset()` in `beforeEach` | Preflight tests with `mockLoadPlan.mockReset()`                               |
 
 ## Mock Coverage Documentation
 
@@ -290,6 +309,7 @@ A narrow mock can produce hollow coverage: the test passes because the mocked pa
 ### Required comment format
 
 For any mock that does not cover all branches of the target function, add a comment near the mock declaration listing:
+
 1. Which branches/paths are untested.
 2. Why they are not covered in this test (e.g., "covered by `runtime-conformance.complete.test.ts`", "requires live critic evidence store", "tested at integration level in `tests/integration/...`").
 
@@ -366,12 +386,12 @@ mock.module('../../../src/config/schema.js', () => ({
 
 Adding stubs for ESM resolution is NOT test theater — it's a Bun runtime requirement. The distinction:
 
-| Pattern | Test theater? | Why |
-|---------|--------------|-----|
-| Adding `PluginConfigSchema: zodStub` so the module loads | **No** | Required for ESM resolution; stub is never called |
-| Stubbing `validateDirectory` to return `true` then asserting "validation works" | **Yes** | The stub bypasses the logic you should be testing |
-| Using `zodStub` in assertions: `expect(zodStub.parse(input)).toBe(input)` | **Yes** | Testing the stub, not the real code |
-| Adding stubs for ALL 50 Zod schemas in config/schema.ts | **No** | All are required for transitive import resolution |
+| Pattern                                                                         | Test theater? | Why                                               |
+| ------------------------------------------------------------------------------- | ------------- | ------------------------------------------------- |
+| Adding `PluginConfigSchema: zodStub` so the module loads                        | **No**        | Required for ESM resolution; stub is never called |
+| Stubbing `validateDirectory` to return `true` then asserting "validation works" | **Yes**       | The stub bypasses the logic you should be testing |
+| Using `zodStub` in assertions: `expect(zodStub.parse(input)).toBe(input)`       | **Yes**       | Testing the stub, not the real code               |
+| Adding stubs for ALL 50 Zod schemas in config/schema.ts                         | **No**        | All are required for transitive import resolution |
 
 The stubs exist solely to satisfy the module loader. Test assertions must verify behavior through the real-mocked functions (the ones your test actually calls), not through the stubs.
 
@@ -542,17 +562,17 @@ When writing a test, know which step your file will run in. In batch steps, do n
 
 ### Convention
 
-| Test type | Location | When to use |
-|-----------|----------|-------------|
-| Unit tests for `src/hooks/*.ts` | `tests/unit/hooks/` | Testing hook factories and hook behavior |
-| Unit tests for `src/tools/*.ts` | `tests/unit/tools/` | Testing tool execute functions |
-| Unit tests for `src/commands/*.ts` | `tests/unit/commands/` | Testing CLI command handlers |
-| Unit tests for `src/config/*.ts` | `tests/unit/config/` | Testing schema validation, config loading |
-| Unit tests for `src/agents/*.ts` | `tests/unit/agents/` | Testing agent prompt generation, factory logic |
-| Colocated tests | `src/**/*.test.ts` | Integration-style tests tightly coupled to the source module |
-| Integration tests | `tests/integration/` | Cross-module workflows, plugin initialization |
-| Security tests | `tests/security/` | Adversarial input handling, injection resistance |
-| Smoke tests | `tests/smoke/` | Built package validation |
+| Test type                          | Location               | When to use                                                  |
+| ---------------------------------- | ---------------------- | ------------------------------------------------------------ |
+| Unit tests for `src/hooks/*.ts`    | `tests/unit/hooks/`    | Testing hook factories and hook behavior                     |
+| Unit tests for `src/tools/*.ts`    | `tests/unit/tools/`    | Testing tool execute functions                               |
+| Unit tests for `src/commands/*.ts` | `tests/unit/commands/` | Testing CLI command handlers                                 |
+| Unit tests for `src/config/*.ts`   | `tests/unit/config/`   | Testing schema validation, config loading                    |
+| Unit tests for `src/agents/*.ts`   | `tests/unit/agents/`   | Testing agent prompt generation, factory logic               |
+| Colocated tests                    | `src/**/*.test.ts`     | Integration-style tests tightly coupled to the source module |
+| Integration tests                  | `tests/integration/`   | Cross-module workflows, plugin initialization                |
+| Security tests                     | `tests/security/`      | Adversarial input handling, injection resistance             |
+| Smoke tests                        | `tests/smoke/`         | Built package validation                                     |
 
 ### Naming
 
@@ -576,9 +596,17 @@ describe('<feature> — regression: <one-line description> (F#)', () => {
 ```
 
 Rules:
+
 - The describe label includes the original finding ID (e.g. `F8`, `F9`, `F1.1`) so future readers can map back to the review.
 - The leading comment in the body explains the **prior buggy behavior** in concrete terms — what the code did before, not what it does now.
 - One regression test per finding. Do not pile unrelated assertions into a single regression block.
+
+Regression tests must be falsifiable. Before marking regression coverage
+complete, temporarily remove or bypass the fix, run the regression test and
+confirm it fails for the expected reason, restore the fix, then rerun the test
+and confirm it passes. Record both commands/results in the task evidence. If the
+fix cannot be safely reverted, document the exact reason and use the smallest
+equivalent mutation that would reintroduce the bug.
 
 Examples in-tree: `tests/unit/graph/graph-query.test.ts`, `tests/unit/graph/import-extractor.test.ts`, `tests/unit/graph/graph-store.test.ts`.
 
@@ -609,13 +637,14 @@ When you modify any entry of a "map of agents/tools/roles" in `src/config/consta
 
 Known parity assertions:
 
-| Test | Invariant |
-|---|---|
-| `tests/unit/config/critic-registration.test.ts` | critic sibling maps include required shared tools such as `get_approved_plan` |
-| `tests/unit/config/agent-tool-map.test.ts` | architect has broader access than subagents, and subagent tool lists stay bounded |
-| `tests/unit/config/constants.test.ts` | declared agents, default models, and tool metadata stay coherent |
+| Test                                            | Invariant                                                                         |
+| ----------------------------------------------- | --------------------------------------------------------------------------------- |
+| `tests/unit/config/critic-registration.test.ts` | critic sibling maps include required shared tools such as `get_approved_plan`     |
+| `tests/unit/config/agent-tool-map.test.ts`      | architect has broader access than subagents, and subagent tool lists stay bounded |
+| `tests/unit/config/constants.test.ts`           | declared agents, default models, and tool metadata stay coherent                  |
 
 Workflow when adding a tool to a single agent:
+
 1. Add the entry.
 2. Run `bun --smol test tests/unit/config --timeout 60000` **before pushing**.
 3. If a parity test fails, decide: mirror the change to sibling agents, or update the invariant test if the design intent has actually changed.
@@ -665,6 +694,7 @@ expect(stage3Section).toContain('ASK_USER');
 **Why this matters:** A bare `toContain('DROP')` passes as long as the word appears anywhere in the file. If the structured outcomes section is deleted but a prose reference remains (e.g., "The critic may DROP irrelevant items"), the test still passes — silently hiding the removal. Section-anchored assertions fail when the content is actually removed from its intended location.
 
 Use this pattern for:
+
 - Critic outcome mappings in skill files (DROP, ASK_USER, RESOLVE, REPHRASE)
 - Classification category lists (self_resolved, user_decision, etc.)
 - Any structured section where word presence is necessary but position-dependent
@@ -689,6 +719,7 @@ When a SKILL.md (or other agent-facing document) contains an **executable exampl
 > **Working example:** `tests/unit/skills/swarm-pr-review-dry-run.test.ts` exercises the `swarm-pr-review` SKILL.md dry-run transcript (lines 866–1050) against the live `parse_lane_candidates` implementation. That test survived four review cycles to align the documentation with runtime output. Drift caught during those cycles included: `invocation_envelope.parse_errors` was `0` in the example but actually `2` (FR-017 both-discriminators detection); `invocation_envelope` was `null` on refusal in the example but actually populated; `sidecar_write_error: undefined` is not valid JSON and had to be replaced with an explicit value; `parse_error_details` field paths and message strings did not match the parser source.
 
 **When NOT to use this pattern:**
+
 - Skills without executable examples (pure conceptual guidance with no runnable artifact).
 - Examples that are intentionally schematic ("the response looks roughly like this") rather than literal.
 - Documentation that is auto-generated from source — drift is impossible by construction in that case.
@@ -699,17 +730,20 @@ When a SKILL.md (or other agent-facing document) contains an **executable exampl
 > guidance on mock keys, symlink behavior, temp directories, and line endings.
 
 All tests must pass on Linux, macOS, and Windows unless explicitly gated with:
+
 ```typescript
 const isWindows = process.platform === 'win32';
 if (isWindows) test.skip('reason', () => {});
 ```
 
 ### Path handling
+
 - Use `path.join()` or `path.resolve()`, never string concatenation with `/`.
 - Temp directories: use `os.tmpdir()`, not hardcoded `/tmp`.
 - File comparisons: normalize paths before comparing (`path.resolve(a) === path.resolve(b)`).
 
 ### Process spawning
+
 - Use `.cmd` extension on Windows for npm/bun binaries: `process.platform === 'win32' ? 'bun.cmd' : 'bun'`.
 - Use array-form `spawn`/`spawnSync`, never shell string commands.
 
@@ -773,15 +807,15 @@ The `--timeout 120000` flag sets per-test timeout to 120 seconds. Individual tes
 
 The following test failures are pre-existing and unrelated to mock isolation:
 
-| Test file | Failures | Cause | Status |
-|-----------|----------|-------|--------|
-| `tests/unit/hooks/full-auto-intercept.test.ts` | 21/37 | `logger.log` returns early without `OPENCODE_SWARM_DEBUG=1` | Pre-existing |
-| `tests/unit/hooks/full-auto-intercept.dispatch.test.ts` | 2/46 | Same logger issue | Pre-existing |
-| `tests/unit/commands/help-compound-commands.test.ts` | Multiple | Command routing issues | Pre-existing |
-| `tests/unit/commands/index.test.ts` | Multiple | Command routing issues | Pre-existing |
-| `tests/unit/commands/issue-command.test.ts` | Multiple | Command routing issues | Pre-existing |
-| `src/__tests__/preflight-phase.test.ts` | 3/3 | `loadPlan` called twice per invocation (lines 930 + 545) | Bug exposed by cleanup |
-| `tests/unit/agents/architect-sounding-board-protocol.adversarial.test.ts` | 1 | Token budget threshold `35000` exceeded by prompt growth; soft regression indicator that prompt size needs attention | Pre-existing |
+| Test file                                                                 | Failures | Cause                                                                                                                | Status                 |
+| ------------------------------------------------------------------------- | -------- | -------------------------------------------------------------------------------------------------------------------- | ---------------------- |
+| `tests/unit/hooks/full-auto-intercept.test.ts`                            | 21/37    | `logger.log` returns early without `OPENCODE_SWARM_DEBUG=1`                                                          | Pre-existing           |
+| `tests/unit/hooks/full-auto-intercept.dispatch.test.ts`                   | 2/46     | Same logger issue                                                                                                    | Pre-existing           |
+| `tests/unit/commands/help-compound-commands.test.ts`                      | Multiple | Command routing issues                                                                                               | Pre-existing           |
+| `tests/unit/commands/index.test.ts`                                       | Multiple | Command routing issues                                                                                               | Pre-existing           |
+| `tests/unit/commands/issue-command.test.ts`                               | Multiple | Command routing issues                                                                                               | Pre-existing           |
+| `src/__tests__/preflight-phase.test.ts`                                   | 3/3      | `loadPlan` called twice per invocation (lines 930 + 545)                                                             | Bug exposed by cleanup |
+| `tests/unit/agents/architect-sounding-board-protocol.adversarial.test.ts` | 1        | Token budget threshold `35000` exceeded by prompt growth; soft regression indicator that prompt size needs attention | Pre-existing           |
 
 ## Known Cross-module mock.module Locations
 
@@ -805,7 +839,7 @@ The following directories contain test files that use cross-module `mock.module`
 - `src/agents/` — mocks node:fs/promises
 - `src/background/` — mocks vulnerability trigger
 
-## Dead-code _internals Seams
+## Dead-code \_internals Seams
 
 The following source modules export `_internals` but have no test consumers (as of this writing). They are harmless but may be removed in future cleanup:
 

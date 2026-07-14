@@ -4,27 +4,28 @@ import { describe, test, expect, vi, beforeEach } from 'vitest';
 // Hoisted mocks
 // =============================================================================
 
-const { mockGetConfig, mockConnect, mockGetDB, mockFail, mockRedirect, mockSignSession } = vi.hoisted(() => {
-  const mockDriver = {
-    query: vi.fn(),
-  };
-  return {
-    mockGetConfig: vi.fn(),
-    mockConnect: vi.fn().mockResolvedValue(undefined),
-    mockGetDB: vi.fn(() => ({
-      getDriver: () => mockDriver,
-    })),
-    mockFail: vi.fn((status: number, data: any) => ({ status, data })),
-    mockRedirect: vi.fn((status: number, location: string) => {
-      const err: any = new Error(`Redirect: ${status} -> ${location}`);
-      err.status = status;
-      err.location = location;
-      throw err;
-    }),
-    mockSignSession: vi.fn().mockResolvedValue('mock-signed-token'),
-    mockDriver,
-  };
-});
+const { mockGetConfig, mockConnect, mockGetDB, mockFail, mockRedirect, mockSignSession } =
+  vi.hoisted(() => {
+    const mockDriver = {
+      query: vi.fn(),
+    };
+    return {
+      mockGetConfig: vi.fn(),
+      mockConnect: vi.fn().mockResolvedValue(undefined),
+      mockGetDB: vi.fn(() => ({
+        getDriver: () => mockDriver,
+      })),
+      mockFail: vi.fn((status: number, data: any) => ({ status, data })),
+      mockRedirect: vi.fn((status: number, location: string) => {
+        const err: any = new Error(`Redirect: ${status} -> ${location}`);
+        err.status = status;
+        err.location = location;
+        throw err;
+      }),
+      mockSignSession: vi.fn().mockResolvedValue('mock-signed-token'),
+      mockDriver,
+    };
+  });
 
 // =============================================================================
 // Module mocks — hoisted before imports

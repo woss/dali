@@ -1,4 +1,4 @@
-import { connect } from '$lib/server/db/connection';
+import { connect, getDB } from '$lib/server/db/connection';
 import { EmbedderService } from '$lib/server/embedder';
 import { MemoryService } from '$lib/server/services/memory';
 import { HybridSearch } from '$lib/server/services/hybrid-search';
@@ -11,24 +11,36 @@ import type { Actions, PageServerLoad } from './$types';
 
 const DEFAULT_LIMIT = 20;
 
-export const load: PageServerLoad = async ({ params, url }) => {
+export const load: PageServerLoad = async (event) => {
+  const { params, url, locals } = event;
   const db = await connect();
   const embedder = new EmbedderService();
   await embedder.initialize();
   const memoryService = new MemoryService(embedder);
+  const userEmail = locals?.userEmail;
 
   const workspaceId = params.id;
   const wsRecordId = new RecordId('workspaces', workspaceId);
 
-  // Verify workspace exists
+  // Verify workspace exists (and ownership when auth is enabled)
+  let wsBindings: { id: RecordId; userId?: unknown } = { id: wsRecordId };
+  let wsQuery = 'SELECT id, name, description, is_personal FROM workspaces WHERE id = $id';
+  if (userEmail) {
+    const [userRow] = await db.query<{ id: unknown }>(
+      'SELECT id FROM users WHERE email = $email LIMIT 1',
+      { email: userEmail },
+    );
+    if (userRow?.id) {
+      wsQuery += ' AND user_id = $userId';
+      wsBindings.userId = userRow.id;
+    }
+  }
   const workspaceRows = await db.query<{
     id: string;
     name: string;
     description: string | null;
     is_personal: boolean;
-  }>('SELECT id, name, description, is_personal FROM workspaces WHERE id = $id', {
-    id: wsRecordId,
-  });
+  }>(wsQuery, wsBindings);
   const workspace = workspaceRows?.[0] ?? null;
 
   if (!workspace) {
@@ -46,7 +58,7 @@ export const load: PageServerLoad = async ({ params, url }) => {
   let memories: (MemoryRecord & { matched_on?: 'vector' | 'fulltext' | 'both' })[];
   if (activeTag) {
     const tagged = await tagService.unionTags([activeTag]);
-    memories = tagged.filter(m => {
+    memories = tagged.filter((m) => {
       const wid = m.workspace_id;
       const widStr = typeof wid === 'string' ? wid : String((wid as unknown as RecordId).id);
       return widStr === workspaceId;
@@ -57,7 +69,7 @@ export const load: PageServerLoad = async ({ params, url }) => {
       workspaceId,
       limit,
     });
-    memories = results.map(r => ({
+    memories = results.map((r) => ({
       ...r.memory,
       matched_on: r.matched_on,
     }));
@@ -69,7 +81,7 @@ export const load: PageServerLoad = async ({ params, url }) => {
   const memoryTagsMap: Record<string, TagRecord[]> = {};
   if (memories.length > 0) {
     const tagsResults = await Promise.all(
-      memories.map(m => tagService.getMemoryTags(m.id.toString())),
+      memories.map((m) => tagService.getMemoryTags(m.id.toString())),
     );
     memories.forEach((mem, i) => {
       memoryTagsMap[mem.id] = tagsResults[i];
@@ -77,7 +89,7 @@ export const load: PageServerLoad = async ({ params, url }) => {
   }
 
   // Attach tags to memories
-  const memoriesWithTags = memories.map(mem => ({
+  const memoriesWithTags = memories.map((mem) => ({
     ...mem,
     tags: memoryTagsMap[mem.id] || [],
   }));
@@ -95,8 +107,29 @@ export const load: PageServerLoad = async ({ params, url }) => {
 };
 
 export const actions: Actions = {
-  create: async ({ request, params }) => {
+  create: async (event) => {
+    const { request, params, locals } = event;
     await connect();
+    const db = getDB();
+
+    // Conditional ownership check — skip when auth is disabled
+    let userRow: { id: unknown } | undefined;
+    if (locals?.userEmail) {
+      [userRow] = await db.query<{ id: unknown }>(
+        'SELECT id FROM users WHERE email = $email LIMIT 1',
+        { email: locals.userEmail },
+      );
+      if (userRow?.id) {
+        const ws = await db.query<{ id: string }>(
+          'SELECT id FROM workspaces WHERE id = $id AND user_id = $userId',
+          { id: new RecordId('workspaces', params.id), userId: userRow.id },
+        );
+        if (!ws?.[0]) {
+          error(404, 'Workspace not found');
+        }
+      }
+    }
+
     const embedder = new EmbedderService();
     await embedder.initialize();
     const memoryService = new MemoryService(embedder);
@@ -118,6 +151,15 @@ export const actions: Actions = {
         memory_type,
         workspace_id,
       });
+
+      // Create the has_memory graph edge when auth is active
+      if (userRow?.id && memory?.id) {
+        await db.query('RELATE $userId -> has_memory -> $memoryId', {
+          userId: userRow.id,
+          memoryId: memory.id,
+        });
+      }
+
       return { success: true, memory: toPlain(memory) };
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Failed to create memory';
@@ -125,8 +167,28 @@ export const actions: Actions = {
     }
   },
 
-  delete: async ({ request, params }) => {
+  delete: async (event) => {
+    const { request, params, locals } = event;
     await connect();
+    const db = getDB();
+
+    // Conditional ownership check — skip when auth is disabled
+    if (locals?.userEmail) {
+      const [userRow] = await db.query<{ id: unknown }>(
+        'SELECT id FROM users WHERE email = $email LIMIT 1',
+        { email: locals.userEmail },
+      );
+      if (userRow?.id) {
+        const ws = await db.query<{ id: string }>(
+          'SELECT id FROM workspaces WHERE id = $id AND user_id = $userId',
+          { id: new RecordId('workspaces', params.id), userId: userRow.id },
+        );
+        if (!ws?.[0]) {
+          error(404, 'Workspace not found');
+        }
+      }
+    }
+
     const embedder = new EmbedderService();
     await embedder.initialize();
     const memoryService = new MemoryService(embedder);
@@ -139,7 +201,7 @@ export const actions: Actions = {
     }
 
     try {
-      await memoryService.deleteMemory(id);
+      await memoryService.deleteMemory(id, params.id);
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Failed to delete memory';
       return fail(400, { error: msg });

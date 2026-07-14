@@ -61,7 +61,6 @@ export const embeddingsTable = defineTable(
   {
     vector: array('vector'),
     model: record('models'),
-    dimensions: int('dimensions'),
     chunk_index: int('chunk_index').optional(),
     chunk_text: string('chunk_text').optional(),
     section: string('section').optional(),
@@ -126,6 +125,16 @@ export const memoryTagsTable = defineRelationTable(
   },
 );
 
+// ---- User-Memory Relation ----
+export const hasMemoryTable = defineRelationTable(
+  'has_memory',
+  {},
+  {
+    in: 'users',
+    out: 'memories',
+  },
+);
+
 // ---- API Keys ----
 export const apiKeysTable = defineTable(
   'api_keys',
@@ -174,6 +183,7 @@ export const schema = createOrmSchema({
     has_embedding: hasEmbeddingTable,
     tags: tagsTable,
     memory_tags: memoryTagsTable,
+    has_memory: hasMemoryTable,
     api_keys: apiKeysTable,
     users: usersTable,
   },

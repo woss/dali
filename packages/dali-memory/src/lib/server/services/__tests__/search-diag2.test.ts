@@ -10,14 +10,33 @@ const { mockState } = (vi as any).hoisted(() => ({
 }));
 
 vi.mock('../../db/connection', () => ({
-  getDB: () => { if (!mockState.orm) throw new Error('no db'); return mockState.orm; },
+  getDB: () => {
+    if (!mockState.orm) throw new Error('no db');
+    return mockState.orm;
+  },
 }));
 
 vi.mock('../../embedder/index', () => ({
-  EmbedderService: vi.fn().mockImplementation(function () { return { initialize: vi.fn().mockResolvedValue(undefined), embed: mockState.embed, embedBatch: mockState.embedBatch }; }),
+  EmbedderService: vi.fn().mockImplementation(function () {
+    return {
+      initialize: vi.fn().mockResolvedValue(undefined),
+      embed: mockState.embed,
+      embedBatch: mockState.embedBatch,
+    };
+  }),
 }));
 
-vi.mock('$env/dynamic/private', () => ({ env: { DALI_MEMORY_SECRET: 'x', DALI_MEMORY_EMBEDDING_MODEL: 'x', DALI_MEMORY_SURREAL_URL: 'x', DALI_MEMORY_SURREAL_NS: 'x', DALI_MEMORY_SURREAL_DB: 'x', DALI_MEMORY_SURREAL_USER: 'x', DALI_MEMORY_SURREAL_PASS: 'x' } }));
+vi.mock('$env/dynamic/private', () => ({
+  env: {
+    DALI_MEMORY_SECRET: 'x',
+    DALI_MEMORY_EMBEDDING_MODEL: 'x',
+    DALI_MEMORY_SURREAL_URL: 'x',
+    DALI_MEMORY_SURREAL_NS: 'x',
+    DALI_MEMORY_SURREAL_DB: 'x',
+    DALI_MEMORY_SURREAL_USER: 'x',
+    DALI_MEMORY_SURREAL_PASS: 'x',
+  },
+}));
 
 let orm: DaliORM;
 let wsId: string;
@@ -34,10 +53,14 @@ beforeAll(async () => {
   wsRid = new RecordId('workspaces', 'default');
   mockState.orm = orm;
   mockState.embed.mockResolvedValue({ embedding: EMBED, model: 'test-model', dimensions: 384 });
-  mockState.embedBatch.mockResolvedValue([{ embedding: EMBED, model: 'test-model', dimensions: 384 }]);
+  mockState.embedBatch.mockResolvedValue([
+    { embedding: EMBED, model: 'test-model', dimensions: 384 },
+  ]);
 });
 
-afterAll(async () => { if (orm) await orm.disconnect(); });
+afterAll(async () => {
+  if (orm) await orm.disconnect();
+});
 
 const sql = (where: string) =>
   `SELECT id, vector::similarity::cosine(vector, $queryEmbedding) AS score
@@ -47,29 +70,53 @@ ORDER BY score DESC LIMIT 10`;
 
 describe('SQL variants', () => {
   test('CONTAINS string', async () => {
-    await orm.query('DELETE has_embedding'); await orm.query('DELETE embeddings'); await orm.query('DELETE memories');
-    await orm.query("CREATE memories:m1 SET content='a', workspace_id=workspaces:default, name='m1'");
-    await orm.query("CREATE embeddings:e1 SET vector=$emb, model=$mId, dimensions=384, chunk_index=NONE, chunk_text=NONE, section=NONE", { emb: EMBED, mId: new RecordId('models', 'test') });
+    await orm.query('DELETE has_embedding');
+    await orm.query('DELETE embeddings');
+    await orm.query('DELETE memories');
+    await orm.query(
+      "CREATE memories:m1 SET content='a', workspace_id=workspaces:default, name='m1'",
+    );
+    await orm.query(
+      'CREATE embeddings:e1 SET vector=$emb, model=$mId, chunk_index=NONE, chunk_text=NONE, section=NONE',
+      { emb: EMBED, mId: new RecordId('models', 'test') },
+    );
     await orm.query('RELATE embeddings:e1 -> has_embedding -> memories:m1');
-    
+
     // Get models ID
-    const models = await (orm as any).query("SELECT id FROM models LIMIT 1");
+    const models = await (orm as any).query('SELECT id FROM models LIMIT 1');
     if (models.length > 0) {
       await orm.query('DELETE embeddings; DELETE has_embedding');
-      await orm.query("CREATE embeddings:e1 SET vector=$emb, model=$mId, dimensions=384", { emb: EMBED, mId: models[0].id });
+      await orm.query('CREATE embeddings:e1 SET vector=$emb, model=$mId', {
+        emb: EMBED,
+        mId: models[0].id,
+      });
       await orm.query('RELATE embeddings:e1 -> has_embedding -> memories:m1');
     }
 
-    const rows = await orm.query(sql(`->has_embedding.out.workspace_id CONTAINS $workspaceId`), { queryEmbedding: EMBED, workspaceId: wsId });
+    const rows = await orm.query(sql(`->has_embedding.out.workspace_id CONTAINS $workspaceId`), {
+      queryEmbedding: EMBED,
+      workspaceId: wsId,
+    });
     console.log('CONTAINS string:', rows.length, JSON.stringify(rows));
-    
-    const rows2 = await orm.query(sql(`->has_embedding.out.workspace_id CONTAINS $wsRid`), { queryEmbedding: EMBED, wsRid, workspaceId: null });
+
+    const rows2 = await orm.query(sql(`->has_embedding.out.workspace_id CONTAINS $wsRid`), {
+      queryEmbedding: EMBED,
+      wsRid,
+      workspaceId: null,
+    });
     console.log('CONTAINS RecordId:', rows2.length, JSON.stringify(rows2));
-    
-    const rows3 = await orm.query(sql(`$workspaceId INSIDE ->has_embedding.out.workspace_id`), { queryEmbedding: EMBED, workspaceId: wsId });
+
+    const rows3 = await orm.query(sql(`$workspaceId INSIDE ->has_embedding.out.workspace_id`), {
+      queryEmbedding: EMBED,
+      workspaceId: wsId,
+    });
     console.log('INSIDE string:', rows3.length, JSON.stringify(rows3));
-    
-    const rows4 = await orm.query(sql(`$wsRid INSIDE ->has_embedding.out.workspace_id`), { queryEmbedding: EMBED, wsRid, workspaceId: null });
+
+    const rows4 = await orm.query(sql(`$wsRid INSIDE ->has_embedding.out.workspace_id`), {
+      queryEmbedding: EMBED,
+      wsRid,
+      workspaceId: null,
+    });
     console.log('INSIDE RecordId:', rows4.length, JSON.stringify(rows4));
 
     // Test using RecordId
@@ -89,10 +136,22 @@ ORDER BY score DESC LIMIT 10`;
     console.log('IN subquery (no WS filter):', rows6.length, JSON.stringify(rows6));
 
     // Test: retrieve emb IDs then filter
-    const edges = await orm.query("SELECT in FROM has_embedding WHERE out.workspace_id = $ws", { ws: wsRid });
-    console.log('Edge query WHERE out.workspace_id = RecordId:', edges.length, JSON.stringify(edges));
+    const edges = await orm.query('SELECT in FROM has_embedding WHERE out.workspace_id = $ws', {
+      ws: wsRid,
+    });
+    console.log(
+      'Edge query WHERE out.workspace_id = RecordId:',
+      edges.length,
+      JSON.stringify(edges),
+    );
 
-    const edges2 = await orm.query("SELECT in FROM has_embedding WHERE out.workspace_id = $ws", { ws: wsId });
-    console.log('Edge query WHERE out.workspace_id = string:', edges2.length, JSON.stringify(edges2));
+    const edges2 = await orm.query('SELECT in FROM has_embedding WHERE out.workspace_id = $ws', {
+      ws: wsId,
+    });
+    console.log(
+      'Edge query WHERE out.workspace_id = string:',
+      edges2.length,
+      JSON.stringify(edges2),
+    );
   });
 });

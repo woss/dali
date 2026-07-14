@@ -1,5 +1,5 @@
--- Migration: new_stuff
--- Version: 20260705221741
+-- Migration: init
+-- Version: 20260707184505
 
 -- UP
 -- ---- Analyzers ----
@@ -25,7 +25,6 @@ DEFINE INDEX idx_memories_content_ft ON TABLE memories COLUMNS content FULLTEXT 
 DEFINE TABLE IF NOT EXISTS embeddings SCHEMAFULL;
 DEFINE FIELD IF NOT EXISTS vector ON TABLE embeddings TYPE array;
 DEFINE FIELD IF NOT EXISTS model ON TABLE embeddings TYPE record<models>;
-DEFINE FIELD IF NOT EXISTS dimensions ON TABLE embeddings TYPE int;
 DEFINE FIELD IF NOT EXISTS chunk_index ON TABLE embeddings TYPE option<int>;
 DEFINE FIELD IF NOT EXISTS chunk_text ON TABLE embeddings TYPE option<string>;
 DEFINE FIELD IF NOT EXISTS section ON TABLE embeddings TYPE option<string>;
@@ -45,6 +44,7 @@ DEFINE TABLE IF NOT EXISTS memory_tags SCHEMAFULL TYPE RELATION IN memories OUT 
 DEFINE FIELD IF NOT EXISTS in ON TABLE memory_tags TYPE record<memories>;
 DEFINE FIELD IF NOT EXISTS out ON TABLE memory_tags TYPE record<tags>;
 DEFINE INDEX idx_memory_tags_pair ON TABLE memory_tags COLUMNS in, out UNIQUE;
+DEFINE TABLE IF NOT EXISTS has_memory SCHEMAFULL TYPE RELATION IN users OUT memories;
 DEFINE TABLE IF NOT EXISTS api_keys SCHEMAFULL;
 DEFINE FIELD IF NOT EXISTS key_hash ON TABLE api_keys TYPE string;
 DEFINE FIELD IF NOT EXISTS name ON TABLE api_keys TYPE string;

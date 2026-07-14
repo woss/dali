@@ -62,6 +62,7 @@ const {
 
 vi.mock('$lib/server/db/connection', () => ({
   connect: mockConnect,
+  getDB: vi.fn(() => ({ query: mockDbQuery })),
 }));
 
 vi.mock('$lib/server/embedder', () => ({
@@ -229,7 +230,7 @@ describe('Workspace memories page server — load', () => {
     });
 
     expect(mockListMemories).toHaveBeenCalledWith('ws_001', { limit: 20, offset: 0 });
-    expect(result.memories).toEqual(sampleMemories.map(m => ({ ...m, tags: [] })));
+    expect(result.memories).toEqual(sampleMemories.map((m) => ({ ...m, tags: [] })));
   });
 
   test('load returns default values when no URL params', async () => {
@@ -243,7 +244,7 @@ describe('Workspace memories page server — load', () => {
     });
 
     expect(result.workspace).toEqual(sampleWorkspace);
-    expect(result.memories).toEqual(sampleMemories.map(m => ({ ...m, tags: [] })));
+    expect(result.memories).toEqual(sampleMemories.map((m) => ({ ...m, tags: [] })));
     expect(result.allTags).toEqual(sampleTags);
     expect(result.searchQuery).toBeNull();
     expect(result.activeTag).toBeNull();
@@ -275,7 +276,7 @@ describe('Workspace memories page server — load', () => {
   test('load passes workspaceId to HybridSearch', async () => {
     mockListTags.mockResolvedValue(sampleTags);
     mockSearch.mockResolvedValue([
-      { memory: sampleMemories[0], score: 0.90, matched_on: 'both' as const },
+      { memory: sampleMemories[0], score: 0.9, matched_on: 'both' as const },
     ]);
 
     await pageServerModule.load({
@@ -299,9 +300,7 @@ describe('Workspace memories page server — load', () => {
   test('load filters memories by tag with workspace scope', async () => {
     mockListTags.mockResolvedValue(sampleTags);
     mockUnionTags.mockResolvedValue(sampleMemories);
-    mockGetMemoryTags.mockImplementation((id: string) =>
-      Promise.resolve(perMemoryTags[id] || []),
-    );
+    mockGetMemoryTags.mockImplementation((id: string) => Promise.resolve(perMemoryTags[id] || []));
 
     const result = await pageServerModule.load({
       params: { id: 'ws_001' },
@@ -430,9 +429,7 @@ describe('Workspace memories page server — load', () => {
   test('load attaches tags to each memory object', async () => {
     mockListTags.mockResolvedValue(sampleTags);
     mockListMemories.mockResolvedValue(sampleMemories);
-    mockGetMemoryTags.mockImplementation((id: string) =>
-      Promise.resolve(perMemoryTags[id] || []),
-    );
+    mockGetMemoryTags.mockImplementation((id: string) => Promise.resolve(perMemoryTags[id] || []));
 
     const result = await pageServerModule.load({
       params: { id: 'ws_001' },
@@ -592,6 +589,95 @@ describe('Workspace memories page server — create action', () => {
 
     expect(mockFail).toHaveBeenCalledWith(400, { error: 'Failed to create memory' });
   });
+
+  // ── has_memory RELATE graph edge (auth path) ─────────────────
+
+  test('create action RELATE query is called when auth active and memory is created', async () => {
+    mockDbQuery
+      .mockReset()
+      .mockResolvedValueOnce([{ id: 'user:abc123' }]) // user lookup
+      .mockResolvedValueOnce([{ id: 'workspace:ws_001' }]); // workspace ownership
+    mockCreateMemory.mockResolvedValue(sampleMemories[0]);
+
+    const form = new FormData();
+    form.set('name', 'Test');
+    form.set('content', 'Content');
+
+    const request = new Request('http://localhost:7777/workspaces/ws_001/memories', {
+      method: 'POST',
+      body: form,
+    });
+
+    const result = await pageServerModule.actions.create({
+      request,
+      params: { id: 'ws_001' },
+      locals: { userEmail: 'user@test.com' },
+    });
+
+    // Hoisted userRow gets the user lookup id — RELATE uses it
+    expect(mockDbQuery).toHaveBeenCalledTimes(3);
+    expect(mockDbQuery).toHaveBeenNthCalledWith(3, 'RELATE $userId -> has_memory -> $memoryId', {
+      userId: 'user:abc123',
+      memoryId: 'mem_001',
+    });
+    expect(result).toEqual({ success: true, memory: sampleMemories[0] });
+  });
+
+  test('create action RELATE query is NOT called when auth is disabled', async () => {
+    mockCreateMemory.mockResolvedValue(sampleMemories[0]);
+
+    const form = new FormData();
+    form.set('name', 'Test');
+    form.set('content', 'Content');
+
+    const request = new Request('http://localhost:7777/workspaces/ws_001/memories', {
+      method: 'POST',
+      body: form,
+    });
+
+    const result = await pageServerModule.actions.create({
+      request,
+      params: { id: 'ws_001' },
+      // No locals — auth disabled, userRow stays undefined
+    });
+
+    expect(mockDbQuery).not.toHaveBeenCalledWith(
+      'RELATE $userId -> has_memory -> $memoryId',
+      expect.anything(),
+    );
+    expect(result).toEqual({ success: true, memory: sampleMemories[0] });
+  });
+
+  test('create action RELATE query is NOT called when memory creation fails (caught by try/catch)', async () => {
+    mockDbQuery
+      .mockReset()
+      .mockResolvedValueOnce([{ id: 'user:abc123' }]) // user lookup
+      .mockResolvedValueOnce([{ id: 'workspace:ws_001' }]); // workspace ownership
+    mockCreateMemory.mockRejectedValue(new Error('Service error'));
+
+    const form = new FormData();
+    form.set('name', 'Test');
+    form.set('content', 'Content');
+
+    const request = new Request('http://localhost:7777/workspaces/ws_001/memories', {
+      method: 'POST',
+      body: form,
+    });
+
+    const result = await pageServerModule.actions.create({
+      request,
+      params: { id: 'ws_001' },
+      locals: { userEmail: 'user@test.com' },
+    });
+
+    // 2 calls: user lookup + workspace check. No RELATE because createMemory failed.
+    expect(mockDbQuery).toHaveBeenCalledTimes(2);
+    expect(mockDbQuery).not.toHaveBeenCalledWith(
+      'RELATE $userId -> has_memory -> $memoryId',
+      expect.anything(),
+    );
+    expect(result).toEqual({ status: 400, data: { error: 'Service error' } });
+  });
 });
 
 describe('Workspace memories page server — delete action', () => {
@@ -615,7 +701,7 @@ describe('Workspace memories page server — delete action', () => {
       }),
     ).rejects.toThrow('Redirect:/workspaces/ws_001/memories');
 
-    expect(mockDeleteMemory).toHaveBeenCalledWith('mem_001');
+    expect(mockDeleteMemory).toHaveBeenCalledWith('mem_001', 'ws_001');
     expect(mockRedirect).toHaveBeenCalledWith(303, '/workspaces/ws_001/memories');
   });
 

@@ -78,7 +78,10 @@ export const actions: Actions = {
     const content = data.get('content')?.toString();
 
     if (!name || !content) {
-      createLogger(['dali-memory', 'http']).warn('edit action validation failed: missing fields', { name: !!name, content: !!content });
+      createLogger(['dali-memory', 'http']).warn('edit action validation failed: missing fields', {
+        name: !!name,
+        content: !!content,
+      });
       return fail(400, { error: 'Name and content are required' });
     }
 
@@ -87,7 +90,10 @@ export const actions: Actions = {
       return { success: true, action: 'edit' };
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Failed to update memory';
-      createLogger(['dali-memory', 'http']).error('edit action failed', { error: msg, slug: params.slug });
+      createLogger(['dali-memory', 'http']).error('edit action failed', {
+        error: msg,
+        slug: params.slug,
+      });
       return fail(400, { error: msg });
     }
   },
@@ -111,7 +117,10 @@ export const actions: Actions = {
       await memoryService.deleteMemory(params.slug);
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Failed to delete memory';
-      createLogger(['dali-memory', 'http']).error('delete action failed', { error: msg, slug: params.slug });
+      createLogger(['dali-memory', 'http']).error('delete action failed', {
+        error: msg,
+        slug: params.slug,
+      });
       return fail(400, { error: msg });
     }
 
@@ -139,7 +148,10 @@ export const actions: Actions = {
       return fail(400, { error: 'At least one tag name is required' });
     }
 
-    const tagNames = raw.split(',').map((s) => s.trim()).filter(Boolean);
+    const tagNames = raw
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean);
 
     if (tagNames.length === 0) {
       return fail(400, { error: 'At least one tag name is required' });

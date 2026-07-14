@@ -146,7 +146,9 @@ describe('MemoryService', () => {
   test('rejects duplicate content in same workspace', async () => {
     const content = `dedup-ws-${Date.now()}`;
     await seedMemory(service, content, wsId);
-    await expect(seedMemory(service, content, wsId)).rejects.toThrow(/already exists in workspace/i);
+    await expect(seedMemory(service, content, wsId)).rejects.toThrow(
+      /already exists in workspace/i,
+    );
   });
 
   test('allows same content in different workspace', async () => {

@@ -24,7 +24,11 @@ export const load: LayoutServerLoad = async ({ locals }) => {
       // Extract default workspace ID from record string
       if (userResult?.default_workspace_id) {
         const wsId = String(userResult.default_workspace_id);
-        defaultWorkspaceId = wsId.replace(/[⟨⟩]/g, '').split(':').pop() ?? null;
+        defaultWorkspaceId =
+          wsId
+            .replace(/[⟨⟩]/g, '')
+            .split(':')
+            .pop() ?? null;
       }
 
       // Load workspaces list for nav
@@ -33,7 +37,11 @@ export const load: LayoutServerLoad = async ({ locals }) => {
       );
       const seen = new Set<string>();
       for (const ws of wsResult ?? []) {
-        const slug = String(ws.id).replace(/[⟨⟩]/g, '').split(':').pop() ?? '';
+        const slug =
+          String(ws.id)
+            .replace(/[⟨⟩]/g, '')
+            .split(':')
+            .pop() ?? '';
         if (slug && !seen.has(slug)) {
           seen.add(slug);
           workspaces.push({ name: ws.name, id: slug });

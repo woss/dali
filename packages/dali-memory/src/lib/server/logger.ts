@@ -2,14 +2,15 @@ import {
   configure,
   getConsoleSink,
   getLogger,
-  getJsonLinesFormatter,
   type Logger,
   type LogLevel,
+  type Sink,
 } from '@logtape/logtape';
 import { getRotatingFileSink } from '@logtape/file';
 import { getPrettyFormatter } from '@logtape/pretty';
 import { getConfig } from './config';
 import { contextLocalStorage } from './trace-context';
+import { createDatadogSink } from './datadog-sink';
 
 const LOG_LEVEL_MAP: Record<string, LogLevel> = {
   debug: 'debug',
@@ -35,7 +36,6 @@ export const CAT = {
 };
 
 export async function initLogger(): Promise<void> {
-  console.log('configuring logger...', configured);
   if (configured) {
     return;
   }
@@ -43,27 +43,41 @@ export async function initLogger(): Promise<void> {
   const level = (LOG_LEVEL_MAP[getConfig().DALI_MEMORY_LOG_LEVEL] ?? 'info') as LogLevel;
   const logsDir = getConfig().DALI_MEMORY_LOG_DIR || 'logs';
 
+  const sinks: Record<string, Sink> = {
+    console: getConsoleSink({
+      formatter: getPrettyFormatter({
+        timestamp: 'time',
+        inspectOptions: { colors: true },
+        wordWrap: 400,
+      }),
+    }),
+    file: getRotatingFileSink(`${logsDir}/dali-memory.log`, {
+      maxSize: 10 * 1024 * 1024,
+      maxFiles: 70,
+      formatter: getPrettyFormatter({
+        timestamp: 'time',
+        inspectOptions: { colors: true },
+        wordWrap: 400,
+      }),
+    }),
+  };
+
+  const sinkNames: string[] = ['console', 'file'];
+
+  const datadogSink = createDatadogSink();
+  if (datadogSink) {
+    sinks.datadog = datadogSink;
+    sinkNames.push('datadog');
+  }
+
   try {
     await configure({
       contextLocalStorage,
       reset: true,
-      sinks: {
-        console: getConsoleSink({
-          formatter: getPrettyFormatter({
-            timestamp: 'time',
-            inspectOptions: { colors: true },
-            wordWrap: 400,
-          }),
-        }),
-        file: getRotatingFileSink(`${logsDir}/dali-memory.log`, {
-          maxSize: 10 * 1024 * 1024,
-          maxFiles: 70,
-          formatter: getJsonLinesFormatter({ properties: 'flatten' }),
-        }),
-      },
+      sinks,
       loggers: [
         { category: ['logtape', 'meta'], lowestLevel: 'warning', sinks: [] },
-        { category: ['dali-memory'], lowestLevel: level, sinks: ['console', 'file'] },
+        { category: ['dali-memory'], lowestLevel: level, sinks: sinkNames },
       ],
     });
     configured = true;

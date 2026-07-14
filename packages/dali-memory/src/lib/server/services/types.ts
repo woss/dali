@@ -36,7 +36,9 @@ export function toMemoryRecord(raw: unknown): MemoryRecord {
     id instanceof RecordId
       ? String(id.id)
       : typeof id === 'string'
-        ? id.includes(':') ? id.split(':')[1] : id
+        ? id.includes(':')
+          ? id.split(':')[1]
+          : id
         : String(id);
   return { ...record, slug } as unknown as MemoryRecord;
 }

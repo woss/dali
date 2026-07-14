@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { enhance } from '$app/forms';
   let { form } = $props();
 </script>
 
@@ -9,7 +10,7 @@
         <h1 class="card-title text-2xl font-heading bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">dali-memory</h1>
         <p class="text-sm opacity-70 mb-4 font-body">Sign in with your email address</p>
 
-        <form method="POST" class="space-y-4 animate-fade-in" style="animation-delay: 150ms">
+        <form method="POST" class="space-y-4 animate-fade-in" style="animation-delay: 150ms" use:enhance>
           <div>
             <label for="email" class="mb-1 block text-sm font-medium">Email</label>
             <input

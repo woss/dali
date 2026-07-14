@@ -293,9 +293,7 @@ describe('Global memories page server — load', () => {
 
   test('load attaches tags to each memory object', async () => {
     mockListAllMemories.mockResolvedValue(sampleMemories);
-    mockGetMemoryTags.mockImplementation((id: string) =>
-      Promise.resolve(perMemoryTags[id] || []),
-    );
+    mockGetMemoryTags.mockImplementation((id: string) => Promise.resolve(perMemoryTags[id] || []));
     mockListTags.mockResolvedValue(sampleTags);
 
     const result = await pageServerModule.load({ url: makeUrl() });
@@ -368,8 +366,8 @@ describe('Global memories page server — load', () => {
     const result = await pageServerModule.load({ url: makeUrl() });
 
     expect(result.workspaceNames).toEqual({
-      'ws_001': 'Workspace Alpha',
-      'ws_002': 'Workspace Beta',
+      ws_001: 'Workspace Alpha',
+      ws_002: 'Workspace Beta',
     });
   });
 

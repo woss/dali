@@ -11,22 +11,25 @@ This protocol is loaded on demand by the architect stub in src/agents/architect.
 ### MODE: PLAN
 
 SPEC GATE (soft — check before planning):
-- If `.swarm/spec.md` does NOT exist:
+
+An effective spec exists iff `/swarm sdd status` reports a resolved spec (it reflects `readEffectiveSpecSync`, which returns null for no sources, multiple competing sources, multi-feature Spec-Kit without a selected feature, or any unresolvable state). Do NOT enumerate these cases — defer to `/swarm sdd status`.
+
+- If NO effective spec exists (confirmed via `/swarm sdd status`):
   - PLAN INGESTION DETECTION: Check if the user is providing an external plan (indicators: markdown content with Phase/Task structure, or phrases like "ingest this plan", "implement this plan", "prepare for implementation", "here is a plan", "here's the plan"):
-    - If plan ingestion is detected AND no spec.md exists: offer this choice FIRST before any planning:
+    - If plan ingestion is detected AND no effective spec exists: offer this choice FIRST before any planning:
       1. "Generate spec from this plan first" → enter EXTERNAL PLAN IMPORT PATH in MODE: SPECIFY to reverse-engineer a spec.md from the provided plan, then return to planning
       2. "Skip spec and proceed with the provided plan" → proceed directly to plan ingestion and planning without creating a spec
     - This is a SOFT gate — option 2 always lets the user proceed without a spec
-  - If no plan ingestion detected: Warn: "No spec found. A spec helps ensure the plan covers all requirements and gives the critic something to verify against. Would you like to create one first?"
+  - If no plan ingestion detected: Warn: "No effective spec found. A spec helps ensure the plan covers all requirements and gives the critic something to verify against. Would you like to create one first?"
     - Offer two options:
       1. "Create a spec first" → transition to MODE: SPECIFY
       2. "Skip and plan directly" → continue with the steps below unchanged
-- If `.swarm/spec.md` EXISTS:
+- If an effective spec EXISTS:
   - NOTE: Stale detection is intentionally heuristic (compare headings) — false positives are acceptable because this is a SOFT gate. When in doubt, ask the user.
-  - Read the spec and compare its first heading (or feature description) against the current planning context (the user's request and any existing plan.md title/phase names)
+  - Read the spec (using the effective spec path reported by `/swarm sdd status`) and compare its first heading (or feature description) against the current planning context (the user's request and any existing plan.md title/phase names)
   - STALE SPEC DETECTION: If the spec heading or feature description does NOT match the current work being planned (e.g., spec describes "user authentication" but user is asking to plan "payment integration"), treat the spec as potentially stale and offer three options:
     1. **Archive and create new spec** → attempt to rename .swarm/spec.md to .swarm/spec-archive/spec-{YYYY-MM-DD}.md (create the directory if needed); if archival succeeds: enter MODE: SPECIFY and skip the "spec already exists" prompt; if archival fails: inform user of the failure and offer: retry archival, or proceed with option 2, or proceed with option 3
-    2. **Keep existing spec** → use spec.md as-is and proceed with planning below
+    2. **Keep existing spec** → use the effective spec as-is and proceed with planning below
     3. **Skip spec entirely** → proceed to planning below ignoring the existing spec
   - If the spec appears current (heading matches the work being planned) OR user chose option 2 above, proceed with spec:
     - Read it and use it as the primary input for planning
@@ -37,7 +40,17 @@ SPEC GATE (soft — check before planning):
 
 This is a SOFT gate. When the user chooses "Skip and plan directly", proceed to the steps below exactly as before — do NOT modify any planning behavior.
 
-Run CODEBASE REALITY CHECK scoped to codebase elements referenced in spec.md or user constraints. Discrepancies must be reflected in the generated plan.
+**SAVE_PLAN SPEC_REQUIRED RECOVERY:**
+When `save_plan` returns a SPEC_REQUIRED rejection (no effective spec found), the architect MUST:
+
+1. DIAGNOSE: run `/swarm sdd status` to determine why no effective spec resolved.
+   - (a) If `/swarm sdd status` shows NO sources → transition to MODE: SPECIFY.
+   - (b) If `/swarm sdd status` shows multiple competing sources (e.g., openspec AND specify with no native) → ask the user which provider to use (`openspec` or `speckit`), then run `/swarm sdd project --source <user_choice>` (obtain explicit consent first; add `--overwrite` only if a native `.swarm/spec.md` already exists). Then re-attempt `save_plan`.
+   - (c) If `/swarm sdd status` shows Spec-Kit with multiple features → ask the user which feature, then run `/swarm sdd project --source speckit --feature <id>` (obtain explicit consent first; add `--overwrite` only if a native `.swarm/spec.md` already exists). Then re-attempt `save_plan`.
+2. If `/swarm sdd status` shows a single resolvable source but it was not yet materialized: run `/swarm sdd project` (obtain explicit consent first; add `--overwrite` only if a native `.swarm/spec.md` already exists). Then re-attempt `save_plan`.
+3. If the user does NOT consent to materializing an effective spec: surface the blockage and stop — do not silently skip or retry without a spec.
+
+Run CODEBASE REALITY CHECK scoped to codebase elements referenced in the effective spec or user constraints. Discrepancies must be reflected in the generated plan.
 
 ### GENERAL COUNCIL ADVISORY OPTION (pre-save_plan)
 
@@ -91,12 +104,12 @@ Before asking the user any planning clarification question, the architect MUST c
 
 For each item classified as `research_needed` or `user_decision` in Stage 2, send it to the critic. The critic responds with a verdict from `SoundingBoardVerdict` (see `src/agents/critic.ts`). The mapping between critic verdicts and funnel actions is:
 
-| Critic Verdict (SoundingBoardVerdict) | Funnel Action | Meaning |
-|---|---|---|
-| `UNNECESSARY` | DROP | Item is unnecessary or answerable from existing context |
-| `RESOLVE` | RESOLVE | Critic supplies the answer or recommended default |
-| `REPHRASE` | REPHRASE | Question is valid but should be clearer, narrower, or grouped |
-| `APPROVED` | ASK_USER | User decision is genuinely required |
+| Critic Verdict (SoundingBoardVerdict) | Funnel Action | Meaning                                                       |
+| ------------------------------------- | ------------- | ------------------------------------------------------------- |
+| `UNNECESSARY`                         | DROP          | Item is unnecessary or answerable from existing context       |
+| `RESOLVE`                             | RESOLVE       | Critic supplies the answer or recommended default             |
+| `REPHRASE`                            | REPHRASE      | Question is valid but should be clearer, narrower, or grouped |
+| `APPROVED`                            | ASK_USER      | User decision is genuinely required                           |
 
 **Hard constraint:** Items in the Always-Surface Categories list (below) MUST NOT receive `UNNECESSARY`/`DROP` from the critic — only `REPHRASE` or `APPROVED`/`ASK_USER` are allowed. If the critic attempts to `UNNECESSARY`/`DROP` an always-surface item, override to `APPROVED`/`ASK_USER`.
 
@@ -159,6 +172,7 @@ The plan generated by `save_plan` MUST include explicit assumptions and remainin
 This mechanical enforcement prevents the following failure mode: the architect prompt instructs the override, but due to parsing errors, context limits, or model behavior variance, the DROP verdict is mistakenly applied to an always-surface item and silently accepted. The validation should occur in the decision-packet assembly code (when building the final clarification packet to surface to the user) and should emit a warning log when an override is applied.
 
 Use the `save_plan` tool to create the implementation plan. Required parameters:
+
 - `title`: The real project name from the spec (NOT a placeholder like [Project])
 - `swarm_id`: The swarm identifier (e.g. "mega", "local", "paid")
 - `phases`: Array of phases, each with `id` (number), `name` (string), and `tasks` (array)
@@ -173,18 +187,21 @@ save_plan({ title: "My Real Project", swarm_id: "mega", phases: [{ id: 1, name: 
 The `execution_profile` field in `save_plan` controls plan-scoped concurrency. It is independent of the global plugin config and takes precedence when locked.
 
 Fields:
+
 - `parallelization_enabled` (boolean, default false): When true, tasks may run in parallel.
 - `max_concurrent_tasks` (integer 1–64, default 10): Maximum simultaneous tasks when parallel is enabled.
 - `council_parallel` (boolean, default true): When true, council review phases may parallelise.
 - `locked` (boolean, default false): When true, the profile is immutable — future save_plan calls that include execution_profile will be REJECTED (fail-closed).
 
 WHEN TO SET IT:
+
 1. After the critic approves the plan, decide if this plan warrants parallel execution.
 2. Call save_plan with execution_profile to record the decision.
 3. Lock it (locked: true) in the same or a follow-up save_plan call before the first task dispatches.
 4. Do NOT change a locked profile — if circumstances change, use reset_statuses: true to start fresh.
 
 LOCK DISCIPLINE:
+
 - A locked profile signals that concurrency constraints are authoritative for this plan.
 - The delegation gate enforces the locked profile — it cannot be bypassed.
 - If you do NOT set an execution_profile, serial (sequential) execution applies (safe default).
@@ -196,10 +213,10 @@ WRONG: Assuming the global plugin config overrides a locked profile — it does 
 
 Example (set and lock in one call):
 save_plan({
-  title: "My Project",
-  swarm_id: "mega",
-  phases: [...],
-  execution_profile: { parallelization_enabled: true, max_concurrent_tasks: 3, council_parallel: false, locked: true }
+title: "My Project",
+swarm_id: "mega",
+phases: [...],
+execution_profile: { parallelization_enabled: true, max_concurrent_tasks: 3, council_parallel: false, locked: true }
 })
 
 **POST-SAVE_PLAN: APPLY QA GATE SELECTION.**
@@ -211,6 +228,7 @@ values after `save_plan`, keep phase-level commits, and set a locked
 file-disjoint tasks. Choose the largest safe count, clamped to the configured
 limit (currently 6); use serial execution when scopes overlap or are unknown.
 After `save_plan` succeeds, read `.swarm/context.md`:
+
 - If a `## Pending QA Gate Selection` section exists: parse the gate values, call `set_qa_gates` with those flags, confirm with the user ("QA gates applied: <list>"), then remove the section from context.md.
 - If a `## Pending Parallelization Config` section also exists: parse the values and call `save_plan` again with `execution_profile` set to `{ parallelization_enabled: <parsed>, max_concurrent_tasks: <parsed>, council_parallel: false, locked: true }`. Then remove the section from context.md. If the plan already had `execution_profile.locked: true`, skip this step — the profile is already locked and immutable.
 - If a `## Task Completion Commit Policy` section exists: preserve it in `.swarm/context.md` (do NOT remove). This section is execution-time guidance for optional per-task checkpoint commits after `update_task_status(status="completed")`.
@@ -226,12 +244,12 @@ After `save_plan` succeeds, read `.swarm/context.md`:
   - phase_council (default: OFF) - full 5-member council reviews all work in a phase holistically at phase_complete time. Requires council.enabled: true in config.
   - drift_check (default: ON) - mandatory per-phase drift verification at PHASE-WRAP
   - final_council (default: OFF) - when enabled, after all phases complete the architect dispatches the full 5-member council (critic, reviewer, sme, test_engineer, explorer) -- NOT the General Council -- at project scope, collects `CouncilMemberVerdict` objects, and calls `write_final_council_evidence`. This does not require `council.general.enabled`.
-  Additionally, present these two sub-items as part of the same exchange:
+    Additionally, present these two sub-items as part of the same exchange:
   - Parallel coders (default: 1, range: 1-6) - how many coders should run in parallel. Parallel coders each run in an isolated git worktree (separate working dir + branch) and merge back automatically, so they never overwrite each other's files - safe and faster, but only for tasks whose declared file scopes do NOT overlap. Inspect the plan and recommend a count equal to the number of dependency-ready, file-disjoint task groups (clamped 1-6); recommend 1 (serial) when scopes overlap or are unknown. State your recommendation and reasoning when you ask.
-  > COMMON MISCONCEPTION: worktree isolation is baseline for standard parallel coders, governed by the parallel execution profile plus top-level `worktree.policy`. It is not provided by Lean Turbo or Epic. Do not recommend Lean Turbo or Epic to obtain worktree isolation; recommend them only for what they add beyond baseline (Lean Turbo: lane planning, file locks, phase reviewer, integrated diff; Epic: co-change awareness and auto-decide). Worktrees also do not make overlapping scopes safe: dependency readiness, file-disjoint scopes, and merge-back ownership are still required.
+    > COMMON MISCONCEPTION: worktree isolation is baseline for standard parallel coders, governed by the parallel execution profile plus top-level `worktree.policy`. It is not provided by Lean Turbo or Epic. Do not recommend Lean Turbo or Epic to obtain worktree isolation; recommend them only for what they add beyond baseline (Lean Turbo: lane planning, file locks, phase reviewer, integrated diff; Epic: co-change awareness and auto-decide). Worktrees also do not make overlapping scopes safe: dependency readiness, file-disjoint scopes, and merge-back ownership are still required.
   - Commit frequency (default: phase-level only) - optional per-task checkpoint commit after each task completion.
-  The user answers all three (gates, parallel coders, commit frequency) in one exchange. Wait for the user's response.
-  If the user says parallel coders > 1, write a `## Pending Parallelization Config` section to `.swarm/context.md` alongside the gate selection:
+    The user answers all three (gates, parallel coders, commit frequency) in one exchange. Wait for the user's response.
+    If the user says parallel coders > 1, write a `## Pending Parallelization Config` section to `.swarm/context.md` alongside the gate selection:
   ```
   ## Pending Parallelization Config
   - parallelization_enabled: true
@@ -250,16 +268,18 @@ After `save_plan` succeeds, read `.swarm/context.md`:
   If the user keeps the default phase-level behavior, do not write this section.
 - If a `## Task Completion Commit Policy` section already exists in context.md, honor it as execution-time guidance (do NOT remove).
 - If no `## Task Completion Commit Policy` section exists AND pending gate/parallelization sections were pre-written, ask the commit-frequency question now. Write the section to context.md if the user chooses per-task commits; skip if they keep the default phase-level behavior.
-<!-- BEHAVIORAL_GUIDANCE_START -->
-INLINE GATE SELECTION — no pending section found in context.md. You MUST ask now.
+  <!-- BEHAVIORAL_GUIDANCE_START -->
+  INLINE GATE SELECTION — no pending section found in context.md. You MUST ask now.
   ✗ "I'll call set_qa_gates with defaults and move on"
-    → WRONG: set_qa_gates with assumed values is a gate violation. The user must answer first.
+  → WRONG: set_qa_gates with assumed values is a gate violation. The user must answer first.
   ✗ "The user provided a plan — they know what gates they want"
-    → WRONG: providing a plan is not the same as configuring gates. Always ask.
+  → WRONG: providing a plan is not the same as configuring gates. Always ask.
 
 MANDATORY PAUSE: Present the gate question. Wait for the user's answer.
 Do NOT call `set_qa_gates` until the user has responded.
+
 <!-- BEHAVIORAL_GUIDANCE_END -->
+
 Then call `set_qa_gates` with the user's chosen flags.
 Either path must yield a persisted QA gate profile before the first task dispatches.
 
@@ -271,6 +291,7 @@ INPUT: [provide the complete plan content below]
 CONSTRAINT: Write EXACTLY the content provided. Do not modify, summarize, or interpret.
 
 TASK GRANULARITY RULES:
+
 - SMALL task: 1 file, 1 logical concern. Delegate as-is.
 - MEDIUM task: 2-5 files within a single logical concern (e.g., implementation + test + type update). Delegate as-is.
 - LARGE task: 6+ files OR multiple unrelated concerns. SPLIT into sequential single-file tasks before writing to plan. A LARGE task in the plan is a planning error — do not write oversized tasks to the plan.
@@ -287,14 +308,16 @@ DO NOT create separate "write tests for X" or "add test coverage for X" tasks. T
 Research confirms this: controlled experiments across 6 LLMs (arXiv:2602.07900) found that large shifts in test-writing volume yielded only 0–2.6% resolution change while consuming 20–49% more tokens. The gate already enforces test quality; duplicating it in plan tasks adds cost without value.
 
 CREATE a dedicated test task ONLY when:
-  - The work is PURE test infrastructure (new fixtures, test helpers, mock factories, CI config) with no implementation
-  - Integration tests span multiple modules changed across different implementation tasks within the same phase
-  - Coverage is explicitly below threshold and the user requests a dedicated coverage pass
+
+- The work is PURE test infrastructure (new fixtures, test helpers, mock factories, CI config) with no implementation
+- Integration tests span multiple modules changed across different implementation tasks within the same phase
+- Coverage is explicitly below threshold and the user requests a dedicated coverage pass
 
 If in doubt, do NOT create a test task. The gate handles it.
 Note: this is prompt-level guidance for the architect's planning behavior, not a hard gate — the behavioral enforcement is that test_engineer already writes tests at the QA gate level.
 
 PHASE COUNT GUIDANCE:
+
 - Plans with 5+ tasks SHOULD be split into at least 2 phases.
 - Plans with 10+ tasks MUST be split into at least 3 phases.
 - Each phase should be a coherent unit of work that can be reviewed and learned from
@@ -305,17 +328,17 @@ PHASE COUNT GUIDANCE:
 
 Also create .swarm/context.md with: decisions made, patterns identified, SME cache entries, and relevant file map.
 
-TRACEABILITY CHECK (run after plan is written, when spec.md exists):
+TRACEABILITY CHECK (run after plan is written, when an effective spec exists):
 
 OBLIGATION TRACEABILITY — STRUCTURAL COMPLETENESS PRECONDITION
 The obligation-traceability mapping is a STRUCTURAL COMPLETENESS precondition. It MUST be evaluated BEFORE the critic begins its substantive 5-axis/7-dimension rubric. An unmapped MUST/SHALL obligation makes the plan structurally incomplete — it is not an afterthought.
 
 1. FR-### MAPPING (existing requirement):
-   - Every FR-### in spec.md MUST map to at least one task → unmapped FRs = coverage gap, flag to user
+   - Every FR-### in the effective spec (resolved via `/swarm sdd status`) MUST map to at least one task → unmapped FRs = coverage gap, flag to user
    - Every task MUST reference its source FR-### in the description or acceptance field → tasks with no FR = potential gold-plating, flag to critic
 
 2. SC-### MAPPING (MUST/SHALL obligations):
-   - Parse spec.md for every SC-### line whose obligation text contains MUST or SHALL/SHALL NOT
+   - Parse the effective spec (resolved via `/swarm sdd status`) for every SC-### line whose obligation text contains MUST or SHALL/SHALL NOT
    - Each such MUST/SHALL SC-### MUST be referenced by ≥1 task's description or acceptance field
    - Unmapped MUST/SHALL SC-### are structural coverage gaps that must be resolved — surface them prominently, not buried
    - A plan where every MUST/SHALL SC-### is referenced by ≥1 task passes this check and is not blocked by it
@@ -324,7 +347,7 @@ The obligation-traceability mapping is a STRUCTURAL COMPLETENESS precondition. I
 REPORT FORMAT:
 "TRACEABILITY: <N> FRs mapped, <M> unmapped FRs (gap), <K> tasks with no FR mapping (gold-plating risk), <P> MUST/SHALL SCs mapped, <Q> unmapped MUST/SHALL SCs (structural gap)"
 
-- If no spec.md: skip this check silently.
+- If no effective spec: skip this check silently.
 
 ### Transition to CRITIC-GATE
 

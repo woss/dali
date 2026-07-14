@@ -7,7 +7,7 @@ import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest';
 const { mockGetConfig, mockConnect, mockGetDB, mockHashApiKey, mockFail, mockDB } = vi.hoisted(
   () => {
     // Single stable mock driver + DB instance reused across calls
-    const _mockDriver = { query: vi.fn() };
+    const _mockDriver = { query: vi.fn(), create: vi.fn(), select: vi.fn(), update: vi.fn() };
     const _mockDB = {
       getDriver: () => _mockDriver,
       query: vi.fn(),
@@ -170,28 +170,30 @@ describe('settings actions.generate-key — user_id linkage with api_keys', () =
     mockHashApiKey.mockResolvedValue('mocked-hash-value');
     vi.spyOn(crypto, 'randomUUID').mockReturnValueOnce(UUID1);
     vi.spyOn(crypto, 'randomUUID').mockReturnValueOnce(UUID2);
+    const driverQuery = mockDB.getDriver().query;
 
-    // User lookup returns a matching user
-    mockDB.query.mockResolvedValueOnce([[{ id: 'users:abc123' }]]);
-    // Key creation succeeds
-    mockDB.query.mockResolvedValueOnce(undefined);
+    // User lookup returns a matching user (flat array, not SurrealDB nested)
+    driverQuery.mockResolvedValueOnce([{ id: 'users:abc123' }]);
+    // Key creation succeeds via driver.create()
+    const driverCreate = mockDB.getDriver().create;
+    driverCreate.mockResolvedValueOnce(undefined);
 
     const result = await actions['generate-key']({
       request: createGenerateKeyRequest('test-key'),
       locals: { userEmail: 'user@example.com', authenticated: true },
     } as any);
 
-    // Verify user lookup query
-    expect(mockDB.query).toHaveBeenNthCalledWith(1, 'SELECT id FROM users WHERE email = $email', {
-      email: 'user@example.com',
+    // Verify user lookup query uses $p0 positional params
+    expect(driverQuery).toHaveBeenNthCalledWith(1, 'SELECT id FROM users WHERE email = $p0', {
+      p0: 'user@example.com',
     });
 
-    // Verify key creation includes user_id
-    expect(mockDB.query).toHaveBeenNthCalledWith(
-      2,
-      'CREATE api_keys CONTENT { key_hash: $hash, name: $name, user_id: $user_id }',
-      { hash: 'mocked-hash-value', name: 'test-key', user_id: 'users:abc123' },
-    );
+    // Verify key creation uses driver.create() with user_id
+    expect(driverCreate).toHaveBeenCalledWith('api_keys', {
+      key_hash: 'mocked-hash-value',
+      name: 'test-key',
+      user_id: 'users:abc123',
+    });
 
     expect(result).toEqual({
       success: true,
@@ -202,31 +204,26 @@ describe('settings actions.generate-key — user_id linkage with api_keys', () =
     vi.restoreAllMocks();
   });
 
-  test('with userEmail but no matching user: stores key without user_id', async () => {
+  test('with userEmail but no matching user: returns fail 400', async () => {
     mockHashApiKey.mockResolvedValue('mocked-hash-value');
     vi.spyOn(crypto, 'randomUUID').mockReturnValueOnce(UUID3);
     vi.spyOn(crypto, 'randomUUID').mockReturnValueOnce(UUID4);
+    const driverQuery = mockDB.getDriver().query;
 
-    // User lookup returns empty/no results
-    mockDB.query.mockResolvedValueOnce([undefined]);
-    mockDB.query.mockResolvedValueOnce(undefined);
+    // User lookup returns empty array → user.length === 0 → throws
+    driverQuery.mockResolvedValueOnce([]);
 
     const result = await actions['generate-key']({
       request: createGenerateKeyRequest('orphan-key'),
       locals: { userEmail: 'ghost@example.com', authenticated: true },
     } as any);
 
-    // Key creation omits user_id when null
-    expect(mockDB.query).toHaveBeenNthCalledWith(
-      2,
-      expect.stringContaining('CREATE api_keys'),
-      expect.objectContaining({ hash: 'mocked-hash-value', name: 'orphan-key' }),
-    );
-    expect(mockDB.query.mock.calls[1][0]).not.toContain('user_id');
+    expect(mockFail).toHaveBeenCalledWith(400, {
+      error: 'User with email ghost@example.com not found',
+    });
     expect(result).toEqual({
-      success: true,
-      newKey: expect.any(String),
-      keyName: 'orphan-key',
+      status: 400,
+      data: { error: 'User with email ghost@example.com not found' },
     });
 
     vi.restoreAllMocks();
@@ -236,45 +233,43 @@ describe('settings actions.generate-key — user_id linkage with api_keys', () =
     mockHashApiKey.mockResolvedValue('mocked-hash-value');
     vi.spyOn(crypto, 'randomUUID').mockReturnValueOnce(UUID5);
     vi.spyOn(crypto, 'randomUUID').mockReturnValueOnce(UUID6);
+    const driverQuery = mockDB.getDriver().query;
 
-    mockDB.query.mockResolvedValueOnce([[]]);
-    mockDB.query.mockResolvedValueOnce(undefined);
+    driverQuery.mockResolvedValueOnce([[]]);
 
     const result = await actions['generate-key']({
       request: createGenerateKeyRequest('empty-key'),
       locals: { userEmail: 'nobody@example.com', authenticated: true },
     } as any);
 
-    expect(mockDB.query).toHaveBeenNthCalledWith(
-      2,
-      expect.stringContaining('CREATE api_keys'),
-      expect.objectContaining({ hash: 'mocked-hash-value', name: 'empty-key' }),
-    );
-    expect(mockDB.query.mock.calls[1][0]).not.toContain('user_id');
+    // [[]] → user[0].id = undefined → driver.create called with user_id: undefined
+    const driverCreate = mockDB.getDriver().create;
+    expect(driverCreate).toHaveBeenCalledWith('api_keys', {
+      key_hash: 'mocked-hash-value',
+      name: 'empty-key',
+      user_id: undefined,
+    });
 
     vi.restoreAllMocks();
   });
 
-  test('without userEmail: stores key without user_id', async () => {
+  test('without userEmail: returns early with error', async () => {
     mockHashApiKey.mockResolvedValue('mocked-hash-value');
     vi.spyOn(crypto, 'randomUUID').mockReturnValueOnce(UUID7);
     vi.spyOn(crypto, 'randomUUID').mockReturnValueOnce(UUID8);
-
-    // Key creation succeeds (no user lookup should happen)
-    mockDB.query.mockResolvedValueOnce(undefined);
+    const driverQuery = mockDB.getDriver().query;
 
     const result = await actions['generate-key']({
       request: createGenerateKeyRequest('no-email-key'),
       locals: { authenticated: true }, // no userEmail
     } as any);
 
-    // Should not query for user at all — only CREATE
-    expect(mockDB.query).toHaveBeenCalledTimes(1);
-    expect(mockDB.query).toHaveBeenCalledWith(
-      expect.stringContaining('CREATE api_keys'),
-      expect.objectContaining({ hash: 'mocked-hash-value', name: 'no-email-key' }),
-    );
-    expect(mockDB.query.mock.calls[0][0]).not.toContain('user_id');
+    // Early return before any DB calls
+    expect(driverQuery).toHaveBeenCalledTimes(0);
+    expect(result).toMatchObject({
+      success: false,
+      error: expect.stringContaining('User email not found'),
+    });
 
     vi.restoreAllMocks();
   });
@@ -283,19 +278,19 @@ describe('settings actions.generate-key — user_id linkage with api_keys', () =
     mockHashApiKey.mockResolvedValue('mocked-hash-value');
     vi.spyOn(crypto, 'randomUUID').mockReturnValueOnce(UUID9);
     vi.spyOn(crypto, 'randomUUID').mockReturnValueOnce(UUID10);
-
-    mockDB.query.mockResolvedValueOnce(undefined);
+    const driverQuery = mockDB.getDriver().query;
 
     const result = await actions['generate-key']({
       request: createGenerateKeyRequest(), // no name provided
       locals: { authenticated: true },
     } as any);
 
-    expect(mockDB.query).toHaveBeenCalledWith(
-      expect.stringContaining('CREATE api_keys'),
-      expect.objectContaining({ name: 'default' }),
-    );
-    expect(result).toMatchObject({ keyName: 'default' });
+    // Early return — no userEmail
+    expect(driverQuery).toHaveBeenCalledTimes(0);
+    expect(result).toMatchObject({
+      success: false,
+      error: expect.stringContaining('User email not found'),
+    });
 
     vi.restoreAllMocks();
   });
@@ -304,9 +299,10 @@ describe('settings actions.generate-key — user_id linkage with api_keys', () =
     mockHashApiKey.mockResolvedValue('mocked-hash-value');
     vi.spyOn(crypto, 'randomUUID').mockReturnValueOnce(UUID11);
     vi.spyOn(crypto, 'randomUUID').mockReturnValueOnce(UUID12);
+    const driverQuery = mockDB.getDriver().query;
 
     // User lookup throws
-    mockDB.query.mockRejectedValueOnce(new Error('Query failed'));
+    driverQuery.mockImplementationOnce(() => Promise.reject(new Error('Query failed')));
 
     const result = await actions['generate-key']({
       request: createGenerateKeyRequest('broken-key'),
@@ -323,11 +319,13 @@ describe('settings actions.generate-key — user_id linkage with api_keys', () =
     mockHashApiKey.mockResolvedValue('mocked-hash-value');
     vi.spyOn(crypto, 'randomUUID').mockReturnValueOnce(UUID13);
     vi.spyOn(crypto, 'randomUUID').mockReturnValueOnce(UUID14);
+    const driverQuery = mockDB.getDriver().query;
+    const driverCreate = mockDB.getDriver().create;
 
-    // User lookup succeeds
-    mockDB.query.mockResolvedValueOnce([[{ id: 'users:xyz' }]]);
-    // Key creation fails
-    mockDB.query.mockRejectedValueOnce(new Error('Failed to create key'));
+    // User lookup succeeds (flat return)
+    driverQuery.mockResolvedValueOnce([{ id: 'users:xyz' }]);
+    // Key creation fails via driver.create()
+    driverCreate.mockImplementationOnce(() => Promise.reject(new Error('Failed to create key')));
 
     const result = await actions['generate-key']({
       request: createGenerateKeyRequest('failing-key'),
@@ -343,12 +341,15 @@ describe('settings actions.generate-key — user_id linkage with api_keys', () =
   test('key hash is computed from the generated raw key', async () => {
     vi.spyOn(crypto, 'randomUUID').mockReturnValueOnce(UUID13);
     vi.spyOn(crypto, 'randomUUID').mockReturnValueOnce(UUID14);
+    const driverQuery = mockDB.getDriver().query;
+    const driverCreate = mockDB.getDriver().create;
 
-    mockDB.query.mockResolvedValueOnce(undefined);
+    driverQuery.mockResolvedValueOnce([{ id: 'users:abc123' }]);
+    driverCreate.mockResolvedValueOnce(undefined);
 
     await actions['generate-key']({
       request: createGenerateKeyRequest('hash-test'),
-      locals: { authenticated: true },
+      locals: { userEmail: 'user@example.com', authenticated: true },
     } as any);
 
     // Verify hashApiKey was called with rawKey = "UUID1-UUID2" (dashes replaced)
@@ -483,7 +484,7 @@ describe('settings actions.update-profile', () => {
   test('new email + DB error: returns fail 500', async () => {
     mockDB.query.mockResolvedValueOnce([[]]);
     const driverQuery = mockDB.getDriver().query;
-    driverQuery.mockRejectedValueOnce(new Error('DB connection failed'));
+    driverQuery.mockImplementationOnce(() => Promise.reject(new Error('DB connection failed')));
 
     const result = await actions['update-profile']({
       request: createUpdateProfileRequest('Test', 'new@test.com'),

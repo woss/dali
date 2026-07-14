@@ -61,7 +61,7 @@ function rid(id: any): string {
 // Setup / Teardown
 // ---------------------------------------------------------------------------
 let orm: DaliORM;
-let wsA: string;  // workspace A — always exists
+let wsA: string; // workspace A — always exists
 const NONEXISTENT_WS = 'workspaces:nonexistent';
 
 beforeAll(async () => {
@@ -219,11 +219,7 @@ describe('MemoryService workspace validation', () => {
     });
 
     test('updates memory with matching workspaceId', async () => {
-      const updated: any = await service.updateMemory(
-        memId,
-        { name: 'updated-name-ws' },
-        wsA,
-      );
+      const updated: any = await service.updateMemory(memId, { name: 'updated-name-ws' }, wsA);
       expect(updated.name).toBe('updated-name-ws');
     });
 
@@ -243,11 +239,7 @@ describe('MemoryService workspace validation', () => {
 
     test('throws when memory not found with workspaceId', async () => {
       await expect(
-        service.updateMemory(
-          'memories:nonexistent',
-          { name: 'nope' },
-          wsA,
-        ),
+        service.updateMemory('memories:nonexistent', { name: 'nope' }, wsA),
       ).rejects.toThrow('Memory not found');
     });
   });
@@ -298,9 +290,9 @@ describe('MemoryService workspace validation', () => {
       const memId = rid(mem.id);
 
       // Deleting with wrong workspace should throw
-      await expect(
-        service.deleteMemory(memId, 'workspaces:other'),
-      ).rejects.toThrow('Memory not found in workspace');
+      await expect(service.deleteMemory(memId, 'workspaces:other')).rejects.toThrow(
+        'Memory not found in workspace',
+      );
 
       // Memory should still exist
       const stillThere = await service.getMemory(memId);
