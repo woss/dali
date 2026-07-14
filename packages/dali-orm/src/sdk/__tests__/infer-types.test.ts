@@ -1,5 +1,4 @@
 import { describe, expect, it, vi, expectTypeOf } from 'vite-plus/test';
-import type { SurrealColumnType } from '../schema/column/types.js';
 import type {
   SurrealTypeToTS,
   InferSelectResult,

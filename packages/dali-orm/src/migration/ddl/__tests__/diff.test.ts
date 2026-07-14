@@ -17,6 +17,7 @@ import {
   type SurrealFunction,
   type SurrealIndex,
   type SurrealRelation,
+  type SurrealSequence,
 } from '../ddl.js';
 import { ddlDiff, getDefaultPermissions, statementToSql } from '../diff.js';
 
@@ -49,6 +50,12 @@ function withRelations(relations: SurrealRelation[]): SurrealDbDDL {
 function withAccess(access: SurrealAccess[]): SurrealDbDDL {
   const d = empty();
   d.accessStructured = access;
+  return d;
+}
+
+function withSequences(sequences: SurrealSequence[]): SurrealDbDDL {
+  const d = empty();
+  d.sequences = sequences;
   return d;
 }
 
@@ -341,9 +348,7 @@ describe('ddlDiff — columns', () => {
       withTables([table('user', { columns: [col('email', { permissions: {} })] })]),
       withTables([
         table('user', {
-          columns: [
-            col('email', { permissions: { select: 'FULL', create: 'NONE', update: 'NONE' } }),
-          ],
+          columns: [col('email', { permissions: { select: true, create: false, update: false } })],
         }),
       ]),
     );
@@ -642,6 +647,57 @@ describe('ddlDiff — functions', () => {
 });
 
 // ---------------------------------------------------------------------------
+// ddlDiff — namespaces
+// ---------------------------------------------------------------------------
+
+describe('ddlDiff — namespaces', () => {
+  it('detects a new namespace', async () => {
+    const d1 = empty();
+    const d2 = empty();
+    d2.namespaces = ['production'];
+    const r = await ddlDiff(d1, d2);
+    const creates = r.statements.filter((s) => s.type === 'create_namespace');
+    expect(creates).toHaveLength(1);
+    if (creates[0].type === 'create_namespace') {
+      expect(creates[0].name).toBe('production');
+    }
+  });
+
+  it('detects multiple new namespaces', async () => {
+    const d1 = empty();
+    const d2 = empty();
+    d2.namespaces = ['staging', 'production'];
+    const r = await ddlDiff(d1, d2);
+    const creates = r.statements.filter((s) => s.type === 'create_namespace');
+    expect(creates).toHaveLength(2);
+  });
+
+  it('does NOT remove namespaces (safety-first)', async () => {
+    const d1 = empty();
+    d1.namespaces = ['old_ns'];
+    const d2 = empty();
+    const r = await ddlDiff(d1, d2);
+    const drops = r.statements.filter((s) => s.type === 'drop_namespace');
+    expect(drops).toHaveLength(0);
+  });
+
+  it('is idempotent for identical namespaces', async () => {
+    const d = empty();
+    d.namespaces = ['production'];
+    const r = await ddlDiff(d, d);
+    expect(r.statements).toHaveLength(0);
+  });
+
+  it('generates SQL for namespace statements', async () => {
+    const d1 = empty();
+    const d2 = empty();
+    d2.namespaces = ['production'];
+    const r = await ddlDiff(d1, d2);
+    expect(r.sqlStatements.some((sql) => sql.includes('DEFINE NAMESPACE production'))).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Statement ordering
 // ---------------------------------------------------------------------------
 
@@ -751,7 +807,7 @@ describe('statementToSql', () => {
             assert: '$value != "superadmin"',
             readonly: true,
             flex: true,
-            permissions: { select: 'FULL', create: 'NONE', update: 'NONE' },
+            permissions: { select: true, create: false, update: false },
           }),
         ],
         indexes: [],
@@ -1019,6 +1075,19 @@ describe('statementToSql', () => {
     });
   });
 
+  describe('namespace statements', () => {
+    it('generates DEFINE NAMESPACE for create_namespace', () => {
+      const sql = statementToSql({ type: 'create_namespace', name: 'production' });
+      expect(sql).toBe('DEFINE NAMESPACE production');
+    });
+
+    it('generates REMOVE NAMESPACE for drop_namespace', () => {
+      expect(statementToSql({ type: 'drop_namespace', name: 'production' })).toBe(
+        'REMOVE NAMESPACE production',
+      );
+    });
+  });
+
   describe('unknown statement type', () => {
     it('returns a comment for unknown types', () => {
       const sql = statementToSql({ type: 'unknown_type' } as any);
@@ -1122,5 +1191,142 @@ describe('edge cases', () => {
     for (let i = 0; i < r.statements.length; i++) {
       expect(statementToSql(r.statements[i])).toBe(r.sqlStatements[i]);
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Database diff tests
+// ---------------------------------------------------------------------------
+
+describe('diffDatabases', () => {
+  it('detects new databases', async () => {
+    const ddl1 = empty();
+    const ddl2 = empty();
+    ddl2.databases = ['testdb', 'production'];
+
+    const r = await ddlDiff(ddl1, ddl2);
+    expect(r.statements).toHaveLength(2);
+    expect(r.statements.map((s) => s.type)).toEqual(['create_database', 'create_database']);
+    expect(r.statements[0]).toEqual({ type: 'create_database', name: 'testdb' });
+    expect(r.statements[1]).toEqual({ type: 'create_database', name: 'production' });
+  });
+
+  it('detects no changes when databases match', async () => {
+    const ddl1 = empty();
+    ddl1.databases = ['testdb'];
+    const ddl2 = empty();
+    ddl2.databases = ['testdb'];
+
+    const r = await ddlDiff(ddl1, ddl2);
+    expect(r.statements).toHaveLength(0);
+  });
+
+  it('never auto-removes databases (safety-first)', async () => {
+    const ddl1 = empty();
+    ddl1.databases = ['testdb'];
+    const ddl2 = empty();
+    ddl2.databases = [];
+
+    const r = await ddlDiff(ddl1, ddl2);
+    const drops = r.statements.filter((s) => s.type === 'drop_database');
+    expect(drops).toHaveLength(0);
+  });
+
+  it('ignores databases undefined on both sides', async () => {
+    const ddl1 = empty();
+    const ddl2 = empty();
+
+    const r = await ddlDiff(ddl1, ddl2);
+    expect(r.statements).toHaveLength(0);
+  });
+});
+
+describe('statementToSql - database', () => {
+  it('generates DEFINE DATABASE for create_database', () => {
+    expect(statementToSql({ type: 'create_database', name: 'testdb' })).toBe(
+      'DEFINE DATABASE testdb',
+    );
+  });
+
+  it('generates DEFINE DATABASE with COMMENT', () => {
+    expect(statementToSql({ type: 'create_database', name: 'testdb', comment: 'Test' })).toBe(
+      'DEFINE DATABASE testdb COMMENT "Test"',
+    );
+  });
+
+  it('generates REMOVE DATABASE for drop_database', () => {
+    expect(statementToSql({ type: 'drop_database', name: 'testdb' })).toBe(
+      'REMOVE DATABASE testdb',
+    );
+  });
+});
+
+// ===========================================================================
+// diffSequences
+// ===========================================================================
+describe('diffSequences', () => {
+  it('detects new sequence', async () => {
+    const ddl1 = empty();
+    const ddl2 = withSequences([{ name: 'my_seq', start: 1 }]);
+
+    const r = await ddlDiff(ddl1, ddl2);
+    const creates = r.statements.filter((s) => s.type === 'create_sequence');
+    const drops = r.statements.filter((s) => s.type === 'drop_sequence');
+    expect(creates).toHaveLength(1);
+    expect(drops).toHaveLength(0);
+    expect((creates[0] as any).def.name).toBe('my_seq');
+  });
+
+  it('detects changed sequence (drop+recreate)', async () => {
+    const ddl1 = withSequences([{ name: 'my_seq', start: 1, increment: 1 }]);
+    const ddl2 = withSequences([{ name: 'my_seq', start: 1, increment: 5 }]);
+
+    const r = await ddlDiff(ddl1, ddl2);
+    const creates = r.statements.filter((s) => s.type === 'create_sequence');
+    const drops = r.statements.filter((s) => s.type === 'drop_sequence');
+    expect(creates).toHaveLength(1);
+    expect(drops).toHaveLength(1);
+    expect((drops[0] as any).def.name).toBe('my_seq');
+  });
+
+  it('detects no changes for identical sequences', async () => {
+    const seq: SurrealSequence = { name: 'my_seq', start: 1, increment: 1, cycle: true };
+    const ddl1 = withSequences([seq]);
+    const ddl2 = withSequences([{ ...seq }]);
+
+    const r = await ddlDiff(ddl1, ddl2);
+    const creates = r.statements.filter((s) => s.type === 'create_sequence');
+    const drops = r.statements.filter((s) => s.type === 'drop_sequence');
+    expect(creates).toHaveLength(0);
+    expect(drops).toHaveLength(0);
+  });
+
+  it('never auto-removes sequences (safety-first)', async () => {
+    const ddl1 = withSequences([{ name: 'my_seq' }]);
+    const ddl2 = empty();
+
+    const r = await ddlDiff(ddl1, ddl2);
+    const drops = r.statements.filter((s) => s.type === 'drop_sequence');
+    expect(drops).toHaveLength(0);
+  });
+});
+
+// ===========================================================================
+// statementToSql - sequence
+// ===========================================================================
+describe('statementToSql - sequence', () => {
+  it('generates DEFINE SEQUENCE for create_sequence', () => {
+    expect(
+      statementToSql({
+        type: 'create_sequence',
+        def: { name: 'my_seq', start: 1, increment: 2 },
+      }),
+    ).toBe('DEFINE SEQUENCE IF NOT EXISTS my_seq START 1 INCREMENT 2');
+  });
+
+  it('generates REMOVE SEQUENCE for drop_sequence', () => {
+    expect(statementToSql({ type: 'drop_sequence', def: { name: 'my_seq' } })).toBe(
+      'REMOVE SEQUENCE my_seq',
+    );
   });
 });

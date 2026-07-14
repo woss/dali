@@ -1,4 +1,5 @@
 import { array, boolean, literal, number, object, optional, string, union } from 'valibot';
+import type { SurrealSequence } from '../migration/ddl/ddl.js';
 import type { TableDefinition } from './table.js';
 import { SurrealQLGenerator } from '../migration/core/generator.js';
 
@@ -428,6 +429,179 @@ export function defineEvent(name: string) {
         ...built,
         what: built.on,
       });
+    },
+  };
+}
+
+// =============================================================================
+// SEQUENCE DEFINITION
+// =============================================================================
+
+export type SequenceBuilder = ReturnType<typeof defineSequence>;
+
+/**
+ * Sequence configuration for SurrealDB sequence definitions
+ *
+ * SurrealDB syntax: DEFINE SEQUENCE [IF NOT EXISTS] <name>
+ *   [START <n>] [INCREMENT <n>] [MIN <n>] [MAX <n>] [CACHE <n>] [CYCLE]
+ *   [COMMENT '<str>']
+ */
+export type SequenceConfig = {
+  name: string;
+  start?: number;
+  increment?: number;
+  min?: number;
+  max?: number;
+  cache?: number;
+  cycle?: boolean;
+  comment?: string;
+};
+
+/**
+ * Create a DEFINE SEQUENCE fluent builder
+ *
+ * @example
+ * defineSequence('my_seq')
+ *   .start(1)
+ *   .increment(2)
+ *   .cycle()
+ *   .toSQL()
+ * // → DEFINE SEQUENCE IF NOT EXISTS `my_seq` START 1 INCREMENT 2 CYCLE
+ */
+export function defineSequence(name: string) {
+  if (!name) throw new Error('Sequence name is required');
+
+  let config: SequenceConfig = { name };
+
+  return {
+    get name() {
+      return name;
+    },
+    start(n: number) {
+      config = { ...config, start: n };
+      return this;
+    },
+    increment(n: number) {
+      config = { ...config, increment: n };
+      return this;
+    },
+    min(n: number) {
+      config = { ...config, min: n };
+      return this;
+    },
+    max(n: number) {
+      config = { ...config, max: n };
+      return this;
+    },
+    cache(n: number) {
+      config = { ...config, cache: n };
+      return this;
+    },
+    cycle() {
+      config = { ...config, cycle: true };
+      return this;
+    },
+    comment(text: string) {
+      config = { ...config, comment: text };
+      return this;
+    },
+    build(): SurrealSequence {
+      return { ...config };
+    },
+    toSQL(): string {
+      return new SurrealQLGenerator().generateSequenceDefinition(this.build());
+    },
+  };
+}
+
+// =============================================================================
+// NAMESPACE DEFINITION
+// =============================================================================
+
+// =============================================================================
+// DATABASE DEFINITION
+// =============================================================================
+
+export type DatabaseBuilder = ReturnType<typeof defineDatabase>;
+
+/**
+ * Create a DEFINE DATABASE fluent builder
+ *
+ * SurrealDB syntax: DEFINE DATABASE [IF NOT EXISTS] <name> [COMMENT '<str>']
+ *
+ * @example
+ * defineDatabase('testdb')
+ *   .comment('Test database')
+ *   .toSQL()
+ * // → DEFINE DATABASE `testdb` COMMENT "Test database"
+ */
+export function defineDatabase(name: string) {
+  if (!name) throw new Error('Database name is required');
+
+  let config: {
+    comment?: string;
+    ifNotExists?: boolean;
+  } = {};
+
+  return {
+    get name() {
+      return name;
+    },
+    comment(text: string) {
+      config = { ...config, comment: text };
+      return this;
+    },
+    ifNotExists() {
+      config = { ...config, ifNotExists: true };
+      return this;
+    },
+    build() {
+      return { name, ...config };
+    },
+    toSQL(): string {
+      return new SurrealQLGenerator().generateDatabaseDefinition(name, config);
+    },
+  };
+}
+
+export type NamespaceBuilder = ReturnType<typeof defineNamespace>;
+
+/**
+ * Create a DEFINE NAMESPACE fluent builder
+ *
+ * SurrealDB syntax: DEFINE NAMESPACE [IF NOT EXISTS] <name> [COMMENT '<str>']
+ *
+ * @example
+ * defineNamespace('production')
+ *   .comment('Production namespace')
+ *   .toSQL()
+ * // → DEFINE NAMESPACE `production` COMMENT "Production namespace"
+ */
+export function defineNamespace(name: string) {
+  if (!name) throw new Error('Namespace name is required');
+
+  let config: {
+    comment?: string;
+    ifNotExists?: boolean;
+  } = {};
+
+  return {
+    get name() {
+      return name;
+    },
+    comment(text: string) {
+      config = { ...config, comment: text };
+      return this;
+    },
+    ifNotExists() {
+      config = { ...config, ifNotExists: true };
+      return this;
+    },
+    build() {
+      return { name, ...config };
+    },
+    toSQL(): string {
+      return new SurrealQLGenerator().generateNamespaceDefinition(name, config);
     },
   };
 }

@@ -54,3 +54,23 @@ export { defineFunction } from './sdk/schema/function-builder.js';
 export type { AccessConfig, AccessType, EventConfig, FunctionConfig } from './sdk/schema.js';
 export { defineAccess, defineEvent } from './sdk/schema.js';
 export type { AnalyzerDefinition, IndexDefinition, TableDefinition } from './sdk/table.js';
+// SurrealQL serialization primitives
+export {
+  escapeIdent,
+  escapeString,
+  formatDefault,
+  isRaw,
+  quoteString,
+  raw,
+  serializePermissionsFragment,
+  serializeValue,
+  surql,
+} from './core/surql.js';
+export type { RawSurql } from './core/surql.js';
+export {
+  ConnectionError,
+  DaliOrmError,
+  MigrationError,
+  QueryError,
+  SchemaError,
+} from './core/errors.js';

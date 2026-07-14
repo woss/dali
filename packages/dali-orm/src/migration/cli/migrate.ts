@@ -94,6 +94,7 @@ export async function migrateUp(options: MigrateOptions, driver?: SurrealDriver)
     }
   } catch (error) {
     console.error('migrateUp error:', error);
+    throw error;
   } finally {
     if (ownsDriver) {
       await safeDisconnect(driver);
@@ -137,7 +138,7 @@ export async function migrateSync(
     }
   } catch (error) {
     console.error('migrateSync error:', error);
-    process.exit(1);
+    throw error;
   }
 }
 

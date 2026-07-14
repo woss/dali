@@ -11,9 +11,41 @@ import type {
   TableConfig,
   TableDefinition,
 } from '../../sdk/table.js';
-import type { SurrealAccess, SurrealEvent, SurrealFunction, SurrealView } from '../ddl/ddl.js';
+import type {
+  SurrealAccess,
+  SurrealEvent,
+  SurrealFunction,
+  SurrealSequence,
+  SurrealView,
+} from '../ddl/ddl.js';
 import { getSurrealQLType } from '../ddl/types.js';
 import { formatDefaultValue, validateChangefeed } from '../utils/format.js';
+import {
+  generateRemoveAccess,
+  generateNamespaceDefinition,
+  generateRemoveNamespace,
+  generateDatabaseDefinition,
+  generateRemoveDatabase,
+  generateAccessDefinition,
+  generateAccessMigration,
+  generateEventDefinition,
+  generateRemoveEvent,
+  generateEventMigration,
+  generateFunctionDefinition,
+  generateRemoveFunction,
+  generateFunctionMigration,
+  generateViewDefinition,
+  generateRemoveView,
+  generateViewMigration,
+  generateSequenceDefinition,
+  generateRemoveSequence,
+  generateAlterFieldType,
+  generateAlterTablePermissions,
+  generateAlterFieldPermissions,
+  generateAlterFieldDefault,
+  generateAnalyzerDefinition,
+  generateRemoveAnalyzer,
+} from './generator-ddl.js';
 
 /**
  * SurrealQL Generator for Schema Definitions
@@ -158,7 +190,7 @@ export class SurrealQLGenerator {
       mainSql += ` ASSERT $value.${column.config.arrayAssert.type}(|$value| ${column.config.arrayAssert.expression})`;
     }
 
-    // DEFAULT value
+    // defaultRaw: when set, passes raw() SQL expression to formatDefaultValue
     if (column.config.defaultRaw !== undefined) {
       mainSql += ` DEFAULT ${column.config.defaultRaw}`;
     } else if (column.config.default !== undefined) {
@@ -231,6 +263,11 @@ export class SurrealQLGenerator {
       parts.push(`PERMISSIONS ${column.config.permissions}`);
     }
 
+    // REFERENCE ON DELETE for record fields
+    if (column.config.onDelete) {
+      parts.push(`REFERENCE ON DELETE ${column.config.onDelete}`);
+    }
+
     return parts.join(' ');
   }
 
@@ -279,6 +316,11 @@ export class SurrealQLGenerator {
     // PERMISSIONS (column permissions are a direct string expression)
     if (column.config.permissions) {
       parts.push(`PERMISSIONS ${column.config.permissions}`);
+    }
+
+    // REFERENCE ON DELETE for record fields
+    if (column.config.onDelete) {
+      parts.push(`REFERENCE ON DELETE ${column.config.onDelete}`);
     }
 
     return parts.join(' ');
@@ -374,10 +416,55 @@ export class SurrealQLGenerator {
    * Generate REMOVE ACCESS statement
    */
   generateRemoveAccess(accessName: string): string {
-    if (!accessName) {
-      throw new Error('Access name is required for REMOVE ACCESS');
-    }
-    return `REMOVE ACCESS IF EXISTS ${accessName} ON DATABASE`;
+    return generateRemoveAccess(accessName);
+  }
+
+  /**
+   * Generate DEFINE NAMESPACE statement
+   *
+   * SurrealQL: DEFINE NAMESPACE [IF NOT EXISTS] <name> [COMMENT '<str>']
+   */
+  generateNamespaceDefinition(
+    name: string,
+    options?: {
+      ifNotExists?: boolean;
+      comment?: string;
+    },
+  ): string {
+    return generateNamespaceDefinition(name, options);
+  }
+
+  /**
+   * Generate REMOVE NAMESPACE statement
+   *
+   * SurrealQL: REMOVE NAMESPACE [IF EXISTS] <name>
+   */
+  generateRemoveNamespace(name: string, ifExists?: boolean): string {
+    return generateRemoveNamespace(name, ifExists);
+  }
+
+  /**
+   * Generate DEFINE DATABASE statement
+   *
+   * SurrealQL: DEFINE DATABASE [IF NOT EXISTS] <name> [COMMENT '<str>']
+   */
+  generateDatabaseDefinition(
+    name: string,
+    options?: {
+      ifNotExists?: boolean;
+      comment?: string;
+    },
+  ): string {
+    return generateDatabaseDefinition(name, options);
+  }
+
+  /**
+   * Generate REMOVE DATABASE statement
+   *
+   * SurrealQL: REMOVE DATABASE [IF EXISTS] <name>
+   */
+  generateRemoveDatabase(name: string, ifExists?: boolean): string {
+    return generateRemoveDatabase(name, ifExists);
   }
 
   /**
@@ -403,48 +490,7 @@ export class SurrealQLGenerator {
     duration?: string;
     tokenDuration?: string;
   }): string {
-    if (!access.name) {
-      throw new Error('Access name is required for DEFINE ACCESS');
-    }
-    if (!access.type) {
-      throw new Error('Access type is required for DEFINE ACCESS');
-    }
-
-    const level = access.level ?? 'DATABASE';
-    const parts: string[] = [`DEFINE ACCESS ${access.name} ON ${level} TYPE ${access.type}`];
-
-    if (access.signup) {
-      parts.push(`SIGNUP (${access.signup})`);
-    }
-
-    if (access.signin) {
-      parts.push(`SIGNIN (${access.signin})`);
-    }
-
-    if (access.algorithm) {
-      parts.push(`ALGORITHM ${access.algorithm}`);
-    }
-
-    if (access.key) {
-      parts.push(`KEY "${access.key}"`);
-    }
-
-    if (access.issuer) {
-      parts.push(`ISSUER ${access.issuer}`);
-    }
-
-    if (access.duration || access.tokenDuration) {
-      const durationParts: string[] = [];
-      if (access.tokenDuration) {
-        durationParts.push(`FOR TOKEN ${access.tokenDuration}`);
-      }
-      if (access.duration) {
-        durationParts.push(`FOR SESSION ${access.duration}`);
-      }
-      parts.push(`DURATION ${durationParts.join(', ')}`);
-    }
-
-    return parts.join(' ');
+    return generateAccessDefinition(access);
   }
 
   /**
@@ -456,11 +502,7 @@ export class SurrealQLGenerator {
    * @returns Single SurrealQL statement
    */
   generateAccessMigration(access: SurrealAccess): string {
-    if (!access.name) {
-      throw new Error('Access name is required for migration');
-    }
-
-    return this.generateAccessDefinition(access);
+    return generateAccessMigration(access);
   }
 
   /**
@@ -479,53 +521,14 @@ export class SurrealQLGenerator {
     retry?: number;
     maxdepth?: number;
   }): string {
-    if (!event.name) {
-      throw new Error('Event name is required for DEFINE EVENT');
-    }
-    if (!event.what) {
-      throw new Error('Event table (what) is required for DEFINE EVENT');
-    }
-    if (!event.when) {
-      throw new Error('Event condition (when) is required for DEFINE EVENT');
-    }
-    if (!event.then || event.then.length === 0) {
-      throw new Error('Event action (then) is required for DEFINE EVENT');
-    }
-
-    const parts: string[] = [
-      `DEFINE EVENT IF NOT EXISTS ${event.name} ON TABLE ${event.what} WHEN (${event.when}) THEN { ${event.then.join('; ')} }`,
-    ];
-
-    if (event.comment) {
-      parts.push(`COMMENT "${event.comment}"`);
-    }
-
-    if (event.async) {
-      parts.push('ASYNC');
-    }
-
-    if (event.retry !== undefined) {
-      parts.push(`RETRY ${event.retry}`);
-    }
-
-    if (event.maxdepth !== undefined) {
-      parts.push(`MAXDEPTH ${event.maxdepth}`);
-    }
-
-    return parts.join(' ');
+    return generateEventDefinition(event);
   }
 
   /**
    * Generate REMOVE EVENT statement
    */
   generateRemoveEvent(eventName: string, tableName: string): string {
-    if (!eventName) {
-      throw new Error('Event name is required for REMOVE EVENT');
-    }
-    if (!tableName) {
-      throw new Error('Table name is required for REMOVE EVENT');
-    }
-    return `REMOVE EVENT IF EXISTS ${eventName} ON TABLE ${tableName}`;
+    return generateRemoveEvent(eventName, tableName);
   }
 
   /**
@@ -537,11 +540,7 @@ export class SurrealQLGenerator {
    * @returns Single SurrealQL statement
    */
   generateEventMigration(event: SurrealEvent): string {
-    if (!event.name) {
-      throw new Error('Event name is required for migration');
-    }
-
-    return this.generateEventDefinition(event);
+    return generateEventMigration(event);
   }
 
   /**
@@ -554,106 +553,67 @@ export class SurrealQLGenerator {
     comment?: string;
     permissions?: string;
   }): string {
-    if (!func.name) {
-      throw new Error('Function name is required for DEFINE FUNCTION');
-    }
-    if (!func.body) {
-      throw new Error('Function body is required for DEFINE FUNCTION');
-    }
-
-    const parts: string[] = [`DEFINE FUNCTION IF NOT EXISTS ${func.name}`];
-
-    if (func.args && func.args.length > 0) {
-      parts.push(`(${func.args.join(', ')})`);
-    }
-
-    parts.push(`{ ${func.body} }`);
-
-    if (func.comment) {
-      parts.push(`COMMENT "${func.comment}"`);
-    }
-
-    if (func.permissions) {
-      parts.push(`PERMISSIONS ${func.permissions}`);
-    }
-
-    return parts.join(' ');
+    return generateFunctionDefinition(func);
   }
 
   /**
    * Generate REMOVE FUNCTION statement
    */
   generateRemoveFunction(funcName: string): string {
-    if (!funcName) {
-      throw new Error('Function name is required for REMOVE FUNCTION');
-    }
-    return `REMOVE FUNCTION IF EXISTS ${funcName}`;
+    return generateRemoveFunction(funcName);
   }
 
   /**
    * Generate function migration SQL
    */
   generateFunctionMigration(func: SurrealFunction): string {
-    if (!func.name) {
-      throw new Error('Function name is required for migration');
-    }
-
-    return this.generateFunctionDefinition(func);
+    return generateFunctionMigration(func);
   }
 
   /**
    * Generate DEFINE VIEW statement
    */
   generateViewDefinition(view: { name: string; query: string; comment?: string }): string {
-    if (!view.name) {
-      throw new Error('View name is required for DEFINE VIEW');
-    }
-    if (!view.query) {
-      throw new Error('View query is required for DEFINE VIEW');
-    }
-
-    const parts: string[] = [`DEFINE VIEW IF NOT EXISTS ${view.name} AS ${view.query}`];
-
-    if (view.comment) {
-      parts.push(`COMMENT "${view.comment}"`);
-    }
-
-    return parts.join(' ');
+    return generateViewDefinition(view);
   }
 
   /**
    * Generate REMOVE VIEW statement
    */
   generateRemoveView(viewName: string): string {
-    if (!viewName) {
-      throw new Error('View name is required for REMOVE VIEW');
-    }
-    return `REMOVE VIEW IF EXISTS ${viewName}`;
+    return generateRemoveView(viewName);
   }
 
   /**
    * Generate view migration SQL
    */
   generateViewMigration(view: SurrealView): string {
-    if (!view.name) {
-      throw new Error('View name is required for migration');
-    }
+    return generateViewMigration(view);
+  }
 
-    return this.generateViewDefinition(view);
+  /**
+   * Generate DEFINE SEQUENCE statement
+   *
+   * SurrealQL: DEFINE SEQUENCE [IF NOT EXISTS] <name> [START <n>] [INCREMENT <n>] [MIN <n>] [MAX <n>] [CACHE <n>] [CYCLE] [COMMENT '<str>']
+   */
+  generateSequenceDefinition(seq: SurrealSequence): string {
+    return generateSequenceDefinition(seq);
+  }
+
+  /**
+   * Generate REMOVE SEQUENCE statement
+   *
+   * SurrealQL: REMOVE SEQUENCE [IF EXISTS] <name>
+   */
+  generateRemoveSequence(seqName: string, ifExists?: boolean): string {
+    return generateRemoveSequence(seqName, ifExists);
   }
 
   /**
    * Generate ALTER FIELD TYPE statement
    */
   generateAlterFieldType(tableName: string, fieldName: string, newType: string): string {
-    if (!tableName) {
-      throw new Error('Table name is required for ALTER FIELD TYPE');
-    }
-    if (!fieldName) {
-      throw new Error('Field name is required for ALTER FIELD TYPE');
-    }
-    const typeStr = getSurrealQLType(newType);
-    return `ALTER FIELD ${fieldName} ON TABLE ${tableName} TYPE ${typeStr}`;
+    return generateAlterFieldType(tableName, fieldName, newType);
   }
 
   /**
@@ -663,41 +623,14 @@ export class SurrealQLGenerator {
     tableName: string,
     permissions: TableConfig['permissions'],
   ): string {
-    if (!tableName) {
-      throw new Error('Table name is required for ALTER TABLE PERMISSIONS');
-    }
-    if (!permissions) {
-      return '';
-    }
-
-    const parts: string[] = [];
-
-    if (permissions.select) parts.push(`FOR select ${permissions.select}`);
-    if (permissions.create) parts.push(`FOR create ${permissions.create}`);
-    if (permissions.update) parts.push(`FOR update ${permissions.update}`);
-    if (permissions.delete) parts.push(`FOR delete ${permissions.delete}`);
-
-    if (parts.length === 0) {
-      return '';
-    }
-
-    return `ALTER TABLE ${tableName} PERMISSIONS ${parts.join(' ')}`;
+    return generateAlterTablePermissions(tableName, permissions);
   }
 
   /**
    * Generate ALTER FIELD PERMISSIONS statement
    */
   generateAlterFieldPermissions(tableName: string, fieldName: string, permissions: string): string {
-    if (!tableName) {
-      throw new Error('Table name is required for ALTER FIELD PERMISSIONS');
-    }
-    if (!fieldName) {
-      throw new Error('Field name is required for ALTER FIELD PERMISSIONS');
-    }
-    if (!permissions) {
-      return '';
-    }
-    return `ALTER FIELD ${fieldName} ON TABLE ${tableName} PERMISSIONS ${permissions}`;
+    return generateAlterFieldPermissions(tableName, fieldName, permissions);
   }
 
   /**
@@ -712,19 +645,7 @@ export class SurrealQLGenerator {
     defaultValue?: unknown,
     defaultRaw?: string,
   ): string {
-    if (!tableName) {
-      throw new Error('Table name is required for ALTER FIELD DEFAULT');
-    }
-    if (!fieldName) {
-      throw new Error('Field name is required for ALTER FIELD DEFAULT');
-    }
-    if (defaultRaw !== undefined) {
-      return `ALTER FIELD ${fieldName} ON TABLE ${tableName} DEFAULT ${defaultRaw}`;
-    }
-    if (defaultValue === undefined) {
-      return '';
-    }
-    return `ALTER FIELD ${fieldName} ON TABLE ${tableName} DEFAULT ${formatDefaultValue(defaultValue)}`;
+    return generateAlterFieldDefault(tableName, fieldName, defaultValue, defaultRaw);
   }
 
   /**
@@ -760,45 +681,14 @@ export class SurrealQLGenerator {
    *   DEFINE ANALYZER [IF NOT EXISTS] @name [TOKENIZERS @t1 [,@tN]] [FILTERS @f1 [,@fN]]
    */
   generateAnalyzerDefinition(analyzer: AnalyzerDefinition): string {
-    if (!analyzer.name) {
-      throw new Error('Analyzer name is required for DEFINE ANALYZER');
-    }
-
-    const parts: string[] = [`DEFINE ANALYZER IF NOT EXISTS ${analyzer.name}`];
-
-    if (analyzer.tokenizers) {
-      const tokenizers = Array.isArray(analyzer.tokenizers)
-        ? analyzer.tokenizers.join(', ')
-        : analyzer.tokenizers;
-      if (tokenizers === '') {
-        throw new Error(
-          'Tokenizers list is empty for DEFINE ANALYZER — provide at least one tokenizer',
-        );
-      }
-      parts.push(`TOKENIZERS ${tokenizers}`);
-    }
-
-    if (analyzer.filters) {
-      const filters = Array.isArray(analyzer.filters)
-        ? analyzer.filters.join(', ')
-        : analyzer.filters;
-      if (filters === '') {
-        throw new Error('Filters list is empty for DEFINE ANALYZER — provide at least one filter');
-      }
-      parts.push(`FILTERS ${filters}`);
-    }
-
-    return parts.join(' ');
+    return generateAnalyzerDefinition(analyzer);
   }
 
   /**
    * Generate REMOVE ANALYZER statement
    */
   generateRemoveAnalyzer(analyzerName: string): string {
-    if (!analyzerName) {
-      throw new Error('Analyzer name is required for REMOVE ANALYZER');
-    }
-    return `REMOVE ANALYZER IF EXISTS ${analyzerName}`;
+    return generateRemoveAnalyzer(analyzerName);
   }
 
   /**

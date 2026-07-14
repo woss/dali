@@ -245,8 +245,9 @@ export class RelateBuilder<
  * Insert a record, then link it to a parent entity (project, session, etc.):
  *
  * ```ts
- * import { relate } from '@woss/dali-orm/query/relate';
- * import { defineRelationTable, string } from '@woss/dali-orm/schema';
+ * import { relate } from '@woss/dali-orm/query';
+ * import { defineRelationTable } from '@woss/dali-orm/sdk/table';
+ * import { string } from '@woss/dali-orm/sdk/schema/column/simple-builders';
  *
  * // 1. Define edge schema
  * const partOfProjectSchema = defineRelationTable('part_of_project', {

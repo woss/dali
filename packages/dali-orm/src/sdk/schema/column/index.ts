@@ -4,12 +4,15 @@ export { tuple } from './tuple.js';
 export {
   array,
   bool,
+  bytes,
   datetime,
   decimal,
   duration,
   float,
   int,
+  literal,
   object,
+  set,
   string,
   uuid,
 } from './simple-builders.js';

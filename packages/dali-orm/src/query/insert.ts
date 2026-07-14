@@ -9,6 +9,7 @@ import type { SurrealDriver } from '../sdk/driver/types.js';
 import type { DaliORM } from '../sdk/dali-orm.js';
 import type { TableDefinition } from '../sdk/table.js';
 import type { InferSelectResult } from './types.js';
+import { escapeIdent, serializeValue } from '../core/surql.js';
 
 export class InsertBuilder<TDef extends TableDefinition, TResult = InferSelectResult<TDef>> {
   private readonly driver: SurrealDriver;
@@ -69,7 +70,7 @@ export class InsertBuilder<TDef extends TableDefinition, TResult = InferSelectRe
       const values = this._records
         .map((r) => `(${fields.map((f) => this.serializeValue(r[f])).join(', ')})`)
         .join(', ');
-      const sql = `INSERT INTO ${this.tableDef.name} (${fields.join(', ')}) VALUES ${values} ON DUPLICATE KEY UPDATE id = id`;
+      const sql = `INSERT INTO ${escapeIdent(this.tableDef.name)} (${fields.map((f) => escapeIdent(f)).join(', ')}) VALUES ${values} ON DUPLICATE KEY UPDATE id = id`;
       return this.driver.query<TResult>(sql);
     }
 
@@ -77,20 +78,13 @@ export class InsertBuilder<TDef extends TableDefinition, TResult = InferSelectRe
     return this.driver.insert<TResult>(this.tableDef.name, this._records);
   }
 
-  /** Serialize a value to SurrealQL */
+  /** Serialize a value to SurrealQL — delegates to canonical serializer */
   private serializeValue(value: unknown): string {
+    // INSERT VALUES requires NONE for null/undefined (canonical serializeValue
+    // returns lowercase 'null' for JS null, which SurrealDB coerces to SQL NULL
+    // and fails against typed schemas expecting NONE).
     if (value === null || value === undefined) return 'NONE';
-    if (typeof value === 'string') return `'${value.replace(/\\/g, '\\\\').replace(/'/g, "\\'")}'`;
-    if (typeof value === 'number') return String(value);
-    if (typeof value === 'boolean') return value ? 'true' : 'false';
-    if (Array.isArray(value)) return `[ ${value.map((v) => this.serializeValue(v)).join(', ')} ]`;
-    if (typeof value === 'object') {
-      const entries = Object.entries(value as Record<string, unknown>)
-        .map(([k, v]) => `${k}: ${this.serializeValue(v)}`)
-        .join(', ');
-      return `{ ${entries} }`;
-    }
-    return JSON.stringify(value);
+    return serializeValue(value);
   }
 }
 

@@ -69,7 +69,9 @@ export type ConditionOp =
   | 'INTERSECTS'
   | 'IN'
   | '~'
-  | '!~';
+  | '!~'
+  | '@@'
+  | '@N@';
 
 /**
  * Build a parameterized condition
@@ -136,6 +138,40 @@ export function anyConditions(...conditions: SerializedCondition[]): SerializedC
  */
 export function negateCondition(condition: SerializedCondition): SerializedCondition {
   return { sql: `NOT (${condition.sql})`, params: condition.params };
+}
+
+/**
+ * Build a graph traversal field path for use in conditions.
+ * Joins segments as-is (no separator added between segments).
+ * Include `.` in segments when accessing nested fields.
+ *
+ * @example
+ * graphFieldPath('->likes->post.title')
+ * // Returns: '->likes->post.title'
+ *
+ * // Dot must be included in the segment:
+ * graphFieldPath('->writes.', 'title')
+ * // Returns: '->writes.title'
+ *
+ * // With condition builder:
+ * buildCondition(graphFieldPath('->likes->post.', 'status'), '=', 'published')
+ * // Produces: `->likes->post.status = $p_...`
+ */
+export function graphFieldPath(...segments: string[]): string {
+  return segments.join('');
+}
+
+/**
+ * Create a SurrealDB cast expression.
+ * SurrealDB uses `<type>value` syntax for type casting.
+ *
+ * @example
+ * cast('int', '$id')     // <int>$id
+ * cast('string', 'name') // <string>name
+ * cast('decimal', 42)    // <decimal>42
+ */
+export function cast(type: string, expr: string | number): string {
+  return `<${type}>${expr}`;
 }
 
 /**

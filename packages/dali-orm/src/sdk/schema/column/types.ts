@@ -55,6 +55,8 @@ export interface ColumnConfig {
   linksTo?: string;
   /** Used to specify the record type (e.g., record<user>) */
   recordTable?: string;
+  /** REFERENCE ON DELETE action for record columns */
+  onDelete?: 'CASCADE' | 'SET NULL' | 'RESTRICT';
   /** Size for tuple/fixed-size arrays */
   size?: number;
   /** Element configurations for tuple arrays */

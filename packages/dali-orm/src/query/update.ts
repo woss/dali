@@ -9,6 +9,7 @@ import type { SurrealDriver } from '../sdk/driver/types.js';
 import type { DaliORM } from '../sdk/dali-orm.js';
 import type { TableDefinition } from '../sdk/table.js';
 import type { InferSelectResult } from './types.js';
+import { resolveRecordId } from '../utils/record-id.js';
 
 export class UpdateBuilder<TDef extends TableDefinition, TResult = InferSelectResult<TDef>> {
   private readonly driver: SurrealDriver;
@@ -53,7 +54,7 @@ export class UpdateBuilder<TDef extends TableDefinition, TResult = InferSelectRe
       throw new Error('Cannot update with empty data - use .data() or .set() first');
     }
 
-    const table = this.recordId ? `${this.tableDef.name}:${this.recordId}` : this.tableDef.name;
+    const table = this.recordId ? resolveRecordId(this.recordId, this.tableDef.name) : this.tableDef.name;
 
     return this.driver.update<TResult>(table, this._data);
   }

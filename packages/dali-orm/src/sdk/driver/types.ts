@@ -184,6 +184,8 @@ export interface LiveSubscriptionHandle<T = unknown> {
   subscribe(callback: (data: LiveMessageData<T>) => void): () => void;
   /** Async iterator for live updates */
   [Symbol.asyncIterator](): AsyncIterator<LiveMessageData<T>>;
+  /** Optional callback for subscription errors */
+  onError?: (error: Error) => void;
 }
 
 // ============================================================================

@@ -254,7 +254,7 @@ export class EmbeddedDriver extends BaseDriver {
               callback({ action, result: result as T });
             }
           } catch {
-            // Live query ended
+            this.warn('Live query ended with error');
           }
         })();
 
@@ -337,6 +337,7 @@ export class EmbeddedDriver extends BaseDriver {
     // Capture driver references for closure
     const driverDb = this.db;
     const subs = this.subscriptions;
+    let onErrorCb: ((error: Error) => void) | undefined;
 
     // Start the LIVE SELECT query in background
     this.db
@@ -368,8 +369,8 @@ export class EmbeddedDriver extends BaseDriver {
               channel.push(data);
             }
           }
-        } catch {
-          // Live query ended
+        } catch (error) {
+          onErrorCb?.(error instanceof Error ? error : new Error(String(error)));
         } finally {
           alive = false;
         }
@@ -386,6 +387,12 @@ export class EmbeddedDriver extends BaseDriver {
       },
       get isAlive(): boolean {
         return alive;
+      },
+      get onError(): ((error: Error) => void) | undefined {
+        return onErrorCb;
+      },
+      set onError(cb: ((error: Error) => void) | undefined) {
+        onErrorCb = cb;
       },
       async kill(): Promise<void> {
         alive = false;

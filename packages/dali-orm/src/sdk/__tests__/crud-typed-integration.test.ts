@@ -12,7 +12,7 @@
 import { afterEach, beforeEach, describe, expect, it, expectTypeOf } from 'vite-plus/test';
 import { DaliORM } from '../dali-orm.js';
 import { defineTable } from '../table.js';
-import { string, int, bool, datetime, record } from '../schema/column/index.js';
+import { string, int, bool } from '../schema/column/index.js';
 import type { InferSelectResult, InferInsertData, InferUpdateData } from '../infer-types.js';
 
 // =============================================================================

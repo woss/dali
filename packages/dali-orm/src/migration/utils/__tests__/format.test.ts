@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vite-plus/test';
+import { raw } from '../../../core/surql.js';
 import {
   formatDefaultValue,
   isNowVariant,
@@ -53,12 +54,36 @@ describe('formatDefaultValue', () => {
     expect(formatDefaultValue('time::now()')).toBe('time::now()');
   });
 
-  it('formats string "true" as boolean true literal', () => {
-    expect(formatDefaultValue('true')).toBe('true');
+  it('formats raw("time::now()") as bare expression', () => {
+    expect(formatDefaultValue(raw('time::now()'))).toBe('time::now()');
   });
 
-  it('formats string "false" as boolean false literal', () => {
-    expect(formatDefaultValue('false')).toBe('false');
+  it('formats raw("NOW()") as bare expression (case preserved)', () => {
+    expect(formatDefaultValue(raw('NOW()'))).toBe('NOW()');
+  });
+
+  it('formats "rand()" as quoted string (not raw SQL)', () => {
+    expect(formatDefaultValue('rand()')).toBe("'rand()'");
+  });
+
+  it('formats "foo::bar()" as quoted string (not raw SQL)', () => {
+    expect(formatDefaultValue('foo::bar()')).toBe("'foo::bar()'");
+  });
+
+  it('formats "some_func(a, b)" as quoted string', () => {
+    expect(formatDefaultValue('some_func(a, b)')).toBe("'some_func(a, b)'");
+  });
+
+  it('formats "hello world" as quoted string', () => {
+    expect(formatDefaultValue('hello world')).toBe("'hello world'");
+  });
+
+  it('formats string "true" as quoted string', () => {
+    expect(formatDefaultValue('true')).toBe("'true'");
+  });
+
+  it('formats string "false" as quoted string', () => {
+    expect(formatDefaultValue('false')).toBe("'false'");
   });
 
   it('formats plain strings as quoted values with escaping', () => {
@@ -69,18 +94,18 @@ describe('formatDefaultValue', () => {
     expect(formatDefaultValue("it's")).toBe("'it\\'s'");
   });
 
-  it('formats boolean true as true', () => {
-    expect(formatDefaultValue(true)).toBe(true);
+  it('formats boolean true as string "true"', () => {
+    expect(formatDefaultValue(true)).toBe('true');
   });
 
-  it('formats boolean false as false', () => {
-    expect(formatDefaultValue(false)).toBe(false);
+  it('formats boolean false as string "false"', () => {
+    expect(formatDefaultValue(false)).toBe('false');
   });
 
-  it('formats numbers as numbers', () => {
-    expect(formatDefaultValue(42)).toBe(42);
-    expect(formatDefaultValue(3.14)).toBe(3.14);
-    expect(formatDefaultValue(0)).toBe(0);
+  it('formats numbers as strings', () => {
+    expect(formatDefaultValue(42)).toBe('42');
+    expect(formatDefaultValue(3.14)).toBe('3.14');
+    expect(formatDefaultValue(0)).toBe('0');
   });
 
   it('formats objects as JSON', () => {

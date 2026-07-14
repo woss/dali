@@ -6,7 +6,7 @@
  * Delegates directly to SDK for all CRUD operations.
  */
 
-import { DateTime, type ExprLike, RecordId, type Surreal, Table } from 'surrealdb';
+import { type ExprLike, RecordId, type Surreal, Table } from 'surrealdb';
 import type {
   DriverConfig,
   EmbeddedConfig,
@@ -19,6 +19,7 @@ import type {
   Transaction,
 } from './types.js';
 import type { OrmSchema } from '../orm-schema.js';
+import { coerceRecordIds, parseTableWithId, transformDatetimeValues } from './driver-utils.js';
 
 export abstract class BaseDriver implements SurrealDriver {
   protected abstract db: Surreal;
@@ -28,6 +29,14 @@ export abstract class BaseDriver implements SurrealDriver {
 
   protected warn(message: string): void {
     console.warn(message);
+  }
+
+  /**
+   * Transform datetime values in data.
+   * Protected wrapper to allow polymorphism (embedded driver overrides for recursive transformation).
+   */
+  protected transformDatetimeValues(obj: unknown): unknown {
+    return transformDatetimeValues(obj);
   }
 
   abstract connect(): Promise<void>;
@@ -95,7 +104,7 @@ export abstract class BaseDriver implements SurrealDriver {
     }
 
     try {
-      const { tableName, recordId } = this.parseTableWithId(table);
+      const { tableName, recordId } = parseTableWithId(table);
 
       let results: T[];
       if (recordId) {
@@ -124,9 +133,9 @@ export abstract class BaseDriver implements SurrealDriver {
     }
 
     try {
-      const { tableName, recordId } = this.parseTableWithId(table);
+      const { tableName, recordId } = parseTableWithId(table);
       const transformedData = this.transformDatetimeValues(data);
-      const coercedData = this.coerceRecordIds(tableName, transformedData);
+      const coercedData = coerceRecordIds(tableName, transformedData, this.schema);
 
       let result: T | T[];
       if (recordId) {
@@ -156,9 +165,9 @@ export abstract class BaseDriver implements SurrealDriver {
     }
 
     try {
-      const { tableName } = this.parseTableWithId(table);
+      const { tableName } = parseTableWithId(table);
       const transformedData = this.transformDatetimeValues(data);
-      const coercedData = this.coerceRecordIds(tableName, transformedData);
+      const coercedData = coerceRecordIds(tableName, transformedData, this.schema);
       const dataArray = Array.isArray(coercedData) ? coercedData : [coercedData];
 
       const results = (await this.db.insert<T>(new Table(table), dataArray as never)) as T[];
@@ -182,9 +191,9 @@ export abstract class BaseDriver implements SurrealDriver {
     }
 
     try {
-      const { tableName, recordId } = this.parseTableWithId(table);
+      const { tableName, recordId } = parseTableWithId(table);
       const transformedData = this.transformDatetimeValues(data);
-      const coercedData = this.coerceRecordIds(tableName, transformedData);
+      const coercedData = coerceRecordIds(tableName, transformedData, this.schema);
 
       let result: T | T[];
       if (recordId) {
@@ -212,7 +221,7 @@ export abstract class BaseDriver implements SurrealDriver {
     }
 
     try {
-      const { tableName, recordId } = this.parseTableWithId(table);
+      const { tableName, recordId } = parseTableWithId(table);
 
       let result: T | T[];
       if (recordId) {
@@ -242,11 +251,11 @@ export abstract class BaseDriver implements SurrealDriver {
     }
 
     try {
-      const { tableName, recordId } = this.parseTableWithId(table);
+      const { tableName, recordId } = parseTableWithId(table);
       if (!recordId) throw new Error('Upsert requires a record ID (e.g., "user:john")');
 
       const transformedData = this.transformDatetimeValues(data);
-      const coercedData = this.coerceRecordIds(tableName, transformedData);
+      const coercedData = coerceRecordIds(tableName, transformedData, this.schema);
 
       const result = (await this.db
         .upsert(new RecordId(tableName, recordId))
@@ -275,9 +284,9 @@ export abstract class BaseDriver implements SurrealDriver {
     }
 
     try {
-      const { tableName } = this.parseTableWithId(table);
+      const { tableName } = parseTableWithId(table);
       const transformedData = this.transformDatetimeValues(data);
-      const coercedData = this.coerceRecordIds(tableName, transformedData);
+      const coercedData = coerceRecordIds(tableName, transformedData, this.schema);
 
       const result = (await this.db
         .upsert(new Table(table))
@@ -307,8 +316,8 @@ export abstract class BaseDriver implements SurrealDriver {
     }
 
     try {
-      const fromParsed = this.parseTableWithId(from);
-      const toParsed = this.parseTableWithId(to);
+      const fromParsed = parseTableWithId(from);
+      const toParsed = parseTableWithId(to);
 
       if (!fromParsed.recordId) {
         throw new Error('From record ID is required for relate');
@@ -360,7 +369,7 @@ export abstract class BaseDriver implements SurrealDriver {
         return (result[0] ?? []) as U[];
       },
       async select<U>(thing: string): Promise<U[]> {
-        const { tableName, recordId } = driver.parseTableWithId(thing);
+        const { tableName, recordId } = parseTableWithId(thing);
         let results: U[];
         if (recordId) {
           const r = await tx.select(new RecordId(tableName, recordId));
@@ -371,7 +380,7 @@ export abstract class BaseDriver implements SurrealDriver {
         return results;
       },
       async create<U>(thing: string, data: unknown): Promise<U[]> {
-        const { tableName, recordId } = driver.parseTableWithId(thing);
+        const { tableName, recordId } = parseTableWithId(thing);
         const transformedData = driver.transformDatetimeValues(data);
         let result: U | U[];
         if (recordId) {
@@ -390,7 +399,7 @@ export abstract class BaseDriver implements SurrealDriver {
         return results;
       },
       async update<U>(thing: string, data: unknown): Promise<U[]> {
-        const { tableName, recordId } = driver.parseTableWithId(thing);
+        const { tableName, recordId } = parseTableWithId(thing);
         const transformedData = driver.transformDatetimeValues(data);
         let result: U | U[];
         if (recordId) {
@@ -404,7 +413,7 @@ export abstract class BaseDriver implements SurrealDriver {
         return results as U[];
       },
       async delete<U>(thing: string): Promise<U[]> {
-        const { tableName, recordId } = driver.parseTableWithId(thing);
+        const { tableName, recordId } = parseTableWithId(thing);
         let result: U | U[];
         if (recordId) {
           result = (await tx.delete(new RecordId(tableName, recordId))) as U;
@@ -414,8 +423,8 @@ export abstract class BaseDriver implements SurrealDriver {
         return Array.isArray(result) ? result : [result];
       },
       async relate<U>(from: string, edge: string, to: string, data?: unknown): Promise<U[]> {
-        const fromParsed = driver.parseTableWithId(from);
-        const toParsed = driver.parseTableWithId(to);
+        const fromParsed = parseTableWithId(from);
+        const toParsed = parseTableWithId(to);
         if (!fromParsed.recordId) throw new Error('From record ID is required for relate');
         if (!toParsed.recordId) throw new Error('To record ID is required for relate');
         const transformedData = data ? driver.transformDatetimeValues(data) : undefined;
@@ -547,12 +556,20 @@ export abstract class BaseDriver implements SurrealDriver {
 
     const subs = this.subscriptions; // capture for closure
 
+    let onErrorCb: ((error: Error) => void) | undefined;
+
     const handle: LiveSubscriptionHandle<T> = {
       get id(): string {
         return subscriptionId;
       },
       get isAlive(): boolean {
         return subscription.isAlive;
+      },
+      get onError(): ((error: Error) => void) | undefined {
+        return onErrorCb;
+      },
+      set onError(cb: ((error: Error) => void) | undefined) {
+        onErrorCb = cb;
       },
       async kill(): Promise<void> {
         await subscription.kill();
@@ -564,8 +581,12 @@ export abstract class BaseDriver implements SurrealDriver {
         });
       },
       async *[Symbol.asyncIterator](): AsyncIterator<LiveMessageData<T>> {
-        for await (const message of subscription) {
-          yield { action: message.action as LiveAction, result: message.value as T };
+        try {
+          for await (const message of subscription) {
+            yield { action: message.action as LiveAction, result: message.value as T };
+          }
+        } catch (error) {
+          onErrorCb?.(error instanceof Error ? error : new Error(String(error)));
         }
       },
     };
@@ -584,175 +605,5 @@ export abstract class BaseDriver implements SurrealDriver {
       }
     }
     this.subscriptions.delete(subscriptionId);
-  }
-
-  // ==================== Utilities ====================
-
-  parseTableWithId(table: string): { tableName: string; recordId: string | undefined } {
-    const colonIndex = table.indexOf(':');
-    if (colonIndex === -1) return { tableName: table, recordId: undefined };
-
-    const tableName = table.substring(0, colonIndex);
-    const recordId = table.substring(colonIndex + 1);
-
-    return { tableName, recordId: recordId || undefined };
-  }
-
-  transformDatetimeValues(obj: unknown): unknown {
-    if (obj === null || obj === undefined) return obj;
-    if (Array.isArray(obj)) return obj.map((item) => this.transformDatetimeValues(item));
-
-    if (typeof obj === 'object') {
-      // Preserve class instances (RecordId, DateTime, Uint8Array, etc.)
-      // Only transform plain objects so we don't erase non-enumerable data.
-      if (!this.isPlainObject(obj)) return obj;
-
-      const result: Record<string, unknown> = {};
-      for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
-        if (
-          this.isDatetimeField(key) &&
-          value !== null &&
-          value !== undefined &&
-          !Array.isArray(value)
-        ) {
-          result[key] = this.tryCreateDateTime(value);
-        } else {
-          result[key] = value;
-        }
-      }
-      return result;
-    }
-
-    return obj;
-  }
-
-  // ==================== Private Helpers ====================
-
-  private isDatetimeField(key: string): boolean {
-    const lowerKey = key.toLowerCase();
-    return (
-      lowerKey.includes('date') ||
-      lowerKey.includes('time') ||
-      lowerKey.endsWith('_at') ||
-      lowerKey.endsWith('_on')
-    );
-  }
-
-  private coerceRecordIds(tableName: string, input: unknown): unknown {
-    if (input === null || input === undefined) return input;
-    if (Array.isArray(input)) return input.map((item) => this.coerceRecordIds(tableName, item));
-    if (typeof input !== 'object') return input;
-    if (!this.isPlainObject(input)) return input;
-
-    const out: Record<string, unknown> = {};
-
-    // Schema-aware coercion: only coerce columns defined as record() in the table schema
-    if (this.schema) {
-      const tableDef = this.schema.getTable(tableName);
-      if (tableDef?.$columns) {
-        const recordColumns = new Set<string>();
-        for (const [colName, colDef] of Object.entries(tableDef.$columns)) {
-          if (colDef.config.recordTable) {
-            recordColumns.add(colName);
-          }
-        }
-
-        for (const [key, value] of Object.entries(input)) {
-          if (recordColumns.has(key)) {
-            out[key] = this.tryCoerceRecordId(value);
-          } else {
-            out[key] = value;
-          }
-        }
-        return out;
-      }
-    }
-
-    // Fallback: coerce all values (backward compatibility, FR-005)
-    for (const [key, value] of Object.entries(input)) {
-      out[key] = this.tryCoerceRecordId(value);
-    }
-    return out;
-  }
-
-  private tryCoerceRecordId(value: unknown): unknown {
-    if (value === null || value === undefined) return value;
-
-    // Fast path: already our RecordId
-    if (value instanceof RecordId) return value;
-
-    // Foreign RecordId instance (different module instance): detect by constructor name
-    if (typeof value === 'object' && value !== null) {
-      const ctorName = (value as { constructor?: { name?: string } }).constructor?.name;
-      if (ctorName === 'RecordId' || ctorName === 'StringRecordId') {
-        return this.recordIdFromString(`${value as unknown as string}`);
-      }
-
-      const obj = value as Record<string, unknown>;
-      if (typeof obj.tb === 'string' && typeof obj.id === 'string') {
-        return new RecordId(obj.tb, obj.id);
-      }
-      if (typeof obj.id === 'string') {
-        return this.recordIdFromString(obj.id);
-      }
-      if (typeof obj.id === 'object' && obj.id !== null) {
-        const nested = obj.id as Record<string, unknown>;
-        if (typeof nested.id === 'string') {
-          return this.recordIdFromString(nested.id);
-        }
-      }
-    }
-
-    if (typeof value === 'string') {
-      return this.recordIdFromString(value);
-    }
-
-    return value;
-  }
-
-  private recordIdFromString(value: string): RecordId | string {
-    const trimmed = value.trim();
-    if (!trimmed) return value;
-
-    // Guard: only convert strings that look like valid record references.
-    // A SurrealDB record reference is "tablename:id" where tablename is a
-    // simple word (word chars only, no whitespace, no newlines) and the
-    // entire string has no whitespace/newlines outside the colon boundary.
-    // This prevents accidental conversion of long text (e.g. changelogs,
-    // descriptions) that happen to contain a colon somewhere inside.
-    if (trimmed.includes('\n') || trimmed.includes('\r')) return value;
-
-    const colonIndex = trimmed.indexOf(':');
-    if (colonIndex === -1) return value;
-
-    const tableName = trimmed.substring(0, colonIndex);
-    const recordId = trimmed.substring(colonIndex + 1);
-
-    // table name must be simple word characters (matching SurrealDB table naming)
-    if (!/^\w+$/.test(tableName)) return value;
-    // record id part must contain no whitespace — no spaces, tabs, newlines
-    if (/\s/.test(recordId)) return value;
-
-    if (!recordId) return value;
-    if (!tableName) return value;
-
-    return new RecordId(tableName, recordId);
-  }
-
-  private isPlainObject(value: unknown): value is Record<string, unknown> {
-    if (!value || typeof value !== 'object') return false;
-    const proto = Object.getPrototypeOf(value);
-    return proto === Object.prototype || proto === null;
-  }
-
-  private tryCreateDateTime(value: unknown): unknown {
-    if (value === null || value === undefined) return value;
-    try {
-      if (typeof value === 'string') return new DateTime(value);
-      if (typeof value === 'number') return new DateTime(value);
-      return value;
-    } catch {
-      return value;
-    }
   }
 }

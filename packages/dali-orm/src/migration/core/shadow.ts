@@ -8,6 +8,7 @@ import { connect } from '../../sdk/driver/orm-connection.js';
 import type { SurrealDriver } from '../../sdk/driver/types.js';
 import type { Config } from '../config.js';
 import { MigrationRunner } from './runner.js';
+import { escapeIdent } from '../../core/surql.ts';
 
 /**
  * Shadow database configuration
@@ -72,7 +73,7 @@ export async function destroyShadow(driver: SurrealDriver, shadow: ShadowConfig)
   try {
     // Switch to shadow ns (needed for REMOVE DATABASE)
     await driver.use(shadow.namespace, shadow.database);
-    await driver.query(`REMOVE DATABASE IF EXISTS ${shadow.database}`);
+    await driver.query(`REMOVE DATABASE IF EXISTS ${escapeIdent(shadow.database)}`);
   } catch {
     // Non-fatal — cleanup is best-effort
   }

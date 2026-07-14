@@ -8,7 +8,7 @@
 import { beforeEach, describe, expect, it } from 'vite-plus/test';
 import type { ColumnDefinition } from '../../../sdk/schema/column/types.js';
 import type { AnalyzerDefinition, IndexDefinition, TableDefinition } from '../../../sdk/table.js';
-import type { SurrealEvent, SurrealFunction } from '../../ddl/ddl.js';
+import type { SurrealEvent, SurrealFunction, SurrealSequence } from '../../ddl/ddl.js';
 import { SurrealQLGenerator } from '../generator.js';
 
 // ---------------------------------------------------------------------------
@@ -1398,5 +1398,218 @@ describe('empty and boundary states', () => {
   it('generateMigrationFile with empty tables', () => {
     const result = gen.generateMigrationFile([], '1', 'empty');
     expect(result).toEqual({ up: [] });
+  });
+});
+
+// ===========================================================================
+// generateNamespaceDefinition
+// ===========================================================================
+describe('generateNamespaceDefinition', () => {
+  const gen = new SurrealQLGenerator();
+
+  it('generates basic namespace', () => {
+    const sql = gen.generateNamespaceDefinition('production');
+    expect(sql).toBe('DEFINE NAMESPACE production');
+  });
+
+  it('throws for empty name', () => {
+    expect(() => gen.generateNamespaceDefinition('')).toThrow(
+      'Namespace name is required for DEFINE NAMESPACE',
+    );
+  });
+
+  it('generates with comment', () => {
+    const sql = gen.generateNamespaceDefinition('staging', {
+      comment: 'Staging environment',
+    });
+    expect(sql).toBe('DEFINE NAMESPACE staging COMMENT "Staging environment"');
+  });
+
+  it('generates with IF NOT EXISTS', () => {
+    const sql = gen.generateNamespaceDefinition('dev', { ifNotExists: true });
+    expect(sql).toBe('DEFINE NAMESPACE IF NOT EXISTS dev');
+  });
+
+  it('generates with all options', () => {
+    const sql = gen.generateNamespaceDefinition('test', {
+      ifNotExists: true,
+      comment: 'Test env',
+    });
+    expect(sql).toBe('DEFINE NAMESPACE IF NOT EXISTS test COMMENT "Test env"');
+  });
+});
+
+// ===========================================================================
+// generateRemoveNamespace
+// ===========================================================================
+describe('generateRemoveNamespace', () => {
+  const gen = new SurrealQLGenerator();
+
+  it('generates basic remove', () => {
+    expect(gen.generateRemoveNamespace('production')).toBe('REMOVE NAMESPACE production');
+  });
+
+  it('generates with IF EXISTS', () => {
+    expect(gen.generateRemoveNamespace('dev', true)).toBe('REMOVE NAMESPACE IF EXISTS dev');
+  });
+
+  it('throws for empty name', () => {
+    expect(() => gen.generateRemoveNamespace('')).toThrow(
+      'Namespace name is required for REMOVE NAMESPACE',
+    );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// DATABASE definitions
+// ---------------------------------------------------------------------------
+
+describe('generateDatabaseDefinition', () => {
+  const gen = new SurrealQLGenerator();
+
+  it('generates basic DEFINE DATABASE', () => {
+    expect(gen.generateDatabaseDefinition('testdb')).toBe('DEFINE DATABASE testdb');
+  });
+
+  it('generates with IF NOT EXISTS', () => {
+    expect(gen.generateDatabaseDefinition('testdb', { ifNotExists: true })).toBe(
+      'DEFINE DATABASE IF NOT EXISTS testdb',
+    );
+  });
+
+  it('generates with COMMENT', () => {
+    expect(gen.generateDatabaseDefinition('testdb', { comment: 'Test database' })).toBe(
+      'DEFINE DATABASE testdb COMMENT "Test database"',
+    );
+  });
+
+  it('generates with IF NOT EXISTS and COMMENT', () => {
+    expect(gen.generateDatabaseDefinition('testdb', { ifNotExists: true, comment: 'Test' })).toBe(
+      'DEFINE DATABASE IF NOT EXISTS testdb COMMENT "Test"',
+    );
+  });
+
+  it('escapes reserved words with backticks', () => {
+    expect(gen.generateDatabaseDefinition('use')).toBe('DEFINE DATABASE use');
+  });
+
+  it('throws for empty name', () => {
+    expect(() => gen.generateDatabaseDefinition('')).toThrow(
+      'Database name is required for DEFINE DATABASE',
+    );
+  });
+});
+
+describe('generateRemoveDatabase', () => {
+  const gen = new SurrealQLGenerator();
+
+  it('generates basic REMOVE DATABASE', () => {
+    expect(gen.generateRemoveDatabase('testdb')).toBe('REMOVE DATABASE testdb');
+  });
+
+  it('generates with IF EXISTS', () => {
+    expect(gen.generateRemoveDatabase('testdb', true)).toBe('REMOVE DATABASE IF EXISTS testdb');
+  });
+
+  it('escapes reserved words with backticks', () => {
+    expect(gen.generateRemoveDatabase('use')).toBe('REMOVE DATABASE use');
+  });
+
+  it('throws for empty name', () => {
+    expect(() => gen.generateRemoveDatabase('')).toThrow(
+      'Database name is required for REMOVE DATABASE',
+    );
+  });
+});
+
+// ===========================================================================
+// generateSequenceDefinition
+// ===========================================================================
+describe('generateSequenceDefinition', () => {
+  const gen = new SurrealQLGenerator();
+
+  it('generates basic DEFINE SEQUENCE', () => {
+    const seq: SurrealSequence = { name: 'my_seq' };
+    expect(gen.generateSequenceDefinition(seq)).toBe('DEFINE SEQUENCE IF NOT EXISTS my_seq');
+  });
+
+  it('includes START and INCREMENT', () => {
+    const seq: SurrealSequence = { name: 'my_seq', start: 1, increment: 2 };
+    expect(gen.generateSequenceDefinition(seq)).toBe(
+      'DEFINE SEQUENCE IF NOT EXISTS my_seq START 1 INCREMENT 2',
+    );
+  });
+
+  it('includes MIN and MAX', () => {
+    const seq: SurrealSequence = { name: 'seq1', min: 0, max: 1000 };
+    expect(gen.generateSequenceDefinition(seq)).toBe(
+      'DEFINE SEQUENCE IF NOT EXISTS seq1 MIN 0 MAX 1000',
+    );
+  });
+
+  it('includes CACHE and CYCLE', () => {
+    const seq: SurrealSequence = { name: 'seq1', cache: 10, cycle: true };
+    expect(gen.generateSequenceDefinition(seq)).toBe(
+      'DEFINE SEQUENCE IF NOT EXISTS seq1 CACHE 10 CYCLE',
+    );
+  });
+
+  it('includes COMMENT', () => {
+    const seq: SurrealSequence = { name: 'seq1', comment: 'my sequence' };
+    expect(gen.generateSequenceDefinition(seq)).toBe(
+      'DEFINE SEQUENCE IF NOT EXISTS seq1 COMMENT "my sequence"',
+    );
+  });
+
+  it('includes all options', () => {
+    const seq: SurrealSequence = {
+      name: 'full_seq',
+      start: 1,
+      increment: 5,
+      min: 0,
+      max: 99999,
+      cache: 100,
+      cycle: true,
+      comment: 'full sequence',
+    };
+    expect(gen.generateSequenceDefinition(seq)).toBe(
+      'DEFINE SEQUENCE IF NOT EXISTS full_seq START 1 INCREMENT 5 MIN 0 MAX 99999 CACHE 100 CYCLE COMMENT "full sequence"',
+    );
+  });
+
+  it('escapes special characters in names', () => {
+    const seq: SurrealSequence = { name: 'my-seq' };
+    expect(gen.generateSequenceDefinition(seq)).toBe('DEFINE SEQUENCE IF NOT EXISTS `my-seq`');
+  });
+
+  it('throws for empty name', () => {
+    expect(() => gen.generateSequenceDefinition({ name: '' })).toThrow(
+      'Sequence name is required for DEFINE SEQUENCE',
+    );
+  });
+});
+
+// ===========================================================================
+// generateRemoveSequence
+// ===========================================================================
+describe('generateRemoveSequence', () => {
+  const gen = new SurrealQLGenerator();
+
+  it('generates basic REMOVE SEQUENCE', () => {
+    expect(gen.generateRemoveSequence('my_seq')).toBe('REMOVE SEQUENCE my_seq');
+  });
+
+  it('generates with IF EXISTS', () => {
+    expect(gen.generateRemoveSequence('my_seq', true)).toBe('REMOVE SEQUENCE IF EXISTS my_seq');
+  });
+
+  it('escapes special characters in names', () => {
+    expect(gen.generateRemoveSequence('my-seq')).toBe('REMOVE SEQUENCE `my-seq`');
+  });
+
+  it('throws for empty name', () => {
+    expect(() => gen.generateRemoveSequence('')).toThrow(
+      'Sequence name is required for REMOVE SEQUENCE',
+    );
   });
 });

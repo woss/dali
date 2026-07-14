@@ -496,4 +496,22 @@ describe('create + restore roundtrip', () => {
     expect(restoredAccess[0].type).toBe('RECORD');
     expect(restoredAccess[0].duration).toBe('24h');
   });
+
+  it('serializes string-form duration correctly', () => {
+    const manager = createManager();
+    const tables = [createSampleTable('user')];
+    const access = [
+      {
+        config: {
+          name: 'str_duration',
+          type: 'RECORD',
+          level: 'DATABASE',
+          duration: '12h',
+        },
+      },
+    ];
+    const snapshot = manager.createSnapshot(tables, '010', 'str_duration', access);
+    expect(snapshot.access).toHaveLength(1);
+    expect(snapshot.access[0].duration).toBe('12h');
+  });
 });

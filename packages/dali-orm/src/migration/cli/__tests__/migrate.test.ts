@@ -241,7 +241,7 @@ describe('migrateSync', () => {
     expect(journal.entries).toHaveLength(0);
   });
 
-  it('handles disconnect error gracefully', async () => {
+  it('rethrows error on failure', async () => {
     const config = makeConfig({
       migrations: {
         dir: migrationsDir,
@@ -249,14 +249,8 @@ describe('migrateSync', () => {
         journalDir: path.join(tmpDir, 'meta'),
       },
     });
-    // Mock process.exit so migrateSync's catch block doesn't trigger vitest's exit guard
-    const origExit = process.exit.bind(process);
-    process.exit = vi.fn() as unknown as typeof process.exit;
-    try {
-      await expect(migrateSync({ config })).resolves.not.toThrow();
-    } finally {
-      process.exit = origExit;
-    }
+    // Config has no DB URL → NodeDriver constructor throws → migrateSync catches + rethrows
+    await expect(migrateSync({ config })).rejects.toThrow();
   });
 });
 

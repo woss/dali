@@ -13,6 +13,7 @@ import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import type { SurrealDriver } from '../../../sdk/driver/types.js';
 import type { MigrationFile } from '../runner.js';
 import { createRunner, MigrationRunner } from '../runner.js';
+import { computeMigrationHash } from '../../ddl/journal.js';
 
 // ---------------------------------------------------------------------------
 // Hoisted: mock fs functions as PLAIN functions (not vi.fn) so clearAllMocks
@@ -143,11 +144,22 @@ function addMigrationDir(
 
 function createMockDriver(): SurrealDriver & {
   query: ReturnType<typeof vi.fn>;
+  txQuery: ReturnType<typeof vi.fn>;
+  transaction: ReturnType<typeof vi.fn>;
 } {
+  const txQuery = vi.fn().mockResolvedValue([]);
+
   return {
     query: vi.fn().mockResolvedValue([]),
+    txQuery,
+    transaction: vi.fn().mockImplementation(async (fn: (tx: any) => Promise<any>) => {
+      const tx = { query: txQuery };
+      return fn(tx);
+    }),
   } as unknown as SurrealDriver & {
     query: ReturnType<typeof vi.fn>;
+    txQuery: ReturnType<typeof vi.fn>;
+    transaction: ReturnType<typeof vi.fn>;
   };
 }
 
@@ -179,10 +191,14 @@ function defaultBeforeEach() {
     (fn as ReturnType<typeof vi.fn>).mockReset();
   }
 
+  // Reset computeMigrationHash to default behavior
+  vi.mocked(computeMigrationHash).mockReset();
+  vi.mocked(computeMigrationHash).mockReturnValue('mock-hash');
+
   // Default journal behaviors
   mockJournal.getAppliedMigrations.mockResolvedValue([]);
   mockJournal.getPartialMigration.mockResolvedValue(null);
-  mockJournal.read.mockResolvedValue(journalWithEntries());
+  mockJournal.read.mockImplementation(() => Promise.resolve(journalWithEntries()));
   mockJournal.write.mockResolvedValue(undefined);
   mockJournal.updateBreakpoints.mockResolvedValue({
     idx: 1,
@@ -556,11 +572,17 @@ describe('MigrationRunner', () => {
       const runner = new MigrationRunner(driver, { migrationsDir });
       addMigrationDir('001', 'init');
 
+      // Make tx INSERT query return applied_at to exercise when-update path
+      // tx.query is called for UP statements (default []), then INSERT
+      driver.txQuery
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([{ applied_at: '2026-01-01T00:00:00.000Z' }]);
+
       await runner.up();
 
-      // Should INSERT into __migrations table
-      const queryCalls = (driver.query as unknown as ReturnType<typeof vi.fn>).mock.calls;
-      const insertCall = queryCalls.find(
+      // Should INSERT into __migrations table (via tx.query within transaction)
+      const txCalls = driver.txQuery.mock.calls;
+      const insertCall = txCalls.find(
         (call: string[]) => call[0] && (call[0] as string).startsWith('INSERT INTO __migrations'),
       );
       expect(insertCall).toBeTruthy();
@@ -958,14 +980,29 @@ describe('MigrationRunner', () => {
   // applyMigration failure modes (tested through up)
   // ==========================================================================
   describe('applyMigration error handling', () => {
-    it('continues when per-statement checkpoint update fails (non-fatal)', async () => {
+    it('continues when when-update fails (non-fatal)', async () => {
       const driver = createMockDriver();
       const runner = new MigrationRunner(driver, { migrationsDir });
       addMigrationDir('001', 'init', ['STEP ONE']);
 
-      mockJournal.updateBreakpoints.mockRejectedValueOnce(new Error('Disk full'));
+      // Make INSERT return applied_at so when-update is attempted
+      driver.txQuery
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce([{ applied_at: '2026-01-01T00:00:00.000Z' }]);
 
-      // Per-statement journal failures are non-fatal — migration still succeeds
+      // First journal.read() = empty (applyMigration before transaction adds fresh entry)
+      // Subsequent reads = include 'init' entry so when-update finds it
+      mockJournal.read
+        .mockResolvedValueOnce({ ...journalWithEntries(), entries: [] })
+        .mockResolvedValue(journalWithEntries(['init']));
+
+      // Second journal.write() = when-update fails (non-fatal)
+      // (first = initial entry succeeds via default mockResolvedValue(undefined))
+      mockJournal.write
+        .mockResolvedValueOnce(undefined) // initial entry succeeds
+        .mockRejectedValueOnce(new Error('Disk full')); // when-update fails (non-fatal)
+
+      // when-update journal failures are non-fatal — migration still succeeds
       const result = await runner.up();
       expect(result.applied).toEqual(['init']);
     });
@@ -975,18 +1012,28 @@ describe('MigrationRunner', () => {
       const runner = new MigrationRunner(driver, { migrationsDir });
       addMigrationDir('001', 'init', ['STEP ONE']);
 
-      // Per-statement succeeds, final update fails
-      mockJournal.updateBreakpoints
-        .mockResolvedValueOnce({
-          idx: 1,
-          tag: 'mock',
-          breakpoints: [true],
-          hash: 'mock-hash',
-          when: '',
-        })
-        .mockRejectedValueOnce(new Error('Final checkpoint failed'));
+      // Transaction succeeds, final updateBreakpoints fails
+      mockJournal.updateBreakpoints.mockRejectedValue(new Error('Final checkpoint failed'));
 
       await expect(runner.up()).rejects.toThrow('Migration completion checkpoint failed');
+    });
+
+    it('throws MigrationError when checksum mismatch detected at apply time', async () => {
+      const driver = createMockDriver();
+      const runner = new MigrationRunner(driver, { migrationsDir });
+      addMigrationDir('001', 'init', ['CREATE TABLE foo (id int)']);
+
+      // Reset and control computeMigrationHash return values:
+      // loadMigrationFiles → 'mock-hash' (migration.checksum is set to this)
+      // applyMigration:
+      //   1. hash verification → 'different' → throw before journal hash call
+      const mockHash = vi.mocked(computeMigrationHash);
+      mockHash.mockReset();
+      mockHash
+        .mockReturnValueOnce('mock-hash') // loadMigrationFiles
+        .mockReturnValue('different'); // applyMigration (journal hash + verification)
+
+      await expect(runner.up()).rejects.toThrow('Migration file checksum mismatch for init');
     });
   });
 
@@ -999,12 +1046,9 @@ describe('MigrationRunner', () => {
       const runner = new MigrationRunner(driver, { migrationsDir });
       addMigrationDir('001', 'init', ['STEP ONE', 'STEP TWO']);
 
-      // Need 5 query calls:
+      // driver.query calls (SQL runs inside transaction via tx.query):
       // 1. getDbAppliedMigrations (SELECT name FROM ...) → []
-      // 2. STEP ONE → [] (default mock)
-      // 3. STEP TWO → [] (default mock)
-      // 4. INSERT INTO ... → [] (default mock)
-      // 5. syncJournalWithDb (SELECT name, checksum, ...) → record
+      // 2. syncJournalWithDb (SELECT name, checksum, ...) → record
       const queryMock = driver.query as unknown as ReturnType<typeof vi.fn>;
       queryMock
         .mockResolvedValueOnce([]) // getDbAppliedMigrations
@@ -1015,11 +1059,18 @@ describe('MigrationRunner', () => {
       await runner.up();
 
       // Journal should have been rebuilt with proper breakpoints
+      // Last write = syncJournalWithDb rebuild (first = applyMigration with [false,false])
       const writeCalls = mockJournal.write.mock.calls;
-      const syncWrite = writeCalls.find((call: unknown[]) => {
-        const c0 = call[0] as Record<string, unknown>;
-        return c0 && Array.isArray(c0.entries) && (c0.entries as unknown[]).length > 0;
+      console.log('=== WRITE CALLS ===');
+      writeCalls.forEach((call, i) => {
+        console.log(
+          `Write #${i}: entries count=${call[0]?.entries?.length}, tags=${JSON.stringify(call[0]?.entries?.map((e: any) => ({ tag: e.tag, bps: e.breakpoints })))}`,
+        );
       });
+      console.log('READ CALL count:', mockJournal.read.mock.calls.length);
+      console.log('UPDATE_BP CALL count:', mockJournal.updateBreakpoints.mock.calls.length);
+      console.log('UPDATE_BP CALLS:', JSON.stringify(mockJournal.updateBreakpoints.mock.calls));
+      const syncWrite = writeCalls.at(-1);
       expect(syncWrite).toBeTruthy();
       expect(syncWrite?.[0].entries[0].tag).toBe('init');
       expect(syncWrite?.[0].entries[0].breakpoints).toEqual([true, true]);
@@ -1034,15 +1085,15 @@ describe('MigrationRunner', () => {
       addMigrationDir('001', 'init');
 
       const queryMock = driver.query as unknown as ReturnType<typeof vi.fn>;
-      // 1. getDbAppliedMigrations → returns [] (nothing applied yet)
-      // 2-3. applyMigration: INSERT INTO ... (register in DB) → returns []
-      // 4. syncJournalWithDb: query DB records → includes an orphan outside our migration
+      // driver.query calls (SQL runs inside transaction via tx.query):
+      // 1. getDbAppliedMigrations → returns []
+      // 2. syncJournalWithDb: query DB records → includes an orphan outside our migration
       let queryNum = 0;
       queryMock.mockImplementation(async () => {
         queryNum++;
         if (queryNum === 1) return []; // getDbAppliedMigrations
-        if (queryNum >= 3) return [{ name: 'orphan', checksum: '', applied_at: '' }]; // syncJournalWithDb
-        return []; // INSERT
+        if (queryNum === 2) return [{ name: 'orphan', checksum: '', applied_at: '' }]; // syncJournalWithDb
+        return [];
       });
 
       await runner.up();

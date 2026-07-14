@@ -1,4 +1,5 @@
 import { BaseColumnBuilder } from './base.js';
+import { quoteString } from '../../../core/surql.ts';
 
 export class DatetimeColumnBuilder extends BaseColumnBuilder<DatetimeColumnBuilder> {
   constructor(name: string) {
@@ -21,7 +22,7 @@ export class DatetimeColumnBuilder extends BaseColumnBuilder<DatetimeColumnBuild
       return str;
     }
     // Otherwise wrap in quotes for literal datetime strings
-    return `'${str}'`;
+    return quoteString(str);
   }
 }
 

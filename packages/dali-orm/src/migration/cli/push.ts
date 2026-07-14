@@ -73,6 +73,7 @@ export function tablesToDdl(
                   select: col.config.permissions,
                   create: col.config.permissions,
                   update: col.config.permissions,
+                  delete: col.config.permissions,
                 }
               : (col.config.permissions ?? {}),
         })),
@@ -119,6 +120,7 @@ export function tablesToDdl(
                 select: col.config.permissions,
                 create: col.config.permissions,
                 update: col.config.permissions,
+                delete: col.config.permissions,
               }
             : (col.config.permissions ?? {}),
       })),

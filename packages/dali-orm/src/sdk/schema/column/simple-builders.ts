@@ -101,3 +101,39 @@ export function object(name: string) {
 export function uuid(name: string) {
   return createBuilder(name, 'uuid');
 }
+
+/**
+ * Create a set builder (unique unordered values, SurrealDB type).
+ *
+ * @example
+ * defineTable('posts', {
+ *   tags: set('tags'),
+ * })
+ */
+export function set(name: string) {
+  return createBuilder(name, 'set');
+}
+
+/**
+ * Create a bytes builder (binary data).
+ *
+ * @example
+ * defineTable('files', {
+ *   content: bytes('content'),
+ * })
+ */
+export function bytes(name: string) {
+  return createBuilder(name, 'bytes');
+}
+
+/**
+ * Create a literal builder (quoted string literal type).
+ *
+ * @example
+ * defineTable('config', {
+ *   color: literal('color'),
+ * })
+ */
+export function literal(name: string) {
+  return createBuilder(name, 'literal');
+}

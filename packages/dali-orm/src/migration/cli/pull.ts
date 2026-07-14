@@ -11,6 +11,7 @@ import { MigrationRunner } from '../core/runner.js';
 import { introspectDatabase } from '../ddl/introspect.js';
 import { generateFullMigration, generateMigrationFile, loadSchemaFiles } from './generate.js';
 import { safeDisconnect } from './operations.js';
+import { escapeString } from '../../core/surql.ts';
 
 export interface PullOptions {
   config: Config;
@@ -390,17 +391,12 @@ function formatDefaultValueForTS(value: unknown): string {
     return String(value);
   }
   if (typeof value === 'string') {
-    // Handle SQL-quoted strings: 'active' → dequote then re-wrap
+    // Handle SQL-quoted strings: 'active' → dequote, re-wrap with proper escaping
     const unquoted =
       value.startsWith("'") && value.endsWith("'") && value.length >= 2
         ? value.slice(1, -1)
         : value;
-    if (unquoted.includes("'")) {
-      const escaped = unquoted.replace(/"/g, '\\"');
-      return `"${escaped}"`;
-    }
-    const escaped = unquoted.replace(/'/g, "\\'");
-    return `'${escaped}'`;
+    return `'${escapeString(unquoted)}'`;
   }
   return JSON.stringify(value);
 }

@@ -66,7 +66,7 @@ export class LiveSubscription<T = unknown> {
       return this.handle.subscribe((data) => {
         const id = (data.result as { id?: string } | undefined)?.id;
         const recordStr = id ?? '';
-        if (recordStr.includes(filter)) {
+        if (recordStr === filter) {
           callback(data);
         }
       });

@@ -246,7 +246,7 @@ describe('MigrationJournalManager', () => {
       expect(written.entries[0].idx).toBe(1);
       expect(written.entries[0].tag).toBe('initial');
       expect(written.entries[0].hash).toBe('hash123');
-      expect(written.entries[0].breakpoints).toEqual([true]);
+      expect(written.entries[0].breakpoints).toEqual([false]);
     });
 
     it('increments idx for subsequent entries', async () => {
@@ -260,7 +260,18 @@ describe('MigrationJournalManager', () => {
       expect(written.entries).toHaveLength(2);
       expect(written.entries[1].idx).toBe(2);
       expect(written.entries[1].tag).toBe('second');
-      expect(written.entries[1].breakpoints).toEqual([true, true]);
+      expect(written.entries[1].breakpoints).toEqual([false, false]);
+    });
+
+    it('creates entry with all-false breakpoints for partial-failure safety', async () => {
+      mockReadFile.mockResolvedValueOnce(JSON.stringify(makeJournal()));
+      await manager.addEntry('partial_safe', 'hash777', ['s1', 's2', 's3']);
+      const written = JSON.parse(mockWriteFile.mock.calls[0][1] as string);
+      // Every breakpoint must be false so partial-execution is visible
+      expect(written.entries[0].breakpoints).toEqual([false, false, false]);
+      // Verify isApplied correctly returns false for all-false entry
+      const isApplied = await manager.isApplied('partial_safe');
+      expect(isApplied).toBe(false);
     });
 
     it('handles non-sequential indices correctly', async () => {

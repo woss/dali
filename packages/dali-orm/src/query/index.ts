@@ -5,7 +5,7 @@
  * Each builder wraps the driver's native SDK methods with fluent chaining.
  *
  * Database function wrappers (count, math::*, string::*, etc.) are
- * available from '@woss/dali-orm/functions'.
+ * available from '@woss/dali-orm/sdk/functions'.
  */
 
 // Re-exports
@@ -24,7 +24,9 @@ export {
   and,
   anyConditions,
   buildCondition,
+  cast,
   type ConditionOp,
+  graphFieldPath,
   contains,
   containsAll,
   containsAny,
@@ -82,6 +84,35 @@ export type {
   WithGraphAliases,
 } from './types.js';
 export { columnRef, isRelationTable } from './types.js';
+// Statements
+export {
+  BeginBuilder,
+  beginTransaction,
+  CancelBuilder,
+  cancelTransaction,
+  CommitBuilder,
+  commitTransaction,
+  DefineParamBuilder,
+  defineParam,
+  InfoBuilder,
+  info,
+  type InfoScope,
+  KillBuilder,
+  kill,
+  LetBuilder,
+  let_,
+  RebuildIndexBuilder,
+  rebuildIndex,
+  ReturnBuilder,
+  return_,
+  ShowChangesBuilder,
+  showChanges,
+  ThrowBuilder,
+  throw_,
+  UseBuilder,
+  use,
+} from './statements.js';
+
 // Update
 export { UpdateBuilder, update } from './update.js';
 // Upsert

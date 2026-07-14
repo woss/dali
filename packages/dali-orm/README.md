@@ -1,6 +1,6 @@
 # DaliORM
 
-> SUPER EARLY BETA -- do not use in production yet! API is subject to change without warning.
+> **Status:** Stable API surface for core CRUD, migrations, and SurrealQL query building. Internal decomposition ongoing — imports from internal paths (e.g., `./migration/ddl/*`) are not part of the stable public API.
 
 A TypeScript ORM for SurrealDB with schema definitions, fluent query builders, and migrations. Built with 100% TypeScript for full type safety.
 
@@ -22,6 +22,7 @@ A TypeScript ORM for SurrealDB with schema definitions, fluent query builders, a
     - [DELETE](#delete)
     - [RELATE](#relate)
     - [Model Class](#model-class)
+  - [Statement Builders](#statement-builders)
   - [Conditions](#conditions)
     - [Comparison Operators](#comparison-operators)
     - [String Operators](#string-operators)
@@ -42,6 +43,7 @@ A TypeScript ORM for SurrealDB with schema definitions, fluent query builders, a
     - [NodeDriver (Remote)](#nodedriver-remote)
     - [Embedded Modes](#embedded-modes)
     - [DaliORM Methods](#daliorm-methods)
+    - [Transactions](#transactions)
   - [Configuration Files](#configuration-files)
     - [Supported Formats](#supported-formats)
     - [Example Config](#example-config)
@@ -61,7 +63,8 @@ A TypeScript ORM for SurrealDB with schema definitions, fluent query builders, a
 
 - **TypeScript-First** - Full type inference for schema, queries, and results
 - **Schema Builder** - Define tables, columns, indexes, analyzers, and relations programmatically
-- **Query Builders** - Fluent API for SELECT, INSERT, UPDATE, DELETE, and RELATE queries
+- **Query Builders** - Fluent API for SELECT (with OMIT, SPLIT, WITH index hints, EXPLAIN, TEMPFILES, VERSION, GRAPH TRAVERSE, UNION/INTERSECT/EXCEPT, CTEs), INSERT, UPDATE, DELETE, and RELATE queries
+- **Statement Builders** - Fluent builders for KILL, REBUILD INDEX, INFO, SHOW CHANGES, USE, BEGIN/COMMIT/CANCEL, LET, RETURN, and THROW
 - **Model Class** - Pre-bound query builders via `orm.model(tableDef).select().execute()`
 - **Migrations** - Generate and run database migrations with shadow DB pre-validation
 - **Multiple Drivers** - Support for remote (WebSocket) and embedded modes (memory, file, rocksdb)
@@ -118,7 +121,8 @@ import { createModel } from '@woss/dali-orm/query';
 
 const userModel = createModel(orm, usersTable);
 
-const activeUsers = await userModel.select()
+const activeUsers = await userModel
+  .select()
   .where((w) => w.eq('active', true))
   .orderBy('name', 'ASC')
   .limit(10)
@@ -339,18 +343,19 @@ The `Model` class wraps a `DaliORM` instance + `TableDefinition` so you can call
 
 **8 builder methods:**
 
-| Method      | Builder Returned      |
-| ----------- | --------------------- |
-| `.select()` | `SelectBuilder`       |
-| `.insert()` | `InsertBuilder`       |
-| `.update()` | `UpdateBuilder`       |
-| `.delete()` | `DeleteBuilder`       |
-| `.relate()` | `RelateBuilder`       |
-| `.create()` | `CreateBuilder`       |
-| `.upsert()` | `UpsertBuilder`       |
-| `.live()`   | `LiveQueryBuilder`    |
+| Method      | Builder Returned   |
+| ----------- | ------------------ |
+| `.select()` | `SelectBuilder`    |
+| `.insert()` | `InsertBuilder`    |
+| `.update()` | `UpdateBuilder`    |
+| `.delete()` | `DeleteBuilder`    |
+| `.relate()` | `RelateBuilder`    |
+| `.create()` | `CreateBuilder`    |
+| `.upsert()` | `UpsertBuilder`    |
+| `.live()`   | `LiveQueryBuilder` |
 
 **Factory import:**
+
 ```typescript
 import { createModel } from '@woss/dali-orm/query';
 // or via the DaliORM instance:
@@ -358,31 +363,33 @@ const userModel = orm.model(usersTable);
 ```
 
 **Usage — standard CRUD:**
+
 ```typescript
 // SELECT — where, orderBy, limit, etc.
-const adults = await userModel.select()
+const adults = await userModel
+  .select()
   .where((w) => w.gte('age', 18))
   .orderBy('name', 'ASC')
   .execute();
 
 // INSERT — single record
-const [newUser] = await userModel.insert()
+const [newUser] = await userModel
+  .insert()
   .one({ name: 'Alice', email: 'alice@example.com' })
   .execute();
 
 // UPDATE — by ID
-const [updated] = await userModel.update()
-  .id('user:123')
-  .data({ name: 'Bob' })
-  .execute();
+const [updated] = await userModel.update().id('user:123').data({ name: 'Bob' }).execute();
 
 // DELETE — with condition
-await userModel.delete()
+await userModel
+  .delete()
   .where((w) => w.eq('active', false))
   .execute();
 ```
 
 **Compare to free-standing builders:**
+
 ```typescript
 // Free-standing — pass orm + table every time
 select(orm, usersTable).where(...).execute();
@@ -395,6 +402,46 @@ The `.orm` getter provides access to the underlying `DaliORM` instance for raw o
 
 ```typescript
 await userModel.orm.insertInto(usersTable, { name: 'Charlie' });
+```
+
+## Statement Builders
+
+Additional SurrealQL statement builders in `@woss/dali-orm/query`:
+
+```typescript
+import {
+  kill,
+  rebuildIndex,
+  info,
+  showChanges,
+  use,
+  let_,
+  return_,
+  throw_,
+  beginTransaction,
+  commitTransaction,
+  cancelTransaction,
+} from '@woss/dali-orm/query';
+
+// Kill a live query
+await kill(orm).id('query-uuid').execute();
+
+// Rebuild index
+await rebuildIndex(orm).name('idx_name').on('table_name').execute();
+
+// Get database info
+await info(orm).forScope('DB').execute();
+
+// Show changes
+await showChanges(orm).table('user').since(recordId).limit(100).execute();
+
+// Switch namespace/database
+await use(orm).namespace('new_ns').database('new_db').execute();
+
+// Control flow
+await let_(orm).name('now').value($('time::now()')).execute();
+await return_(orm).raw('$now').execute();
+await throw_(orm).message('"error message"').execute();
 ```
 
 ## Conditions
@@ -435,6 +482,8 @@ notInside('status', ['banned']); // status NOT IN [...]
 all('tags', ['featured', 'new']); // CONTAINSALL
 any('tags', ['sale', 'new']); // CONTAINSANY
 ```
+
+**Null semantics** — `eq('field', null)` emits SurrealQL literal `null` (`field = null`). Use `isNull('field')` / `isNotNull('field')` when you need `= NONE` / `!= NONE` semantics. In SurrealDB, `null` and `NONE` are distinct — `NONE` matches undefined/missing fields, `null` matches explicit null values.
 
 ### Combinators
 
@@ -490,6 +539,8 @@ The ORM conditions are built on top of the SurrealDB SDK's internal condition fu
 - Full TypeScript type inference
 - Proper escaping of parameter values
 - Consistent behavior with SDK methods
+
+**Canonical SurrealQL serialization** — All query builders and migration codegen route through a shared internal serializer for consistent identifier escaping, string encoding, and value formatting. This is an internal implementation detail with no public API impact.
 
 ## Database Functions
 
@@ -617,6 +668,10 @@ const result = await select(orm, users)
   .execute();
 ```
 
+### SurrealQL Compatibility
+
+DaliORM targets SurrealDB v3.x. For a comprehensive map of supported SurrealQL features, raw-SQL-only surfaces, and parity-optional resources, see [`meta/parity-matrix.md`](./meta/parity-matrix.md).
+
 ## Driver Connection
 
 ### NodeDriver (Remote)
@@ -728,13 +783,12 @@ const tableDef = orm.table('user');
 const userModel = orm.model(usersTable);
 
 // No need to pass orm/table on every call
-const results = await userModel.select()
+const results = await userModel
+  .select()
   .where((w) => w.eq('active', true))
   .execute();
 
-const [newUser] = await userModel.insert()
-  .one({ name: 'Alice' })
-  .execute();
+const [newUser] = await userModel.insert().one({ name: 'Alice' }).execute();
 ```
 
 `orm.table()` and `orm.model()` serve different purposes — use `table()` to inspect schema definitions (column types, options), use `model()` when you want to run queries against a table.
@@ -764,6 +818,40 @@ await orm.use('new_namespace', 'new_database');
 // Close connection
 await orm.disconnect();
 ```
+
+### Transactions
+
+```typescript
+import { beginTransaction, commitTransaction, cancelTransaction } from '@woss/dali-orm/query';
+
+// Raw transaction control
+await beginTransaction(orm).execute();
+// ... raw queries ...
+await commitTransaction(orm).execute();
+// On error: await cancelTransaction(orm).execute();
+
+// ORM convenience wrapper
+await orm.transaction(async (tx) => {
+  await tx.query('CREATE user SET name = $name', { name: 'test' });
+  await tx.query('UPDATE user SET active = true');
+  // Auto-commits on success, auto-cancels on throw
+});
+```
+
+### Parity-Optional Surfaces
+
+Some SurrealDB resource types are intentionally not exposed through the builder API. These are niche or experimental features that are better served through raw SurrealQL:
+
+| Resource                | Status          | Raw-SQL Escape Hatch                                                 |
+| ----------------------- | --------------- | -------------------------------------------------------------------- |
+| `DEFINE USER`           | Parity-optional | `orm.query('DEFINE USER ...')`                                       |
+| `DEFINE CONFIG`         | Parity-optional | `orm.query('DEFINE CONFIG ...')`                                     |
+| `DEFINE BUCKET`         | Parity-optional | `orm.query('DEFINE BUCKET ...')`                                     |
+| `DEFINE MODULE`         | Parity-optional | `orm.query('DEFINE MODULE ...')`                                     |
+| `DEFINE PARAM`          | Parity-optional | `defineParam(orm, 'name', value)` or `orm.query('DEFINE PARAM ...')` |
+| `ALTER` (most subtypes) | Raw-SQL only    | `orm.query('ALTER TABLE ... ADD FIELD ...')`                         |
+
+For a comprehensive compatibility map, see [`meta/parity-matrix.md`](./meta/parity-matrix.md).
 
 ## Configuration Files
 
@@ -959,7 +1047,7 @@ The demo includes:
 
 ```typescript
 import { defineTable, string, int } from '@woss/dali-orm';
-import { InferSelectResult, InferInsertInput } from '@woss/dali-orm/query/types';
+import { InferSelectResult, InferInsertInput } from '@woss/dali-orm/query';
 
 const userSchema = defineTable('user', {
   id: string('id'),
@@ -980,22 +1068,18 @@ type NewUser = InferInsertInput<typeof userSchema>;
 **SDK type inference utilities** (drives DaliORM typed CRUD methods):
 
 ```typescript
-import type {
-  InferSelectResult,
-  InferInsertData,
-  InferUpdateData,
-} from '@woss/dali-orm/sdk/infer-types';
+import type { InferSelectResult, InferInsertInput, InferUpdateInput } from '@woss/dali-orm/query';
 
 // InferSelectResult<T> — shape of records returned from queries (includes `id: string`)
 type User = InferSelectResult<typeof userSchema>;
 // { id: string; name: string; email: string; age: number }
 
-// InferInsertData<T> — shape of data required for inserts (excludes auto-generated `id`)
-type NewUser = InferInsertData<typeof userSchema>;
+// InferInsertInput<T> — shape of data required for inserts (excludes auto-generated `id`)
+type NewUser = InferInsertInput<typeof userSchema>;
 // { name: string; email: string; age: number }
 
-// InferUpdateData<T> — all fields optional for partial updates
-type UserUpdate = InferUpdateData<typeof userSchema>;
+// InferUpdateInput<T> — all fields optional for partial updates
+type UserUpdate = InferUpdateInput<typeof userSchema>;
 // Partial<{ id: string; name: string; email: string; age: number }>
 ```
 
@@ -1039,15 +1123,15 @@ import { record } from '@woss/dali-orm/sdk/schema/column/record';
 
 const notesTable = defineTable('notes', {
   title: string('title'),
-  content: string('content'),       // ← string field, NOT coerced
-  author: string('author'),          // ← NOT record() — string with colons (e.g. "repo: org/name") preserved as-is
+  content: string('content'), // ← string field, NOT coerced
+  author: string('author'), // ← NOT record() — string with colons (e.g. "repo: org/name") preserved as-is
   related_note: record('related_note', { table: 'notes' }), // ← record()-typed field, coerced to RecordId
 });
 
 await driver.create('notes', {
   title: 'Hello',
   content: 'repo: woss/dali is active', // ← preserved as string
-  related_note: 'notes:abc123',          // ← coerced to RecordId('notes', 'abc123')
+  related_note: 'notes:abc123', // ← coerced to RecordId('notes', 'abc123')
 });
 ```
 

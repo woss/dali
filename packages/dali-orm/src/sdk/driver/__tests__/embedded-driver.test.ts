@@ -6,6 +6,7 @@
  */
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 import { EmbeddedDriver } from '../embedded-driver.js';
+import { transformDatetimeValues } from '../driver-utils.js';
 
 // ============================================================================
 // Mock @surrealdb/node
@@ -207,29 +208,29 @@ describe('EmbeddedDriver', () => {
 
   describe('transformDatetimeValues', () => {
     it('returns null as null', () => {
-      expect((driver as any).transformDatetimeValues(null)).toBeNull();
+      expect(transformDatetimeValues(null)).toBeNull();
     });
 
     it('returns undefined as undefined', () => {
-      expect((driver as any).transformDatetimeValues(undefined)).toBeUndefined();
+      expect(transformDatetimeValues(undefined)).toBeUndefined();
     });
 
     it('returns primitives unchanged', () => {
-      expect((driver as any).transformDatetimeValues('hello')).toBe('hello');
-      expect((driver as any).transformDatetimeValues(42)).toBe(42);
-      expect((driver as any).transformDatetimeValues(true)).toBe(true);
+      expect(transformDatetimeValues('hello')).toBe('hello');
+      expect(transformDatetimeValues(42)).toBe(42);
+      expect(transformDatetimeValues(true)).toBe(true);
     });
 
     it('transforms plain object properties recursively', () => {
       const input = { a: '2024-01-01T00:00:00Z', b: { c: 'nested' } };
-      const result = (driver as any).transformDatetimeValues(input);
+      const result = transformDatetimeValues(input);
       expect(result).toEqual(input);
       expect(result).not.toBe(input); // different reference
     });
 
     it('transforms array items', () => {
       const input = [{ name: 'item1' }, { name: 'item2' }];
-      const result = (driver as any).transformDatetimeValues(input);
+      const result = transformDatetimeValues(input);
       expect(result).toEqual(input);
       expect(result).not.toBe(input);
     });
@@ -239,28 +240,28 @@ describe('EmbeddedDriver', () => {
         x = 1;
       }
       const instance = new CustomClass();
-      const result = (driver as any).transformDatetimeValues(instance);
+      const result = transformDatetimeValues(instance);
       expect(result).toBe(instance); // same reference
     });
 
     it('handles null prototype objects', () => {
       const input = Object.create(null);
       input.a = 1;
-      const result = (driver as any).transformDatetimeValues(input);
+      const result = transformDatetimeValues(input);
       expect(result).toEqual({ a: 1 });
     });
 
     it('handles empty objects', () => {
-      expect((driver as any).transformDatetimeValues({})).toEqual({});
+      expect(transformDatetimeValues({})).toEqual({});
     });
 
     it('handles empty arrays', () => {
-      expect((driver as any).transformDatetimeValues([])).toEqual([]);
+      expect(transformDatetimeValues([])).toEqual([]);
     });
 
     it('handles deeply nested structures', () => {
       const input = { a: [{ b: { c: [1, { d: 2 }] } }] };
-      const result = (driver as any).transformDatetimeValues(input);
+      const result = transformDatetimeValues(input);
       expect(result).toEqual(input);
     });
   });

@@ -376,7 +376,7 @@ function serializeAccess(access: any[] | undefined): SerializedAccess[] {
     level: a.config?.level,
     signup: a.config?.record?.signup,
     signin: a.config?.record?.signin,
-    duration: a.config?.duration?.session,
+    duration: a.config?.duration?.session ?? a.config?.duration,
   }));
 }
 

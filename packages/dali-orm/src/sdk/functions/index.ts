@@ -135,6 +135,8 @@ export {
 } from './math.js';
 // Meta
 export { metaId, metaTable, metaTb } from './meta.js';
+// ML
+export { mlPredict, mlTrain } from './ml.js';
 // Not
 export { not } from './not.js';
 // Object

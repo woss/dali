@@ -10,7 +10,12 @@ import {
   array,
   object,
   uuid,
+  set,
+  bytes,
+  literal,
 } from '../simple-builders.ts';
+import { record } from '../record.js';
+import { SurrealQLGenerator } from '../../../../migration/core/generator.js';
 
 describe('simple-builders', () => {
   describe('wrapper functions', () => {
@@ -82,6 +87,27 @@ describe('simple-builders', () => {
       expect(b.name).toBe('id');
       const def = b.build();
       expect(def.config.type).toBe('uuid');
+    });
+
+    it('set() creates a set builder', () => {
+      const b = set('tags');
+      expect(b.name).toBe('tags');
+      const def = b.build();
+      expect(def.config.type).toBe('set');
+    });
+
+    it('bytes() creates a bytes builder', () => {
+      const b = bytes('data');
+      expect(b.name).toBe('data');
+      const def = b.build();
+      expect(def.config.type).toBe('bytes');
+    });
+
+    it('literal() creates a literal builder', () => {
+      const b = literal('color');
+      expect(b.name).toBe('color');
+      const def = b.build();
+      expect(def.config.type).toBe('literal');
     });
 
     it('all wrapper types are distinct', () => {
@@ -299,6 +325,82 @@ describe('simple-builders', () => {
       expect(def1.config.unique).toBe(true);
       expect(def2.config.optional).toBeUndefined();
       expect(def2.config.unique).toBeUndefined();
+    });
+  });
+
+  describe('record reference', () => {
+    it('record().reference({ onDelete: "CASCADE" }) sets onDelete', () => {
+      const b = record('users').reference({ onDelete: 'CASCADE' });
+      const def = b.build('posts', 'owner');
+      expect(def.config.onDelete).toBe('CASCADE');
+    });
+
+    it('record().reference({ onDelete: "SET NULL" }) sets onDelete', () => {
+      const b = record('users').reference({ onDelete: 'SET NULL' });
+      const def = b.build('posts', 'owner');
+      expect(def.config.onDelete).toBe('SET NULL');
+    });
+
+    it('record().reference({ onDelete: "RESTRICT" }) sets onDelete', () => {
+      const b = record('users').reference({ onDelete: 'RESTRICT' });
+      const def = b.build('posts', 'owner');
+      expect(def.config.onDelete).toBe('RESTRICT');
+    });
+
+    it('reference is chainable with other builder methods', () => {
+      const b = record('users').reference({ onDelete: 'CASCADE' }).optional();
+      const def = b.build('posts', 'owner');
+      expect(def.config.onDelete).toBe('CASCADE');
+      expect(def.config.optional).toBe(true);
+    });
+
+    it('reference without calling reference() leaves onDelete undefined', () => {
+      const b = record('users');
+      const def = b.build('posts', 'owner');
+      expect(def.config.onDelete).toBeUndefined();
+    });
+  });
+
+  describe('generator REFERENCE ON DELETE', () => {
+    it('emits REFERENCE ON DELETE CASCADE in field SQL', () => {
+      const gen = new SurrealQLGenerator();
+      const sql = gen.generateFieldDefinition({
+        name: 'owner',
+        config: { type: 'record', recordTable: 'users', onDelete: 'CASCADE' },
+        tableName: 'projects',
+      });
+      expect(sql).toContain('REFERENCE ON DELETE CASCADE');
+      expect(sql).toContain('TYPE record<users>');
+    });
+
+    it('emits REFERENCE ON DELETE SET NULL in field SQL', () => {
+      const gen = new SurrealQLGenerator();
+      const sql = gen.generateFieldDefinition({
+        name: 'owner',
+        config: { type: 'record', recordTable: 'users', onDelete: 'SET NULL' },
+        tableName: 'projects',
+      });
+      expect(sql).toContain('REFERENCE ON DELETE SET NULL');
+    });
+
+    it('emits REFERENCE ON DELETE RESTRICT in field SQL', () => {
+      const gen = new SurrealQLGenerator();
+      const sql = gen.generateFieldDefinition({
+        name: 'owner',
+        config: { type: 'record', recordTable: 'users', onDelete: 'RESTRICT' },
+        tableName: 'projects',
+      });
+      expect(sql).toContain('REFERENCE ON DELETE RESTRICT');
+    });
+
+    it('omits REFERENCE ON DELETE when onDelete is not set', () => {
+      const gen = new SurrealQLGenerator();
+      const sql = gen.generateFieldDefinition({
+        name: 'owner',
+        config: { type: 'record', recordTable: 'users' },
+        tableName: 'projects',
+      });
+      expect(sql).not.toContain('REFERENCE ON DELETE');
     });
   });
 });

@@ -196,7 +196,7 @@ export class MigrationJournalManager {
       idx: nextIdx,
       when: when ?? '', // caller must provide — no JS timestamp fallback
       tag,
-      breakpoints: statements.map(() => true),
+      breakpoints: statements.map(() => false),
       hash: migrationHash,
     };
 

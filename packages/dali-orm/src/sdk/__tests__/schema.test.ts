@@ -10,6 +10,9 @@ import {
   type FunctionConfig,
   FunctionConfigSchema,
   functionToSQL,
+  defineNamespace,
+  defineDatabase,
+  defineSequence,
   generateSigninFromSQL,
   generateSignupFromSQL,
   generateSignupFromTable,
@@ -628,5 +631,174 @@ describe('EventConfigSchema validation', () => {
       retry: -1,
     });
     expect(result.success).toBe(true);
+  });
+});
+
+// =============================================================================
+// defineNamespace builder
+// =============================================================================
+
+describe('defineNamespace builder', () => {
+  it('returns name from builder', () => {
+    const ns = defineNamespace('production');
+    expect(ns.name).toBe('production');
+  });
+
+  it('throws for empty name', () => {
+    expect(() => defineNamespace('')).toThrow('Namespace name is required');
+  });
+
+  it('generates basic SQL via toSQL()', () => {
+    const sql = defineNamespace('production').toSQL();
+    expect(sql).toBe('DEFINE NAMESPACE production');
+  });
+
+  it('chains .comment()', () => {
+    const sql = defineNamespace('staging').comment('Staging env').toSQL();
+    expect(sql).toBe('DEFINE NAMESPACE staging COMMENT "Staging env"');
+  });
+
+  it('chains .ifNotExists()', () => {
+    const sql = defineNamespace('dev').ifNotExists().toSQL();
+    expect(sql).toBe('DEFINE NAMESPACE IF NOT EXISTS dev');
+  });
+
+  it('chains all options together', () => {
+    const sql = defineNamespace('test').ifNotExists().comment('Test env').toSQL();
+    expect(sql).toBe('DEFINE NAMESPACE IF NOT EXISTS test COMMENT "Test env"');
+  });
+
+  it('returns config via build()', () => {
+    const config = defineNamespace('prod').comment('Prod').ifNotExists().build();
+    expect(config).toEqual({ name: 'prod', comment: 'Prod', ifNotExists: true });
+  });
+
+  it('build() without options returns minimal config', () => {
+    const config = defineNamespace('basic').build();
+    expect(config).toEqual({ name: 'basic' });
+  });
+});
+
+// =============================================================================
+// DATABASE BUILDER
+// =============================================================================
+
+describe('defineDatabase', () => {
+  it('throws on empty name', () => {
+    expect(() => defineDatabase('')).toThrow('Database name is required');
+  });
+
+  it('name getter returns the database name', () => {
+    expect(defineDatabase('mydb').name).toBe('mydb');
+  });
+
+  it('toSQL() generates basic DEFINE DATABASE', () => {
+    expect(defineDatabase('testdb').toSQL()).toBe('DEFINE DATABASE testdb');
+  });
+
+  it('toSQL() with comment', () => {
+    expect(defineDatabase('testdb').comment('Test database').toSQL()).toBe(
+      'DEFINE DATABASE testdb COMMENT "Test database"',
+    );
+  });
+
+  it('toSQL() with ifNotExists', () => {
+    expect(defineDatabase('testdb').ifNotExists().toSQL()).toBe(
+      'DEFINE DATABASE IF NOT EXISTS testdb',
+    );
+  });
+
+  it('toSQL() with all options', () => {
+    expect(defineDatabase('testdb').comment('Test').ifNotExists().toSQL()).toBe(
+      'DEFINE DATABASE IF NOT EXISTS testdb COMMENT "Test"',
+    );
+  });
+
+  it('build() returns config object', () => {
+    const config = defineDatabase('mydb').comment('My DB').ifNotExists().build();
+    expect(config).toEqual({ name: 'mydb', comment: 'My DB', ifNotExists: true });
+  });
+
+  it('build() without options returns minimal config', () => {
+    const config = defineDatabase('basic').build();
+    expect(config).toEqual({ name: 'basic' });
+  });
+});
+
+// ===========================================================================
+// defineSequence
+// ===========================================================================
+describe('defineSequence', () => {
+  it('throws for empty name', () => {
+    expect(() => defineSequence('')).toThrow('Sequence name is required');
+  });
+
+  it('toSQL() returns basic DEFINE SEQUENCE', () => {
+    expect(defineSequence('my_seq').toSQL()).toBe('DEFINE SEQUENCE IF NOT EXISTS my_seq');
+  });
+
+  it('toSQL() with start and increment', () => {
+    expect(defineSequence('my_seq').start(1).increment(2).toSQL()).toBe(
+      'DEFINE SEQUENCE IF NOT EXISTS my_seq START 1 INCREMENT 2',
+    );
+  });
+
+  it('toSQL() with min and max', () => {
+    expect(defineSequence('seq1').min(0).max(1000).toSQL()).toBe(
+      'DEFINE SEQUENCE IF NOT EXISTS seq1 MIN 0 MAX 1000',
+    );
+  });
+
+  it('toSQL() with cache and cycle', () => {
+    expect(defineSequence('seq1').cache(10).cycle().toSQL()).toBe(
+      'DEFINE SEQUENCE IF NOT EXISTS seq1 CACHE 10 CYCLE',
+    );
+  });
+
+  it('toSQL() with comment', () => {
+    expect(defineSequence('seq1').comment('my sequence').toSQL()).toBe(
+      'DEFINE SEQUENCE IF NOT EXISTS seq1 COMMENT "my sequence"',
+    );
+  });
+
+  it('toSQL() with all options', () => {
+    expect(
+      defineSequence('full_seq')
+        .start(1)
+        .increment(5)
+        .min(0)
+        .max(99999)
+        .cache(100)
+        .cycle()
+        .comment('full sequence')
+        .toSQL(),
+    ).toBe(
+      'DEFINE SEQUENCE IF NOT EXISTS full_seq START 1 INCREMENT 5 MIN 0 MAX 99999 CACHE 100 CYCLE COMMENT "full sequence"',
+    );
+  });
+
+  it('build() returns config object', () => {
+    const config = defineSequence('my_seq').start(1).increment(2).cycle().build();
+    expect(config).toEqual({
+      name: 'my_seq',
+      start: 1,
+      increment: 2,
+      cycle: true,
+    });
+  });
+
+  it('chain returns this for method chaining', () => {
+    const builder = defineSequence('test');
+    expect(builder.start(1)).toBe(builder);
+    expect(builder.increment(1)).toBe(builder);
+    expect(builder.min(0)).toBe(builder);
+    expect(builder.max(100)).toBe(builder);
+    expect(builder.cache(10)).toBe(builder);
+    expect(builder.cycle()).toBe(builder);
+    expect(builder.comment('c')).toBe(builder);
+  });
+
+  it('name property returns sequence name', () => {
+    expect(defineSequence('xyz').name).toBe('xyz');
   });
 });

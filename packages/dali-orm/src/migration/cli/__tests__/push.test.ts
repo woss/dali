@@ -193,6 +193,7 @@ describe('tablesToDdl', () => {
       select: 'NONE',
       create: 'NONE',
       update: 'NONE',
+      delete: 'NONE',
     });
   });
 
@@ -219,6 +220,7 @@ describe('tablesToDdl', () => {
       select: 'FOR select FULL, FOR create NONE',
       create: 'FOR select FULL, FOR create NONE',
       update: 'FOR select FULL, FOR create NONE',
+      delete: 'FOR select FULL, FOR create NONE',
     });
   });
 

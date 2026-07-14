@@ -393,7 +393,7 @@ describe('generateFullMigration', () => {
       },
     ];
 
-    const result = generateFullMigration(tables, generator);
+    const _result = generateFullMigration(tables, generator);
   });
 });
 

@@ -7,7 +7,7 @@ export default defineConfig({
     },
     entry: ['src/**/*.ts', '!src/**/__tests__/**/*.ts', '!**/*.spec.ts', '!**/*.test.ts'],
     unbundle: true,
-    exports: true,
+    exports: false,
     dts: true,
     target: 'ES2022',
     format: 'esm',

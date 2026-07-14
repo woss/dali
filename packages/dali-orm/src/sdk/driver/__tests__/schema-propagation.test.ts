@@ -72,7 +72,13 @@ vi.mock('../node-driver.js', () => {
   const query = vi.fn();
   const getUrl = vi.fn();
   const isConnected = vi.fn().mockReturnValue(true);
-  (globalThis as any).__schemaTestNodeDriver = { connect, query, getUrl, isConnected, schema: undefined };
+  (globalThis as any).__schemaTestNodeDriver = {
+    connect,
+    query,
+    getUrl,
+    isConnected,
+    schema: undefined,
+  };
   return {
     NodeDriver: class {
       connect = connect;
@@ -90,7 +96,13 @@ vi.mock('../embedded-driver.js', () => {
   const query = vi.fn();
   const getUrl = vi.fn();
   const isConnected = vi.fn().mockReturnValue(true);
-  (globalThis as any).__schemaTestEmbeddedDriver = { connect, query, getUrl, isConnected, schema: undefined };
+  (globalThis as any).__schemaTestEmbeddedDriver = {
+    connect,
+    query,
+    getUrl,
+    isConnected,
+    schema: undefined,
+  };
   return {
     EmbeddedDriver: class {
       connect = connect;
