@@ -125,17 +125,17 @@ describe('connect()', () => {
     expect(getDB()).toBe(orm);
   });
 
-  test('error: propagates migration errors that are not "No schema changes"', async () => {
+  test('error: wraps non-migration errors in ConnectionError', async () => {
     mockGenerateAndApplyMigration.mockRejectedValueOnce(new Error('Database connection lost'));
 
-    await expect(connect()).rejects.toThrow('Database connection lost');
+    await expect(connect()).rejects.toThrow('Failed to connect to SurrealDB');
     expect(mockConnect).toHaveBeenCalledTimes(1);
   });
 
-  test('error: propagates DaliORM.connect failures', async () => {
+  test('error: wraps DaliORM.connect failures in ConnectionError', async () => {
     mockConnect.mockRejectedValueOnce(new Error('Connection refused'));
 
-    await expect(connect()).rejects.toThrow('Connection refused');
+    await expect(connect()).rejects.toThrow('Failed to connect to SurrealDB');
     expect(mockGenerateAndApplyMigration).not.toHaveBeenCalled();
   });
 });

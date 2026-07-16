@@ -7,6 +7,7 @@
 - Keyboard shortcuts on layout: `?`/`Cmd+/` opens help dialog, `g h/m/w/s` for navigation, `/` and `Cmd+K` focus search input
 - Dynamic document title via `<svelte:head>` — updates per route (Home, Memories, Workspaces, Settings, Sign In, Register)
 - Active nav link underline indicator (`.nav-link.btn-active::after`)
+- Typed error hierarchy (`errors.ts`): `MemoryError`, `TagError`, `WorkspaceError` — all extend `DaliOrmError` from `@woss/dali-orm/core/errors` with optional structured `context` object
 
 ### Changed
 

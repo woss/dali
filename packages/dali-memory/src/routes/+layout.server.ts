@@ -33,7 +33,7 @@ export const load: LayoutServerLoad = async ({ locals }) => {
 
       // Load workspaces list for nav
       const wsResult = await driver.query<{ id: unknown; name: string }>(
-        'SELECT id, name FROM workspaces ORDER BY name ASC',
+        'SELECT id, name FROM workspaces WHERE deleted_at = none ORDER BY name ASC',
       );
       const seen = new Set<string>();
       for (const ws of wsResult ?? []) {

@@ -3,9 +3,9 @@
   import { goto, invalidateAll } from '$app/navigation';
   import { slide } from 'svelte/transition';
   import { page } from '$app/stores';
-  import { toast } from '$lib/components/toast.svelte.ts';
+  import { toast } from 'svelte-sonner';
 
-  let { data, form } = $props();
+  let { data, form } = $props<{ data: any; form?: any }>();
 
   let workspaceId = $derived($page.params.id || '');
   let workspaceName = $derived(data.workspace?.name || '');
@@ -64,7 +64,7 @@
   let memoriesLoading = $state(true);
 
   $effect(() => {
-    const ms = data.memories || [];
+    const ms: Array<{ id: string; slug: string; name: string; content: string; memory_type: string; created_at: string; tags: Array<{ id: string; name: string }>; matched_on?: 'vector' | 'fulltext' | 'both' }> = data.memories || [];
     const off = data.offset ?? 0;
 
     // Form action just completed — reload fresh data from page 0

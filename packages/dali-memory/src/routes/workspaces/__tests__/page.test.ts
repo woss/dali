@@ -30,7 +30,7 @@ const { mockToast, mockInvalidateAll } = vi.hoisted(() => ({
 // Module mocks — verify expected imports exist
 // =============================================================================
 
-vi.mock('$lib/components/toast.svelte.ts', () => ({
+vi.mock('svelte-sonner', () => ({
   toast: mockToast,
 }));
 

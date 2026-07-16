@@ -2,9 +2,9 @@
   import { enhance } from '$app/forms';
   import { goto, invalidateAll } from '$app/navigation';
   import { navigating, page } from '$app/stores';
-  import { toast } from '$lib/components/toast.svelte.ts';
+  import { toast } from 'svelte-sonner';
 
-  let { data, form } = $props();
+  let { data, form } = $props<{ data: any; form?: any }>();
 
   let searchQuery = $derived(data.searchQuery ?? '');
   let allTags = $derived(data.allTags ?? []);

@@ -192,7 +192,7 @@ describe('Workspace memories page server — load', () => {
     ).rejects.toThrow('Workspace not found');
 
     expect(mockDbQuery).toHaveBeenCalledWith(
-      'SELECT id, name, description, is_personal FROM workspaces WHERE id = $id',
+      'SELECT id, name, description, is_personal FROM workspaces WHERE id = $id AND deleted_at = none',
       expect.any(Object),
     );
     // RecordId is serialized by SurrealDB client — verify content directly
@@ -211,7 +211,7 @@ describe('Workspace memories page server — load', () => {
 
     expect(result.workspace).toEqual(sampleWorkspace);
     expect(mockDbQuery).toHaveBeenCalledWith(
-      'SELECT id, name, description, is_personal FROM workspaces WHERE id = $id',
+      'SELECT id, name, description, is_personal FROM workspaces WHERE id = $id AND deleted_at = none',
       expect.any(Object),
     );
     expect(mockDbQuery.mock.calls[0][1].id.toString()).toBe('workspaces:ws_001');

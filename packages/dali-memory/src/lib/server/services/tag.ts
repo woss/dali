@@ -1,7 +1,11 @@
 import { RecordId } from 'surrealdb';
+import { QueryError } from '@woss/dali-orm/core/errors';
+import { createLogger, CAT } from '../logger';
 import { getDB } from '../db/connection';
 import { tagsTable, memoryTagsTable } from '../db/schema';
 import type { TagRecord, MemoryRecord } from './types';
+
+const log = createLogger(CAT.db);
 
 /** Strip SurrealQL angle-bracket escaping from RecordId.toString() */
 function stripBrackets(s: string): string {
@@ -21,21 +25,41 @@ function normalizeId(id: string): string {
   return clean.includes(':') ? clean : `memories:${clean}`;
 }
 
+async function withQueryError<T>(operation: string, fn: () => Promise<T>): Promise<T> {
+  try {
+    return await fn();
+  } catch (error) {
+    if (error instanceof QueryError) throw error;
+    log.error(`${operation} failed`, {
+      error: error instanceof Error ? error.message : String(error),
+      className: error?.constructor?.name ?? 'Unknown',
+    });
+    throw new QueryError(`${operation} failed`, {
+      operation,
+      cause: error instanceof Error ? error : new Error(String(error)),
+    });
+  }
+}
+
 export class TagService {
   async createTag(name: string): Promise<TagRecord> {
     const db = getDB();
 
     // Check for existing tag with same name (unique constraint in schema)
-    const existing = await db
-      .model(tagsTable)
-      .select()
-      .where((w) => w.eq('name', name))
-      .execute();
+    const existing = await withQueryError('createTag:select', () =>
+      db
+        .model(tagsTable)
+        .select()
+        .where((w) => w.eq('name', name))
+        .execute(),
+    );
     if (existing.length > 0) {
       return existing[0] as unknown as TagRecord;
     }
 
-    const result = await db.model(tagsTable).insert().one({ name }).execute();
+    const result = await withQueryError('createTag:insert', () =>
+      db.model(tagsTable).insert().one({ name }).execute(),
+    );
 
     return result[0] as unknown as TagRecord;
   }
@@ -43,11 +67,13 @@ export class TagService {
   async getTag(id: string): Promise<TagRecord | null> {
     const db = getDB();
 
-    const result = await db
-      .model(tagsTable)
-      .select()
-      .where((w) => w.eq('id', rawId(id)))
-      .execute();
+    const result = await withQueryError('getTag', () =>
+      db
+        .model(tagsTable)
+        .select()
+        .where((w) => w.eq('id', rawId(id)))
+        .execute(),
+    );
 
     return (result[0] as unknown as TagRecord) ?? null;
   }
@@ -55,11 +81,13 @@ export class TagService {
   async findByName(name: string): Promise<TagRecord | null> {
     const db = getDB();
 
-    const result = await db
-      .model(tagsTable)
-      .select()
-      .where((w) => w.eq('name', name))
-      .execute();
+    const result = await withQueryError('findByName', () =>
+      db
+        .model(tagsTable)
+        .select()
+        .where((w) => w.eq('name', name))
+        .execute(),
+    );
 
     return (result[0] as unknown as TagRecord) ?? null;
   }
@@ -67,7 +95,9 @@ export class TagService {
   async listTags(): Promise<TagRecord[]> {
     const db = getDB();
 
-    const result = await db.model(tagsTable).select().orderBy('name', 'ASC').execute();
+    const result = await withQueryError('listTags', () =>
+      db.model(tagsTable).select().orderBy('name', 'ASC').execute(),
+    );
 
     return result as unknown as TagRecord[];
   }
@@ -80,7 +110,9 @@ export class TagService {
     const tagNorm = stripBrackets(tagId);
     const tagIdFormatted = tagNorm.includes(':') ? tagNorm : `tags:${rawId(tagNorm)}`;
 
-    await db.model(memoryTagsTable).relate().from(memId).to(tagIdFormatted).execute();
+    await withQueryError('addTagToMemory', () =>
+      db.model(memoryTagsTable).relate().from(memId).to(tagIdFormatted).execute(),
+    );
   }
 
   async removeTagFromMemory(memoryId: string, tagId: string): Promise<void> {
@@ -91,10 +123,12 @@ export class TagService {
     const tagIdFormatted = tagNorm.includes(':') ? tagNorm : `tags:${rawId(tagNorm)}`;
 
     // Use RecordId objects so the embedded engine matches record-typed columns
-    await db.query('DELETE FROM memory_tags WHERE in = $memId AND out = $tagId', {
-      memId: new RecordId('memories', rawId(memId)),
-      tagId: new RecordId('tags', rawId(tagIdFormatted)),
-    });
+    await withQueryError('removeTagFromMemory', () =>
+      db.query('DELETE FROM memory_tags WHERE in = $memId AND out = $tagId', {
+        memId: new RecordId('memories', rawId(memId)),
+        tagId: new RecordId('tags', rawId(tagIdFormatted)),
+      }),
+    );
   }
 
   async getMemoryTags(memoryId: string): Promise<TagRecord[]> {
@@ -105,9 +139,11 @@ export class TagService {
 
     // Use RecordId object so the embedded engine matches graph edge traversal
     // from the correct record (string param in FROM doesn't resolve record edges).
-    const result = await db.query<TagRecord>('SELECT ->memory_tags->tags.* AS tags FROM $memId', {
-      memId: new RecordId(table, key),
-    });
+    const result = await withQueryError('getMemoryTags', () =>
+      db.query<TagRecord>('SELECT ->memory_tags->tags.* AS tags FROM $memId', {
+        memId: new RecordId(table, key),
+      }),
+    );
 
     // Extract tags from the nested structure
     if (result.length === 0) return [];
@@ -123,9 +159,11 @@ export class TagService {
 
     const db = getDB();
 
-    const result = await db.query<MemoryRecord>(
-      `SELECT * FROM memories WHERE ->memory_tags->tags.name CONTAINSANY $tagNames`,
-      { tagNames },
+    const result = await withQueryError('unionTags', () =>
+      db.query<MemoryRecord>(
+        `SELECT * FROM memories WHERE ->memory_tags->tags.name CONTAINSANY $tagNames`,
+        { tagNames },
+      ),
     );
 
     return result as unknown as MemoryRecord[];
@@ -148,9 +186,11 @@ export class TagService {
       params[`tagName${i}`] = name;
     });
 
-    const result = await db.query<MemoryRecord>(
-      `SELECT * FROM memories WHERE ${conditions}`,
-      params,
+    const result = await withQueryError('intersectTags', () =>
+      db.query<MemoryRecord>(
+        `SELECT * FROM memories WHERE ${conditions}`,
+        params,
+      ),
     );
 
     return result as unknown as MemoryRecord[];

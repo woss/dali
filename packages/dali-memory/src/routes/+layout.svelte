@@ -2,7 +2,7 @@
   import '../app.css';
   import { goto } from '$app/navigation';
   import { page } from '$app/stores';
-  import ToastContainer from '$lib/components/ToastContainer.svelte';
+  import { Toaster } from 'svelte-sonner';
   let { children } = $props();
 
   // Derive workspace context for nav
@@ -178,7 +178,7 @@
     {@render children()}
   </main>
 
-  <ToastContainer />
+  <Toaster />
 
   <!-- Keyboard shortcuts help dialog -->
   <dialog bind:this={helpDialog} class="modal">

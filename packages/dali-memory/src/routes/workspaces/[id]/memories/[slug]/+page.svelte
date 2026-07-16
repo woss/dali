@@ -1,7 +1,7 @@
 <script lang="ts">
   import { page } from '$app/stores';
   import { invalidateAll } from '$app/navigation';
-  import { toast } from '$lib/components/toast.svelte.ts';
+  import { toast } from 'svelte-sonner';
   import { enhance } from '$app/forms';
 
   let { data, form } = $props();

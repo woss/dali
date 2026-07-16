@@ -40,7 +40,7 @@ export const load: PageServerLoad = async (event) => {
   if (userId) {
     // Traverse the graph: user -> has_memory -> memory
     const [userData] = await db.query<Record<string, unknown>>(
-      'SELECT ->has_memory->memory.* AS memory FROM $userId',
+      'SELECT ->has_memory->memories.* AS memory FROM $userId',
       { userId },
     );
     const userMemories = (userData != null ? (userData as any)['memory'] : []) ?? [];
@@ -80,7 +80,7 @@ export const load: PageServerLoad = async (event) => {
   const allTags = await tagService.listTags();
   const workspaceNames: Record<string, string> = {};
   const allWorkspaces = await db.query<{ id: unknown; name: string }>(
-    'SELECT id, name FROM workspaces',
+    'SELECT id, name FROM workspaces WHERE deleted_at = none',
   );
   for (const ws of allWorkspaces) {
     workspaceNames[String((ws.id as unknown as RecordId).id)] = ws.name;
@@ -93,7 +93,7 @@ export const load: PageServerLoad = async (event) => {
   }));
   if (userId) {
     const userWsIds = await db.query<{ id: unknown }>(
-      'SELECT id FROM workspaces WHERE user_id = $userId',
+      'SELECT id FROM workspaces WHERE user_id = $userId AND deleted_at = none',
       { userId },
     );
     const userWsSet = new Set(
@@ -147,7 +147,7 @@ export const actions: Actions = {
       if (userRow?.id) {
         currentUserId = userRow.id;
         const wsCheck = await db.query<{ id: unknown }>(
-          'SELECT id FROM workspaces WHERE id = $wsId AND user_id = $userId',
+          'SELECT id FROM workspaces WHERE id = $wsId AND user_id = $userId AND deleted_at = none',
           { wsId: new RecordId('workspaces', workspace_id.split(':').pop()!), userId: userRow.id },
         );
         if (!wsCheck || wsCheck.length === 0) {

@@ -7,7 +7,7 @@ export const load: PageServerLoad = async () => {
     const db = getDB().getDriver();
     const [memories] = await db.query<{ count: number }>('SELECT count() AS count FROM memories');
     const [workspaces] = await db.query<{ count: number }>(
-      'SELECT count() AS count FROM workspaces',
+      'SELECT count() AS count FROM workspaces WHERE deleted_at = none',
     );
     const [tags] = await db.query<{ count: number }>('SELECT count() AS count FROM tags');
     return {

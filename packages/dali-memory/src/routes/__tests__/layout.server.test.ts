@@ -363,7 +363,7 @@ describe('Layout server load', () => {
 
     expect(mockDriverQuery).toHaveBeenNthCalledWith(
       2,
-      'SELECT id, name FROM workspaces ORDER BY name ASC',
+      'SELECT id, name FROM workspaces WHERE deleted_at = none ORDER BY name ASC',
     );
   });
 });

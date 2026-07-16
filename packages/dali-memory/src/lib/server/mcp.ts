@@ -27,6 +27,7 @@ const TOOL_MEMORIES_SEARCH = 'memories_search';
 const TOOL_TAGS_ADD = 'tags_add';
 const TOOL_TAGS_REMOVE = 'tags_remove';
 const TOOL_WORKSPACES_LIST = 'workspaces_list';
+const TOOL_MEMORIES_DELETE = 'memories_delete';
 
 // ---------------------------------------------------------------------------
 // Zod v4 input schemas
@@ -63,6 +64,11 @@ const TagsRemoveSchema = z.object({
 
 const WorkspacesListSchema = z.object({
   limit: z.number().optional(),
+});
+
+const MemoriesDeleteSchema = z.object({
+  memory_id: z.string(),
+  workspace_id: z.string(),
 });
 
 // ---------------------------------------------------------------------------
@@ -117,15 +123,25 @@ const WORKSPACES_LIST_INPUT_SCHEMA = {
   },
 };
 
+const MEMORIES_DELETE_INPUT_SCHEMA = {
+  type: 'object' as const,
+  properties: {
+    memory_id: { type: 'string' as const, description: 'The memory slug or ID to delete' },
+    workspace_id: { type: 'string' as const, description: 'The workspace the memory belongs to' },
+  },
+  required: ['memory_id', 'workspace_id'],
+};
+
 // ---------------------------------------------------------------------------
 // Factory: createMCPServer
 // ---------------------------------------------------------------------------
 
 /**
- * Creates a configured `Server` instance with 5 MCP tools:
+ * Creates a configured `Server` instance with 6 MCP tools:
  *
  * - memories_store    – Create a memory with auto-generated embedding
  * - memories_search   – Hybrid search across memories
+ * - memories_delete   – Delete a memory by slug or ID
  * - tags_add          – Create a tag and attach to a memory
  * - tags_remove       – Detach a tag from a memory
  * - workspaces_list   – List all workspaces
@@ -163,6 +179,11 @@ export function createMCPServer(): Server {
         name: TOOL_WORKSPACES_LIST,
         description: 'List all workspaces',
         inputSchema: WORKSPACES_LIST_INPUT_SCHEMA,
+      },
+      {
+        name: TOOL_MEMORIES_DELETE,
+        description: 'Delete a memory by slug or ID',
+        inputSchema: MEMORIES_DELETE_INPUT_SCHEMA,
       },
     ];
 
@@ -202,6 +223,9 @@ export function createMCPServer(): Server {
 
         case TOOL_WORKSPACES_LIST:
           return await timedTool(log, TOOL_WORKSPACES_LIST, () => handleWorkspacesList(), args);
+
+        case TOOL_MEMORIES_DELETE:
+          return await timedTool(log, TOOL_MEMORIES_DELETE, () => handleMemoriesDelete(args ?? {}), args);
 
         default:
           throw new McpError(ErrorCode.MethodNotFound, `Unknown tool: ${name}`);
@@ -386,7 +410,7 @@ async function handleWorkspacesList(): Promise<{
       description: string | null;
       is_personal: boolean;
       created_at: string;
-    }>('SELECT id, name, description, is_personal, created_at FROM workspaces ORDER BY name ASC');
+    }>('SELECT id, name, description, is_personal, created_at FROM workspaces WHERE deleted_at = none ORDER BY name ASC');
 
     const workspaces = (result ?? []).map((ws) => {
       const rawCreated = ws.created_at;
@@ -444,4 +468,34 @@ async function handleTagsRemove(
   return {
     content: [{ type: 'text', text: JSON.stringify({ removed: true }) }],
   };
+}
+
+async function handleMemoriesDelete(
+  rawArgs: Record<string, unknown>,
+): Promise<{ content: { type: 'text'; text: string }[]; isError?: boolean }> {
+  const args = MemoriesDeleteSchema.parse(rawArgs);
+
+  let embedder: EmbedderService;
+  try {
+    embedder = getEmbedder();
+  } catch {
+    return {
+      content: [{ type: 'text', text: 'Embedding service unavailable. Service may still be starting up.' }],
+      isError: true,
+    };
+  }
+  const memoryService = new MemoryService(embedder);
+
+  try {
+    await memoryService.deleteMemory(args.memory_id, args.workspace_id);
+    return {
+      content: [{ type: 'text', text: JSON.stringify({ deleted: true, id: args.memory_id }) }],
+    };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unknown error';
+    return {
+      content: [{ type: 'text', text: message }],
+      isError: true,
+    };
+  }
 }

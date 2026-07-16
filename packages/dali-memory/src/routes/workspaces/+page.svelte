@@ -1,11 +1,12 @@
 <script lang="ts">
   import { enhance } from '$app/forms';
   import { invalidateAll } from '$app/navigation';
-  import { toast } from '$lib/components/toast.svelte.ts';
+  import { toast } from 'svelte-sonner';
 
-  let { data } = $props();
+  let { data } = $props<{ data: any }>();
 
   let workspaces = $derived(data.workspaces || []);
+  let defaultWorkspaceId = $derived(data.defaultWorkspaceId || null);
   let createDialog: HTMLDialogElement | undefined = $state(undefined);
   let creating = $state(false);
   let createError = $state('');
@@ -107,7 +108,7 @@
       </form>
       <h3 class="mb-4 text-lg font-bold">Delete Workspace</h3>
       <p>Are you sure you want to delete <strong>{deleteTarget?.name}</strong> and all its memories?</p>
-      <p class="mt-1 text-sm opacity-70">This action cannot be undone.</p>
+      <p class="mt-1 text-sm opacity-70">This workspace will be archived and can be restored later.</p>
       {#if deleteError}
         <div role="alert" class="alert alert-error text-sm mt-3">{deleteError}</div>
       {/if}
@@ -150,12 +151,14 @@
                 >
                   View &rarr;
                 </a>
+                {#if ws.slug !== defaultWorkspaceId}
                 <button
                   onclick={() => { deleteTarget = { id: ws.id, name: ws.name }; deleteDialog?.showModal(); }}
                   class="btn btn-ghost btn-xs text-error"
                 >
                   Delete
                 </button>
+                {/if}
               </div>
             </div>
           </div>

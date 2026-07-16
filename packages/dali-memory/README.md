@@ -28,6 +28,7 @@ dali-memory/
 │   ├── hooks.server.test.ts    # Auth hook tests
 │   ├── lib/server/
 │   │   ├── config.ts           # Zod env var schema (DALI_MEMORY_* vars)
+│   │   ├── errors.ts           # Typed error hierarchy: MemoryError, TagError, WorkspaceError (extends DaliOrmError)
 │   │   ├── logger.ts           # LogTape with console + rotating file sinks
 │   │   ├── chunking/
 │   │   │   ├── index.ts        # Hierarchical content chunker (heading→paragraph→line→sentence)
@@ -237,18 +238,12 @@ Defined in `app.css` using the `@utility` directive (Tailwind v4 native):
 
 Built-in toast system backed by a Svelte 5 `$state` reactive store — no external dependencies.
 
-**Files:**
-
-| File                    | Role                                                                       |
-| ----------------------- | -------------------------------------------------------------------------- |
-| `toast.svelte.ts`       | Reactive store (`getToasts`, `addToast`, `removeToast`) + `toast` API      |
-| `Toast.svelte`          | Single toast — daisyUI alert, icon per type, auto-dismiss bar, close       |
-| `ToastContainer.svelte` | Fixed bottom-right stack, renders up to 5 toasts, pointer-events isolation |
-
 **Usage:**
 
+Uses [svelte-sonner](https://github.com/wobsoriano/svelte-sonner) for toast notifications. The `<Toaster />` component is placed in `+layout.svelte`.
+
 ```ts
-import { toast } from '$lib/components/toast.svelte';
+import { toast } from 'svelte-sonner';
 
 toast.success('Memory saved');
 toast.error('Failed to delete', 5000);
@@ -256,15 +251,13 @@ toast.info('Processing...');
 toast.warning('Disk space low');
 ```
 
-- `toast.success(msg, duration?)` — green alert with checkmark icon
-- `toast.error(msg, duration?)` — red alert with X-circle icon
-- `toast.info(msg, duration?)` — blue alert with info icon
-- `toast.warning(msg, duration?)` — yellow alert with triangle icon
-- Default `duration`: 3000ms (pass 0 for persistent — no auto-dismiss)
-- Each toast shows a progress bar that shrinks over `duration`
+- `toast.success(msg, duration?)` — green success toast
+- `toast.error(msg, duration?)` — red error toast
+- `toast.info(msg, duration?)` — blue info toast
+- `toast.warning(msg, duration?)` — yellow warning toast
+- Default `duration`: 3000ms
 - Manual close via X button
-- `ToastContainer` is placed in `+layout.svelte`, available on every page
-- Stack limited to 5 visible toasts (FIFO eviction)
+- `<Toaster />` in `+layout.svelte` makes toasts available on every page
 
 ### Pages
 
@@ -335,6 +328,35 @@ Page title updates via `<svelte:head>` based on current route path:
 9. Sets signed session cookie (`HMAC(email, secret)`)
 10. Registration creates user with `name`, `email`, and `pass` fields, auto-creates a personal workspace (`is_personal: true`) in the same transaction, sets it as the user's `default_workspace_id`, then auto-signs in
 11. Settings page provides a **Profile** section (auth-gated) to update name/email — validates format, checks email uniqueness, updates DB, and resigns the session cookie on email change
+
+## Error Handling
+
+Domain-specific typed error classes in `src/lib/server/errors.ts`. All extend `DaliOrmError` from `@woss/dali-orm/core/errors` and carry an optional `context` object for structured error data.
+
+| Error            | Scope                                     | Example Context            |
+| ---------------- | ----------------------------------------- | -------------------------- |
+| `MemoryError`    | Memory CRUD, search, embedding operations | `{ memoryId: 'mem_123' }`  |
+| `TagError`       | Tag create, attach, detach, list          | `{ tagName: 'important' }` |
+| `WorkspaceError` | Workspace create, delete, list            | `{ name: 'my-workspace' }` |
+
+### Usage
+
+```ts
+import { MemoryError, TagError, WorkspaceError } from '$lib/server/errors';
+
+// All errors are catchable as DaliOrmError
+try {
+  throw new MemoryError('Memory not found', { memoryId: 'mem_123' });
+} catch (err) {
+  if (err instanceof MemoryError) {
+    console.error(err.context?.memoryId); // 'mem_123'
+  }
+}
+```
+
+### Context Object
+
+Each error accepts an optional `Record<string, unknown>` as its second argument. The context is attached to the error instance and accessible as `.context`. This provides structured, machine-readable error data alongside the human-readable `.message`.
 
 ## API Key Auth (MCP)
 

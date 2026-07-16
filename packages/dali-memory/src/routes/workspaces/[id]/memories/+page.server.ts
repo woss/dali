@@ -24,7 +24,7 @@ export const load: PageServerLoad = async (event) => {
 
   // Verify workspace exists (and ownership when auth is enabled)
   let wsBindings: { id: RecordId; userId?: unknown } = { id: wsRecordId };
-  let wsQuery = 'SELECT id, name, description, is_personal FROM workspaces WHERE id = $id';
+  let wsQuery = 'SELECT id, name, description, is_personal FROM workspaces WHERE id = $id AND deleted_at = none';
   if (userEmail) {
     const [userRow] = await db.query<{ id: unknown }>(
       'SELECT id FROM users WHERE email = $email LIMIT 1',
@@ -121,7 +121,7 @@ export const actions: Actions = {
       );
       if (userRow?.id) {
         const ws = await db.query<{ id: string }>(
-          'SELECT id FROM workspaces WHERE id = $id AND user_id = $userId',
+          'SELECT id FROM workspaces WHERE id = $id AND user_id = $userId AND deleted_at = none',
           { id: new RecordId('workspaces', params.id), userId: userRow.id },
         );
         if (!ws?.[0]) {
@@ -180,7 +180,7 @@ export const actions: Actions = {
       );
       if (userRow?.id) {
         const ws = await db.query<{ id: string }>(
-          'SELECT id FROM workspaces WHERE id = $id AND user_id = $userId',
+          'SELECT id FROM workspaces WHERE id = $id AND user_id = $userId AND deleted_at = none',
           { id: new RecordId('workspaces', params.id), userId: userRow.id },
         );
         if (!ws?.[0]) {

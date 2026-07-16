@@ -34,7 +34,7 @@ describe('workspacesTable schema', () => {
 
   test('all columns are present (backward compatible)', () => {
     const columnNames = workspacesTable.columns.map((c) => c.name).sort();
-    expect(columnNames).toEqual(['created_at', 'description', 'is_personal', 'name', 'user_id']);
+    expect(columnNames).toEqual(['created_at', 'deleted_at', 'description', 'is_personal', 'name', 'user_id']);
   });
 
   test('existing string columns keep correct types', () => {

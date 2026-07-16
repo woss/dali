@@ -33,7 +33,7 @@ export const load: PageServerLoad = async ({ params }) => {
   const workspaceRows = await db.query<{
     id: string;
     name: string;
-  }>('SELECT id, name FROM workspaces WHERE id = $id', {
+  }>('SELECT id, name FROM workspaces WHERE id = $id AND deleted_at = none', {
     id: wsRecordId,
   });
   const workspace = workspaceRows?.[0] ?? null;

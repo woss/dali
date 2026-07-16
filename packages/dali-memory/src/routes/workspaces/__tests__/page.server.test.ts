@@ -225,7 +225,7 @@ describe('Workspaces page — load', () => {
     await pageModule.load();
 
     expect(mockDBQuery).toHaveBeenCalledWith(
-      'SELECT id, name, description, is_personal, created_at, count(<-workspace_id) AS memory_count FROM workspaces ORDER BY name ASC',
+      'SELECT id, name, description, is_personal, created_at, count(<-workspace_id) AS memory_count FROM workspaces WHERE deleted_at = none ORDER BY name ASC',
       {},
     );
   });
@@ -356,7 +356,12 @@ describe('Workspaces page — create action', () => {
 });
 
 describe('Workspaces page — delete action', () => {
-  test('delete action calls DELETE query with id', async () => {
+  test('delete action calls soft delete query with id', async () => {
+    // First call: getUserIdByEmail returns a userId
+    mockDBQuery.mockResolvedValueOnce([{ id: 'user:abc123' }]);
+    // Second call: default workspace check returns non-matching workspace
+    mockDBQuery.mockResolvedValueOnce([{ default_workspace_id: 'workspace:other' }]);
+    // Third call: soft delete update
     mockDBQuery.mockResolvedValueOnce(undefined);
 
     const form = new FormData();
@@ -367,11 +372,15 @@ describe('Workspaces page — delete action', () => {
       body: form,
     });
 
-    const result = await pageModule.actions.delete({ request } as any);
+    const result = await pageModule.actions.delete({
+      request,
+      locals: { userEmail: 'user@test.com' },
+    } as any);
 
-    expect(mockDBQuery).toHaveBeenCalledWith('DELETE workspaces WHERE id = $id', {
-      id: 'workspace:ws_001',
-    });
+    expect(mockDBQuery).toHaveBeenCalledWith(
+      'UPDATE workspaces SET deleted_at = time::now() WHERE id = $id AND user_id = $userId',
+      { id: 'workspace:ws_001', userId: 'user:abc123' },
+    );
     expect(result).toEqual({ success: true });
   });
 
@@ -404,6 +413,11 @@ describe('Workspaces page — delete action', () => {
   });
 
   test('delete action returns 400 when db throws', async () => {
+    // First call: getUserIdByEmail returns a userId
+    mockDBQuery.mockResolvedValueOnce([{ id: 'user:abc123' }]);
+    // Second call: default workspace check
+    mockDBQuery.mockResolvedValueOnce([{ default_workspace_id: 'workspace:other' }]);
+    // Third call: soft delete throws
     mockDBQuery.mockRejectedValueOnce(new Error('Not found'));
 
     const form = new FormData();
@@ -414,7 +428,10 @@ describe('Workspaces page — delete action', () => {
       body: form,
     });
 
-    const result = await pageModule.actions.delete({ request } as any);
+    const result = await pageModule.actions.delete({
+      request,
+      locals: { userEmail: 'user@test.com' },
+    } as any);
 
     expect(mockFail).toHaveBeenCalledWith(400, { error: 'Not found' });
   });

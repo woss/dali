@@ -1,4 +1,5 @@
 import { createLogger } from '../logger';
+import { ConnectionError, MigrationError } from '@woss/dali-orm/core/errors';
 import { DaliORM } from '@woss/dali-orm';
 import { generateAndApplyMigration } from '@woss/dali-orm/migration/api';
 import { schema } from './schema';
@@ -47,6 +48,18 @@ export async function connect() {
       }
     }
 
+    // Migrate workspace index: global unique → per-user unique
+    try {
+      await driver.query('REMOVE INDEX idx_workspaces_name ON workspaces');
+    } catch {
+      // Index may not exist yet on fresh databases — ignore
+    }
+    try {
+      await driver.query('DEFINE INDEX idx_workspaces_name ON workspaces FIELDS name, user_id UNIQUE');
+    } catch {
+      // May already exist with correct definition — ignore
+    }
+
     instance = orm;
     log.info('Connected to SurrealDB');
     return orm;
@@ -54,7 +67,14 @@ export async function connect() {
     log.error(
       'Failed to connect to SurrealDB: ' + (error instanceof Error ? error.message : String(error)),
     );
-    throw error;
+    // Re-throw MigrationError as-is — it's already a typed error from dali-orm
+    if (error instanceof MigrationError) throw error;
+    throw new ConnectionError('Failed to connect to SurrealDB', {
+      url,
+      namespace: process.env.DALI_MEMORY_SURREAL_NS || 'memory',
+      database: process.env.DALI_MEMORY_SURREAL_DB || 'memory',
+      cause: error instanceof Error ? error : new Error(String(error)),
+    });
   }
 }
 

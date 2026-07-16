@@ -154,7 +154,7 @@ beforeEach(async () => {
   // Default: connect returns a db with query method
   mockConnect.mockResolvedValue({ query: mockDbQuery });
   // Default: db.query returns workspace rows (SurrealDB Result[] format)
-  mockDbQuery.mockResolvedValue(wsQueryResult(sampleWorkspaceRows));
+  mockDbQuery.mockResolvedValue(sampleWorkspaceRows);
 
   pageServerModule = await import('../+page.server');
 });
@@ -214,6 +214,7 @@ describe('Global memories page server — load', () => {
   test('load handles empty memories gracefully', async () => {
     mockListAllMemories.mockResolvedValue([]);
     mockListTags.mockResolvedValue([]);
+    mockDbQuery.mockResolvedValueOnce([]); // global workspace query returns empty
 
     const result = await pageServerModule.load({ url: makeUrl() });
 
@@ -221,11 +222,6 @@ describe('Global memories page server — load', () => {
     expect(result.allTags).toEqual([]);
     expect(result.activeTag).toBeNull();
     expect(result.workspaceNames).toEqual({});
-    // Should not attempt to batch-fetch workspace names when no memories
-    expect(mockDbQuery).not.toHaveBeenCalledWith(
-      'SELECT id, name FROM workspaces WHERE id IN $ids',
-      expect.anything(),
-    );
   });
 
   test('load returns empty tags array for each memory', async () => {
@@ -317,45 +313,32 @@ describe('Global memories page server — load', () => {
 
   // ── Workspace names ──────────────────────────────────────────
 
-  test('load batch-fetches workspace names with RecordId query', async () => {
+  test('load batch-fetches workspace names with global query', async () => {
     mockListAllMemories.mockResolvedValue(sampleMemories);
     mockGetMemoryTags.mockResolvedValue([]);
     mockListTags.mockResolvedValue(sampleTags);
 
     await pageServerModule.load({ url: makeUrl() });
 
-    // Should query workspaces with deduplicated IDs
-    // The source code creates real RecordId('workspaces', id) objects
+    // Code now queries all workspaces globally instead of batch by IDs
     expect(mockDbQuery).toHaveBeenCalledWith(
-      'SELECT id, name FROM workspaces WHERE id IN $ids',
-      expect.objectContaining({
-        ids: expect.arrayContaining([
-          expect.objectContaining({ id: 'ws_001' }),
-          expect.objectContaining({ id: 'ws_002' }),
-        ]),
-      }),
+      'SELECT id, name FROM workspaces WHERE deleted_at = none',
     );
-    expect(mockDbQuery.mock.calls[0][1].ids).toHaveLength(2);
   });
 
-  test('load deduplicates workspace IDs in batch fetch', async () => {
-    // Two memories in same workspace — should produce only 1 distinct ID
+  test('load queries all workspaces globally', async () => {
+    // Two memories in same workspace — code still queries all workspaces globally
     const mems = [sampleMemories[0], sampleMemories[1]]; // both ws_001
     mockListAllMemories.mockResolvedValue(mems);
     mockGetMemoryTags.mockResolvedValue([]);
     mockListTags.mockResolvedValue(sampleTags);
-    mockDbQuery.mockResolvedValueOnce(wsQueryResult([sampleWorkspaceRows[0]]));
 
     await pageServerModule.load({ url: makeUrl() });
 
-    // Only 1 distinct workspace id -> $ids array has 1 element
+    // Code queries all workspaces, not batch by IDs
     expect(mockDbQuery).toHaveBeenCalledWith(
-      'SELECT id, name FROM workspaces WHERE id IN $ids',
-      expect.objectContaining({
-        ids: expect.arrayContaining([expect.objectContaining({ id: 'ws_001' })]),
-      }),
+      'SELECT id, name FROM workspaces WHERE deleted_at = none',
     );
-    expect(mockDbQuery.mock.calls[0][1].ids).toHaveLength(1);
   });
 
   test('load populates workspaceNames map correctly', async () => {
@@ -371,9 +354,10 @@ describe('Global memories page server — load', () => {
     });
   });
 
-  test('load returns empty workspaceNames when no distinct IDs', async () => {
+  test('load returns empty workspaceNames when no workspaces exist', async () => {
     mockListAllMemories.mockResolvedValue([]);
     mockListTags.mockResolvedValue([]);
+    mockDbQuery.mockResolvedValueOnce([]); // global workspace query returns empty
 
     const result = await pageServerModule.load({ url: makeUrl() });
 

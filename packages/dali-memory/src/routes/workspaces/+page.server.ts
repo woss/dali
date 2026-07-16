@@ -1,19 +1,26 @@
 import { connect, getDB } from '$lib/server/db/connection';
 import { fail } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
+import { workspaceService } from '$lib/server/services/workspace';
 
-/** Look up user RecordId from email. Returns null if no user exists. */
-async function getUserIdByEmail(db: ReturnType<typeof getDB>, email: string): Promise<unknown> {
+/**
+ * Look up user RecordId from email. Returns the raw ID string (e.g. "abc123")
+ * or null if no user exists.
+ */
+async function getUserIdByEmail(db: ReturnType<typeof getDB>, email: string): Promise<string | null> {
   const [userRow] = await db.query<{ id: unknown }>(
     'SELECT id FROM users WHERE email = $email LIMIT 1',
     { email },
   );
-  return userRow?.id ?? null;
+  if (!userRow?.id) return null;
+  // Extract raw ID from RecordId, stripping table prefix and angle brackets
+  const raw = String(userRow.id).replace(/[⟨⟩]/g, '');
+  const idx = raw.indexOf(':');
+  return idx >= 0 ? raw.slice(idx + 1) : raw;
 }
 
 export const load: PageServerLoad = async (event) => {
   await connect();
-  const db = getDB();
   const userEmail = event?.locals?.userEmail;
 
   let workspaces: Array<{
@@ -26,34 +33,13 @@ export const load: PageServerLoad = async (event) => {
   }> = [];
   try {
     if (userEmail) {
+      const db = getDB();
       const userId = await getUserIdByEmail(db, userEmail);
       if (userId) {
-        const result = await db.query<{
-          id: string;
-          name: string;
-          description: string | null;
-          is_personal: boolean;
-          created_at: string;
-          memory_count: number;
-        }>(
-          'SELECT id, name, description, is_personal, created_at, count(<-workspace_id) AS memory_count FROM workspaces WHERE user_id = $userId ORDER BY name ASC',
-          { userId },
-        );
-        workspaces = result ?? [];
+        workspaces = await workspaceService.listWorkspaces(userId);
       }
     } else {
-      const result = await db.query<{
-        id: string;
-        name: string;
-        description: string | null;
-        is_personal: boolean;
-        created_at: string;
-        memory_count: number;
-      }>(
-        'SELECT id, name, description, is_personal, created_at, count(<-workspace_id) AS memory_count FROM workspaces ORDER BY name ASC',
-        {},
-      );
-      workspaces = result ?? [];
+      workspaces = await workspaceService.listWorkspaces();
     }
   } catch {
     // workspaces stays [] — graceful degradation
@@ -84,7 +70,6 @@ export const actions: Actions = {
     const request = event?.request;
     const userEmail = event?.locals?.userEmail;
     await connect();
-    const db = getDB();
     if (!request) return fail(400, { error: 'No request' });
     const data = await request.formData();
     const name = data.get('name')?.toString();
@@ -95,17 +80,14 @@ export const actions: Actions = {
     }
 
     try {
-      let query = 'CREATE workspaces CONTENT { name: $name, description: $description';
-      const bindings: Record<string, unknown> = { name, description };
+      let userId: string | undefined;
       if (userEmail) {
-        const userId = await getUserIdByEmail(db, userEmail);
-        if (userId) {
-          query += ', user_id: $userId';
-          bindings.userId = userId;
-        }
+        const db = getDB();
+        const resolvedId = await getUserIdByEmail(db, userEmail);
+        if (resolvedId) userId = resolvedId;
       }
-      query += ' }';
-      await db.query<unknown>(query, bindings);
+
+      await workspaceService.createWorkspace({ name, description, userId });
       return { success: true };
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Failed to create workspace';
@@ -117,7 +99,6 @@ export const actions: Actions = {
     const request = event?.request;
     const userEmail = event?.locals?.userEmail;
     await connect();
-    const db = getDB();
     if (!request) return fail(400, { error: 'No request' });
     const data = await request.formData();
     const id = data.get('id')?.toString();
@@ -127,17 +108,24 @@ export const actions: Actions = {
     }
 
     try {
-      if (userEmail) {
-        const userId = await getUserIdByEmail(db, userEmail);
-        await db.query<unknown>(
-          userId
-            ? 'DELETE workspaces WHERE id = $id AND user_id = $userId'
-            : 'DELETE workspaces WHERE id = $id',
-          userId ? { id, userId } : { id },
-        );
-      } else {
-        await db.query<unknown>('DELETE workspaces WHERE id = $id', { id });
+      if (!userEmail) {
+        return fail(400, { error: 'Authentication required' });
       }
+
+      const db = getDB();
+      const userId = await getUserIdByEmail(db, userEmail);
+      if (!userId) {
+        return fail(400, { error: 'User not found' });
+      }
+
+      // Check if workspace is the user's default workspace
+      const isDefault = await workspaceService.isDefaultWorkspace(userId, id);
+      if (isDefault) {
+        return fail(400, { error: 'Cannot delete default workspace' });
+      }
+
+      // Soft delete via service (uses ORM update by record ID)
+      await workspaceService.deleteWorkspace(id, userId);
       return { success: true };
     } catch (e) {
       const msg = e instanceof Error ? e.message : 'Failed to delete workspace';

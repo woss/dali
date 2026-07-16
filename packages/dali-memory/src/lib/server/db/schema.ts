@@ -20,9 +20,10 @@ export const workspacesTable = defineTable(
     is_personal: bool('is_personal').default(false),
     user_id: record('users').optional(),
     created_at: datetime('created_at').defaultNow(),
+    deleted_at: datetime('deleted_at').optional(),
   },
   {
-    indexes: [{ name: 'idx_workspaces_name', fields: ['name'], type: 'unique' as const }],
+    indexes: [{ name: 'idx_workspaces_name', fields: ['name', 'user_id'], type: 'unique' as const }],
   },
 );
 
