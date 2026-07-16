@@ -55,7 +55,9 @@ export async function connect() {
       // Index may not exist yet on fresh databases — ignore
     }
     try {
-      await driver.query('DEFINE INDEX idx_workspaces_name ON workspaces FIELDS name, user_id UNIQUE');
+      await driver.query(
+        'DEFINE INDEX idx_workspaces_name ON workspaces FIELDS name, user_id UNIQUE',
+      );
     } catch {
       // May already exist with correct definition — ignore
     }

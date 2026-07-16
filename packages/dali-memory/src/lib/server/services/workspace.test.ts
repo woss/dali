@@ -129,9 +129,7 @@ describe('WorkspaceService', () => {
     });
 
     test('returns all workspaces when no userId provided', async () => {
-      const mockWorkspaces = [
-        { id: 'workspaces:ws-1', name: 'Shared', memory_count: 3 },
-      ];
+      const mockWorkspaces = [{ id: 'workspaces:ws-1', name: 'Shared', memory_count: 3 }];
       db.query.mockResolvedValueOnce(mockWorkspaces);
 
       const { WorkspaceService } = await import('./workspace');
@@ -232,9 +230,7 @@ describe('WorkspaceService', () => {
   describe('createWorkspace', () => {
     test('creates workspace with name and description', async () => {
       const executeMock = vi.fn().mockResolvedValue([]);
-      db.model.mockReturnValue(
-        createQueryBuilder({ execute: executeMock }),
-      );
+      db.model.mockReturnValue(createQueryBuilder({ execute: executeMock }));
 
       const { WorkspaceService } = await import('./workspace');
       const service = new WorkspaceService();
@@ -255,9 +251,7 @@ describe('WorkspaceService', () => {
 
     test('creates workspace without description defaults to empty string', async () => {
       const executeMock = vi.fn().mockResolvedValue([]);
-      db.model.mockReturnValue(
-        createQueryBuilder({ execute: executeMock }),
-      );
+      db.model.mockReturnValue(createQueryBuilder({ execute: executeMock }));
 
       const { WorkspaceService } = await import('./workspace');
       const service = new WorkspaceService();
@@ -272,9 +266,7 @@ describe('WorkspaceService', () => {
 
     test('creates workspace without userId (no user_id field)', async () => {
       const executeMock = vi.fn().mockResolvedValue([]);
-      db.model.mockReturnValue(
-        createQueryBuilder({ execute: executeMock }),
-      );
+      db.model.mockReturnValue(createQueryBuilder({ execute: executeMock }));
 
       const { WorkspaceService } = await import('./workspace');
       const service = new WorkspaceService();
@@ -319,9 +311,9 @@ describe('WorkspaceService', () => {
   describe('deleteWorkspace', () => {
     test('successfully soft-deletes a workspace the user owns', async () => {
       // Ownership verification returns existing record
-      const verifyExecute = vi.fn().mockResolvedValue([
-        { id: 'workspaces:ws-1', name: 'Owned', user_id: 'users:user-1' },
-      ]);
+      const verifyExecute = vi
+        .fn()
+        .mockResolvedValue([{ id: 'workspaces:ws-1', name: 'Owned', user_id: 'users:user-1' }]);
       // Update succeeds
       const updateExecute = vi.fn().mockResolvedValue([]);
 
@@ -347,9 +339,7 @@ describe('WorkspaceService', () => {
     test('throws "Workspace not found or access denied" when ownership check fails', async () => {
       // Ownership verification returns empty (user doesn't own it)
       const verifyExecute = vi.fn().mockResolvedValue([]);
-      db.model.mockReturnValue(
-        createQueryBuilder({ execute: verifyExecute }),
-      );
+      db.model.mockReturnValue(createQueryBuilder({ execute: verifyExecute }));
 
       const { WorkspaceService } = await import('./workspace');
       const service = new WorkspaceService();
@@ -367,9 +357,7 @@ describe('WorkspaceService', () => {
 
     test('throws when ownership verification returns null', async () => {
       const verifyExecute = vi.fn().mockResolvedValue(null);
-      db.model.mockReturnValue(
-        createQueryBuilder({ execute: verifyExecute }),
-      );
+      db.model.mockReturnValue(createQueryBuilder({ execute: verifyExecute }));
 
       const { WorkspaceService } = await import('./workspace');
       const service = new WorkspaceService();
@@ -405,12 +393,8 @@ describe('WorkspaceService', () => {
 
     test('wraps update errors in QueryError after successful verification', async () => {
       // First call (verify) succeeds, second call (update) fails
-      const verifyExecute = vi.fn().mockResolvedValue([
-        { id: 'workspaces:ws-1', name: 'Owned' },
-      ]);
-      const updateExecute = vi.fn().mockRejectedValue(
-        new Error('update conflict'),
-      );
+      const verifyExecute = vi.fn().mockResolvedValue([{ id: 'workspaces:ws-1', name: 'Owned' }]);
+      const updateExecute = vi.fn().mockRejectedValue(new Error('update conflict'));
 
       let callCount = 0;
       db.model.mockImplementation(() => {
@@ -486,9 +470,7 @@ describe('WorkspaceService', () => {
 
   describe('isDefaultWorkspace', () => {
     test('returns true when workspace is the user default', async () => {
-      db.query.mockResolvedValueOnce([
-        { default_workspace_id: 'workspaces:ws-1' },
-      ]);
+      db.query.mockResolvedValueOnce([{ default_workspace_id: 'workspaces:ws-1' }]);
 
       const { WorkspaceService } = await import('./workspace');
       const service = new WorkspaceService();
@@ -504,9 +486,7 @@ describe('WorkspaceService', () => {
     });
 
     test('returns false when workspace IDs do not match', async () => {
-      db.query.mockResolvedValueOnce([
-        { default_workspace_id: 'workspaces:ws-default' },
-      ]);
+      db.query.mockResolvedValueOnce([{ default_workspace_id: 'workspaces:ws-default' }]);
 
       const { WorkspaceService } = await import('./workspace');
       const service = new WorkspaceService();
@@ -528,9 +508,7 @@ describe('WorkspaceService', () => {
     });
 
     test('returns false when default_workspace_id is null', async () => {
-      db.query.mockResolvedValueOnce([
-        { default_workspace_id: null },
-      ]);
+      db.query.mockResolvedValueOnce([{ default_workspace_id: null }]);
 
       const { WorkspaceService } = await import('./workspace');
       const service = new WorkspaceService();
@@ -541,9 +519,7 @@ describe('WorkspaceService', () => {
     });
 
     test('returns false when default_workspace_id is undefined', async () => {
-      db.query.mockResolvedValueOnce([
-        { default_workspace_id: undefined },
-      ]);
+      db.query.mockResolvedValueOnce([{ default_workspace_id: undefined }]);
 
       const { WorkspaceService } = await import('./workspace');
       const service = new WorkspaceService();
@@ -556,9 +532,7 @@ describe('WorkspaceService', () => {
     test('handles RecordId instance for default_workspace_id', async () => {
       // SurrealDB may return RecordId objects instead of strings
       const defaultRecordId = new RecordId('workspaces', 'ws-match');
-      db.query.mockResolvedValueOnce([
-        { default_workspace_id: defaultRecordId },
-      ]);
+      db.query.mockResolvedValueOnce([{ default_workspace_id: defaultRecordId }]);
 
       const { WorkspaceService } = await import('./workspace');
       const service = new WorkspaceService();
@@ -570,9 +544,7 @@ describe('WorkspaceService', () => {
 
     test('handles bracket-encoded strings from RecordId.toString()', async () => {
       // RecordId.toString() may wrap in angle brackets: ⟨workspaces:ws-abc⟩
-      db.query.mockResolvedValueOnce([
-        { default_workspace_id: '⟨workspaces:ws-abc⟩' },
-      ]);
+      db.query.mockResolvedValueOnce([{ default_workspace_id: '⟨workspaces:ws-abc⟩' }]);
 
       const { WorkspaceService } = await import('./workspace');
       const service = new WorkspaceService();

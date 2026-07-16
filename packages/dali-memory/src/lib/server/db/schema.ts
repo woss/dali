@@ -23,7 +23,9 @@ export const workspacesTable = defineTable(
     deleted_at: datetime('deleted_at').optional(),
   },
   {
-    indexes: [{ name: 'idx_workspaces_name', fields: ['name', 'user_id'], type: 'unique' as const }],
+    indexes: [
+      { name: 'idx_workspaces_name', fields: ['name', 'user_id'], type: 'unique' as const },
+    ],
   },
 );
 

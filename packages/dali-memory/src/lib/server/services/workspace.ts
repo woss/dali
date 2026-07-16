@@ -137,9 +137,7 @@ export class WorkspaceService {
       db
         .model(workspacesTable)
         .select()
-        .where((w) =>
-          w.eq('id', new RecordId('workspaces', recordKey)).eq('user_id', wsUserId),
-        )
+        .where((w) => w.eq('id', new RecordId('workspaces', recordKey)).eq('user_id', wsUserId))
         .limit(1)
         .execute(),
     );
@@ -181,7 +179,8 @@ export class WorkspaceService {
     if (!defaultId) return false;
 
     // Normalize both IDs to raw form for reliable comparison
-    const defaultRaw = defaultId instanceof RecordId ? String(defaultId.id) : rawId(String(defaultId));
+    const defaultRaw =
+      defaultId instanceof RecordId ? String(defaultId.id) : rawId(String(defaultId));
     const targetRaw = rawId(workspaceId);
     return defaultRaw === targetRaw;
   }

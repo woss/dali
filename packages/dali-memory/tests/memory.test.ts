@@ -72,7 +72,7 @@ function createQueryBuilder(overrides: Partial<{ execute: any }> = {}) {
 function createMockDB(overrides: { driver?: any } = {}) {
   const mockDriver = {
     select: vi.fn().mockResolvedValue([]),
-    ...(overrides.driver ?? {}),
+    ...overrides.driver,
   };
 
   return {
@@ -218,7 +218,9 @@ describe('withQueryError wrapping via MemoryService', () => {
     // Content dedup: model().select().where().limit(1).execute() returns existing
     db.model.mockReturnValue(
       createQueryBuilder({
-        execute: vi.fn().mockResolvedValue([{ content: 'test content', workspace_id: 'workspaces:ws-1' }]),
+        execute: vi
+          .fn()
+          .mockResolvedValue([{ content: 'test content', workspace_id: 'workspaces:ws-1' }]),
       }),
     );
 
@@ -388,9 +390,7 @@ describe('withQueryError wrapping via MemoryService', () => {
     const rid = new RecordId('memories', 'mem1');
     db.model.mockReturnValue(
       createQueryBuilder({
-        execute: vi.fn().mockResolvedValue([
-          { id: rid, name: 'mem1', content: 'c1' },
-        ]),
+        execute: vi.fn().mockResolvedValue([{ id: rid, name: 'mem1', content: 'c1' }]),
       }),
     );
 

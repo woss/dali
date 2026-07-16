@@ -24,7 +24,8 @@ export const load: PageServerLoad = async (event) => {
 
   // Verify workspace exists (and ownership when auth is enabled)
   let wsBindings: { id: RecordId; userId?: unknown } = { id: wsRecordId };
-  let wsQuery = 'SELECT id, name, description, is_personal FROM workspaces WHERE id = $id AND deleted_at = none';
+  let wsQuery =
+    'SELECT id, name, description, is_personal FROM workspaces WHERE id = $id AND deleted_at = none';
   if (userEmail) {
     const [userRow] = await db.query<{ id: unknown }>(
       'SELECT id FROM users WHERE email = $email LIMIT 1',

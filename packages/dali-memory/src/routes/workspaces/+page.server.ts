@@ -7,7 +7,10 @@ import { workspaceService } from '$lib/server/services/workspace';
  * Look up user RecordId from email. Returns the raw ID string (e.g. "abc123")
  * or null if no user exists.
  */
-async function getUserIdByEmail(db: ReturnType<typeof getDB>, email: string): Promise<string | null> {
+async function getUserIdByEmail(
+  db: ReturnType<typeof getDB>,
+  email: string,
+): Promise<string | null> {
   const [userRow] = await db.query<{ id: unknown }>(
     'SELECT id FROM users WHERE email = $email LIMIT 1',
     { email },

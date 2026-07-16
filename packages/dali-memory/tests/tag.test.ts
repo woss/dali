@@ -242,9 +242,7 @@ describe('withQueryError wrapping via TagService', () => {
   });
 
   test('wraps null value from ORM in QueryError', async () => {
-    db.model.mockReturnValue(
-      createQueryBuilder({ execute: vi.fn().mockRejectedValue(null) }),
-    );
+    db.model.mockReturnValue(createQueryBuilder({ execute: vi.fn().mockRejectedValue(null) }));
 
     const { TagService } = await import('../src/lib/server/services/tag');
     const service = new TagService();
@@ -260,9 +258,7 @@ describe('withQueryError wrapping via TagService', () => {
   });
 
   test('wraps undefined value from ORM in QueryError', async () => {
-    db.model.mockReturnValue(
-      createQueryBuilder({ execute: vi.fn().mockRejectedValue(undefined) }),
-    );
+    db.model.mockReturnValue(createQueryBuilder({ execute: vi.fn().mockRejectedValue(undefined) }));
 
     const { TagService } = await import('../src/lib/server/services/tag');
     const service = new TagService();
@@ -402,9 +398,7 @@ describe('withQueryError wrapping via TagService', () => {
 
   test('getTag returns tag by id', async () => {
     const tag = { id: 'tags:tag1', name: 'important' };
-    db.model.mockReturnValue(
-      createQueryBuilder({ execute: vi.fn().mockResolvedValue([tag]) }),
-    );
+    db.model.mockReturnValue(createQueryBuilder({ execute: vi.fn().mockResolvedValue([tag]) }));
 
     const { TagService } = await import('../src/lib/server/services/tag');
     const service = new TagService();
@@ -414,9 +408,7 @@ describe('withQueryError wrapping via TagService', () => {
   });
 
   test('getTag returns null when not found', async () => {
-    db.model.mockReturnValue(
-      createQueryBuilder({ execute: vi.fn().mockResolvedValue([]) }),
-    );
+    db.model.mockReturnValue(createQueryBuilder({ execute: vi.fn().mockResolvedValue([]) }));
 
     const { TagService } = await import('../src/lib/server/services/tag');
     const service = new TagService();
@@ -427,9 +419,7 @@ describe('withQueryError wrapping via TagService', () => {
 
   test('findByName returns tag by name', async () => {
     const tag = { id: 'tags:tag1', name: 'research' };
-    db.model.mockReturnValue(
-      createQueryBuilder({ execute: vi.fn().mockResolvedValue([tag]) }),
-    );
+    db.model.mockReturnValue(createQueryBuilder({ execute: vi.fn().mockResolvedValue([tag]) }));
 
     const { TagService } = await import('../src/lib/server/services/tag');
     const service = new TagService();
@@ -439,9 +429,7 @@ describe('withQueryError wrapping via TagService', () => {
   });
 
   test('findByName returns null when not found', async () => {
-    db.model.mockReturnValue(
-      createQueryBuilder({ execute: vi.fn().mockResolvedValue([]) }),
-    );
+    db.model.mockReturnValue(createQueryBuilder({ execute: vi.fn().mockResolvedValue([]) }));
 
     const { TagService } = await import('../src/lib/server/services/tag');
     const service = new TagService();

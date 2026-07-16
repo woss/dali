@@ -187,10 +187,7 @@ export class TagService {
     });
 
     const result = await withQueryError('intersectTags', () =>
-      db.query<MemoryRecord>(
-        `SELECT * FROM memories WHERE ${conditions}`,
-        params,
-      ),
+      db.query<MemoryRecord>(`SELECT * FROM memories WHERE ${conditions}`, params),
     );
 
     return result as unknown as MemoryRecord[];

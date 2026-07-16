@@ -244,22 +244,19 @@ export class MemoryService {
 
     // Use native driver.select() which handles RecordId via the SDK
     // instead of parameterized WHERE which can't match record-typed id columns.
-    const result = await withQueryError('get memory', () =>
-      driver.select(qualified),
-    );
+    const result = await withQueryError('get memory', () => driver.select(qualified));
     const memory = result[0] ? toMemoryRecord(result[0]) : null;
 
     if (memory && workspaceId !== undefined) {
       if (memory.workspace_id) {
         // Extract bare key from both sides for comparison
-        const memWsKey = memory.workspace_id instanceof RecordId
-          ? String(memory.workspace_id.id)
-          : String(memory.workspace_id).includes(':')
-            ? String(memory.workspace_id).split(':').pop()!
-            : String(memory.workspace_id);
-        const paramWsKey = workspaceId.includes(':')
-          ? workspaceId.split(':').pop()!
-          : workspaceId;
+        const memWsKey =
+          memory.workspace_id instanceof RecordId
+            ? String(memory.workspace_id.id)
+            : String(memory.workspace_id).includes(':')
+              ? String(memory.workspace_id).split(':').pop()!
+              : String(memory.workspace_id);
+        const paramWsKey = workspaceId.includes(':') ? workspaceId.split(':').pop()! : workspaceId;
         if (memWsKey !== paramWsKey) {
           throw new Error('Memory not found in workspace');
         }
@@ -519,10 +516,9 @@ LIMIT 500`;
 
       const embRecordId = row.id as RecordId;
       const edges = await withQueryError('find embedding parent', () =>
-        db.query<EdgeOut>(
-          'SELECT out FROM has_embedding WHERE in = $embId LIMIT 1',
-          { embId: embRecordId },
-        ),
+        db.query<EdgeOut>('SELECT out FROM has_embedding WHERE in = $embId LIMIT 1', {
+          embId: embRecordId,
+        }),
       );
       if (edges.length === 0) continue;
 
@@ -544,9 +540,7 @@ LIMIT 500`;
     // to avoid angle-bracket wrapping that breaks driver.select() / parseTableWithId()
     const results: SearchResult[] = [];
     for (const [memKey, { score }] of memScores) {
-      const memResult = await withQueryError('fetch similar memory', () =>
-        driver.select(memKey),
-      );
+      const memResult = await withQueryError('fetch similar memory', () => driver.select(memKey));
       if (!memResult[0]) continue;
 
       results.push({

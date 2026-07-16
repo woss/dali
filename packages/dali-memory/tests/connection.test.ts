@@ -63,9 +63,7 @@ describe('connect — error handling', () => {
   beforeEach(async () => {
     vi.clearAllMocks();
     // Reset the singleton between tests
-    const { connect, disconnect } = await import(
-      '../src/lib/server/db/connection'
-    );
+    const { connect, disconnect } = await import('../src/lib/server/db/connection');
     await disconnect();
   });
 

@@ -225,7 +225,12 @@ export function createMCPServer(): Server {
           return await timedTool(log, TOOL_WORKSPACES_LIST, () => handleWorkspacesList(), args);
 
         case TOOL_MEMORIES_DELETE:
-          return await timedTool(log, TOOL_MEMORIES_DELETE, () => handleMemoriesDelete(args ?? {}), args);
+          return await timedTool(
+            log,
+            TOOL_MEMORIES_DELETE,
+            () => handleMemoriesDelete(args ?? {}),
+            args,
+          );
 
         default:
           throw new McpError(ErrorCode.MethodNotFound, `Unknown tool: ${name}`);
@@ -410,7 +415,9 @@ async function handleWorkspacesList(): Promise<{
       description: string | null;
       is_personal: boolean;
       created_at: string;
-    }>('SELECT id, name, description, is_personal, created_at FROM workspaces WHERE deleted_at = none ORDER BY name ASC');
+    }>(
+      'SELECT id, name, description, is_personal, created_at FROM workspaces WHERE deleted_at = none ORDER BY name ASC',
+    );
 
     const workspaces = (result ?? []).map((ws) => {
       const rawCreated = ws.created_at;
@@ -480,7 +487,9 @@ async function handleMemoriesDelete(
     embedder = getEmbedder();
   } catch {
     return {
-      content: [{ type: 'text', text: 'Embedding service unavailable. Service may still be starting up.' }],
+      content: [
+        { type: 'text', text: 'Embedding service unavailable. Service may still be starting up.' },
+      ],
       isError: true,
     };
   }

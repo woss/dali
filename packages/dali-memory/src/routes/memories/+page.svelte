@@ -350,8 +350,7 @@
               </div>
               <button
                   onclick={() => { deleteConfirmTarget = { id: mem.id, name: mem.name }; deleteDialog?.showModal(); }}
-                class="btn btn-ghost btn-xs text-error tooltip tooltip-top tooltip-error btn-rotate-hover"
-                data-tip="Delete this memory permanently"
+                class="btn btn-ghost btn-xs text-error"
               >
                 Delete
               </button>
