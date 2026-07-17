@@ -23,26 +23,26 @@ export function resolveRecordId(recordId: string, tableName: string): string {
   }
 
   // Angle-bracket format: table⟨key⟩ (check FIRST — keys may contain colons)
-  const openIdx = recordId.indexOf('⟨')
-  const closeIdx = recordId.lastIndexOf('⟩')
+  const openIdx = recordId.indexOf('⟨');
+  const closeIdx = recordId.lastIndexOf('⟩');
   if (openIdx !== -1 && closeIdx !== -1 && closeIdx > openIdx) {
-    const key = recordId.substring(openIdx + 1, closeIdx)
-    return `${tableName}:${key}`
+    const key = recordId.substring(openIdx + 1, closeIdx);
+    return `${tableName}:${key}`;
   }
 
   // Already colon-qualified: table:key
   if (recordId.includes(':')) {
-    const key = recordId.split(':').slice(1).join(':') // handle keys with colons
-    return `${tableName}:${key}`
+    const key = recordId.split(':').slice(1).join(':'); // handle keys with colons
+    return `${tableName}:${key}`;
   }
 
   // Check for invalid ASCII angle brackets
   if (recordId.includes('<') || recordId.includes('>')) {
     throw new Error(
       `Invalid record ID format: '${recordId}' contains ASCII angle brackets. Use Unicode angle brackets (⟨⟩) or colon-qualified format.`,
-    )
+    );
   }
 
   // Bare key (no table prefix)
-  return `${tableName}:${recordId}`
+  return `${tableName}:${recordId}`;
 }

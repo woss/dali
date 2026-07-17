@@ -1,1 +1,1 @@
-export { resolveRecordId } from './record-id.js'
+export { resolveRecordId } from './record-id.js';

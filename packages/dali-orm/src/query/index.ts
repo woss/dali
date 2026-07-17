@@ -60,6 +60,9 @@ export { CreateBuilder, create } from './create.js';
 // Delete
 export { DeleteBuilder, delete_ } from './delete.js';
 
+// Serializer (shared condition serialization utilities)
+export { andTrees, serializeCondition, serializedConditionToNode } from './serializer.js';
+
 // Insert
 export { InsertBuilder, insert } from './insert.js';
 // Live

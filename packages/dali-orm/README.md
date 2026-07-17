@@ -318,8 +318,26 @@ import { delete_ } from '@woss/dali-orm/query';
 // Delete by ID
 const [result] = await delete_(orm, userTable).id('user:123').execute();
 
-// Delete with condition
+// Delete with pre-built condition
 const [result] = await delete_(orm, userTable).where(eq('active', false)).execute();
+
+// Delete with typed WHERE builder (graph paths, CONTAINS, INSIDE)
+await delete_(orm, userTable)
+  .where((w) => w.contains(w.field('tags'), 'banned'))
+  .execute();
+
+// Delete with LIMIT (deletes at most N records)
+await delete_(orm, userTable)
+  .where((w) => w.lt('age', 13))
+  .limit(50)
+  .execute();
+
+// Inspect generated SQL
+const { sql, params } = delete_(orm, userTable)
+  .where((w) => w.eq('status', 'expired'))
+  .limit(10)
+  .toSQL();
+// sql: DELETE FROM (SELECT id FROM user WHERE status = 'expired' LIMIT 10)
 ```
 
 ### RELATE

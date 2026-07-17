@@ -54,7 +54,9 @@ export class UpdateBuilder<TDef extends TableDefinition, TResult = InferSelectRe
       throw new Error('Cannot update with empty data - use .data() or .set() first');
     }
 
-    const table = this.recordId ? resolveRecordId(this.recordId, this.tableDef.name) : this.tableDef.name;
+    const table = this.recordId
+      ? resolveRecordId(this.recordId, this.tableDef.name)
+      : this.tableDef.name;
 
     return this.driver.update<TResult>(table, this._data);
   }

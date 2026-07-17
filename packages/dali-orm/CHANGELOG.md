@@ -4,6 +4,10 @@
 
 ### Added
 
+- `DeleteBuilder.where()` with 3 overloads matching `SelectBuilder` API: (a) callback `(w: WhereBuilder) => WhereBuilder`, (b) `SerializedCondition` object, (c) raw string clause
+- `DeleteBuilder.limit(n)` — limits deleted records via subquery wrap (`DELETE FROM (SELECT id FROM table WHERE ... LIMIT n)`)
+- `DeleteBuilder.toSQL()` — public method returning `{ sql, params }` for SurrealQL compilation
+- Shared `serializer.ts` module (`andTrees`, `serializeCondition`, `serializedConditionToNode`) extracted from SelectBuilder to avoid condition tree duplication across builders
 - Schema-aware record ID coercion — `coerceRecordIds` only coerces fields defined as `record()` columns when schema is available; non-record string fields with colons preserved as-is
 - Schema threading from `DaliORM.connect()` through to `BaseDriver` — schema config flows to `SurrealDriver.schema` for all CRUD coercion decisions
 - `NodeDriverConfig.reconnect` field — forward reconnect options to SDK `ConnectOptions` for auto-reconnection support
@@ -23,6 +27,7 @@
 
 ### Changed
 
+- `SelectBuilder` condition serialization refactored to import from shared `serializer.ts` module (no behavior change)
 - `BaseDriver.coerceRecordIds` rewritten to be schema-aware: when `schema` is set, only record-typed columns are coerced; falls back to coerce-all behavior when no schema is provided (backward compatible)
 - `upsertWhere` now parses table name (`table:id` → `table`) before passing to `coerceRecordIds`
 - `NodeDriver.connect()` refactored: system auth types now authenticate through connect options rather than `db.signin()`. Record auth flow unchanged.
