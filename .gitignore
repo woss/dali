@@ -15,3 +15,5 @@ history.txt
 .playwright-mcp/
 # Added by code-review-graph
 .code-review-graph/
+.svelte-kit
+logs/

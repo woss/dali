@@ -21,11 +21,13 @@ export default defineConfig({
   },
   fmt: {
     ignorePatterns: [
-      '.opencode/plugins/**',
+      '**/.opencode/plugins/**',
+      'packages/dali-memory/.opencode/**',
       '**/dist/**',
       'examples/**',
       '**/meta/_journal.json',
       'packages/dali-memory/dali-memory.schema.json',
+      'surreal-docs/**',
     ],
     singleQuote: true,
   },
@@ -34,10 +36,12 @@ export default defineConfig({
     rules: { 'unicorn/no-thenable': 'off' },
     ignorePatterns: [
       '.opencode/plugins/**',
+      'packages/dali-memory/.opencode/**',
       '**/dist/**',
       'examples/**',
       '**/meta/_journal.json',
       'packages/dali-memory/dali-memory.schema.json',
+      'surreal-docs/**',
     ],
   },
 });

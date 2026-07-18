@@ -6,10 +6,11 @@
       "sourceType": "github",
       "computedHash": "65c77d3ee7168d8abdd17c5fd478d3bac800b97745a02488cebfa29a20370dac"
     },
-    "deno-typescript": {
-      "source": "mindrally/skills",
+    "sveltekit-svelte5-tailwind-skill": {
+      "source": "claude-skills/sveltekit-svelte5-tailwind-skill",
       "sourceType": "github",
-      "computedHash": "53eb1146a49f04097769971b6cc817b5c7ee852e6f41860a29bcc15c1774a251"
+      "skillPath": "SKILL.md",
+      "computedHash": "9c372c78030ba0cc3793f0fd79e65a7860d67fed42d3c4aab62208a7833320ed"
     },
     "typescript-pro": {
       "source": "jeffallan/claude-skills",

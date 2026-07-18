@@ -1,21 +1,15 @@
 {
-  "extends": "../../tsconfig.json",
+  "extends": "./.svelte-kit/tsconfig.json",
   "compilerOptions": {
-    "target": "ES2022",
-    "module": "nodenext",
-    "moduleResolution": "nodenext",
-    "strict": true,
+    "allowJs": true,
+    "checkJs": true,
     "esModuleInterop": true,
-    "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
-    "declaration": true,
-    "declarationMap": false,
-    // "sourceMap": true,
-    "outDir": "./dist",
-    "rootDir": "./src",
-    "lib": ["ES2022", "DOM", "DOM.Iterable"]
-  },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "**/__tests__", "**/*.test.ts"]
+    "skipLibCheck": true,
+    "sourceMap": true,
+    "strict": true,
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true
+  }
 }
