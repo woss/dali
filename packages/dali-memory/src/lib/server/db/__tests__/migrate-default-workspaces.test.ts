@@ -41,11 +41,11 @@ import { migrateDefaultWorkspaces } from '../migrate-default-workspaces';
 const USER_ID_1 = new RecordId('users', 'u1');
 const USER_ID_2 = new RecordId('users', 'u2');
 const USER_ID_3 = new RecordId('users', 'u3');
-const USER_ID_4 = new RecordId('users', 'u4');
+const _USER_ID_4 = new RecordId('users', 'u4');
 
 const WORKSPACE_ID_1 = new RecordId('workspaces', 'w1');
 const WORKSPACE_ID_2 = new RecordId('workspaces', 'w2');
-const WORKSPACE_ID_3 = new RecordId('workspaces', 'w3');
+const _WORKSPACE_ID_3 = new RecordId('workspaces', 'w3');
 
 function makeUser(overrides: Record<string, unknown>) {
   return {

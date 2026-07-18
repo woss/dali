@@ -149,7 +149,7 @@ describe('getDB()', () => {
     await connect();
     const db = getDB();
     expect(db).toBeDefined();
-    expect(db.getDriver).toBeDefined();
+    expect(typeof db.getDriver).toBe('function');
   });
 
   test('throws when connect() has not been called', () => {

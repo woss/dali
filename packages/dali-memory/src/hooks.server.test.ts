@@ -107,7 +107,7 @@ describe('handle() — verifyCookie flow', () => {
   test('auth disabled: resolves without verification', async () => {
     disableAuth();
     const event = createMockEvent('/memories');
-    const resolve = vi.fn(async (e: unknown) => new Response('ok'));
+    const resolve = vi.fn(async (_e: unknown) => new Response('ok'));
 
     const result = await handle({ event, resolve } as any);
 
@@ -120,7 +120,7 @@ describe('handle() — verifyCookie flow', () => {
   test('public path: skips auth verification', async () => {
     enableAuth();
     const event = createMockEvent('/login');
-    const resolve = vi.fn(async (e: unknown) => new Response('ok'));
+    const resolve = vi.fn(async (_e: unknown) => new Response('ok'));
 
     const result = await handle({ event, resolve } as any);
 
@@ -132,7 +132,7 @@ describe('handle() — verifyCookie flow', () => {
   test('public /api/mcp path: skips auth verification', async () => {
     enableAuth();
     const event = createMockEvent('/api/mcp');
-    const resolve = vi.fn(async (e: unknown) => new Response('ok'));
+    const resolve = vi.fn(async (_e: unknown) => new Response('ok'));
 
     const result = await handle({ event, resolve } as any);
 
@@ -143,7 +143,7 @@ describe('handle() — verifyCookie flow', () => {
   test('public /logout path: skips auth verification', async () => {
     enableAuth();
     const event = createMockEvent('/logout');
-    const resolve = vi.fn(async (e: unknown) => new Response('ok'));
+    const resolve = vi.fn(async (_e: unknown) => new Response('ok'));
 
     const result = await handle({ event, resolve } as any);
 
@@ -154,7 +154,7 @@ describe('handle() — verifyCookie flow', () => {
   test('protected path with no cookie: redirects to /login', async () => {
     enableAuth();
     const event = createMockEvent('/memories');
-    const resolve = vi.fn(async (e: unknown) => new Response('ok'));
+    const resolve = vi.fn(async (_e: unknown) => new Response('ok'));
 
     const result = (await handle({ event, resolve } as any)) as Response;
 
@@ -167,7 +167,7 @@ describe('handle() — verifyCookie flow', () => {
   test('protected path with empty cookie string: redirects to /login', async () => {
     enableAuth();
     const event = createMockEvent('/memories', '');
-    const resolve = vi.fn(async (e: unknown) => new Response('ok'));
+    const resolve = vi.fn(async (_e: unknown) => new Response('ok'));
 
     const result = (await handle({ event, resolve } as any)) as Response;
 
@@ -178,7 +178,7 @@ describe('handle() — verifyCookie flow', () => {
   test('protected path with malformed cookie (no dot): redirects to /login', async () => {
     enableAuth();
     const event = createMockEvent('/memories', 'invalid-no-dot');
-    const resolve = vi.fn(async (e: unknown) => new Response('ok'));
+    const resolve = vi.fn(async (_e: unknown) => new Response('ok'));
 
     const result = (await handle({ event, resolve } as any)) as Response;
 
@@ -192,7 +192,7 @@ describe('handle() — verifyCookie flow', () => {
     mockVerifyCookie.mockResolvedValueOnce(email);
     const signed = await signSession(email, TEST_SECRET);
     const event = createMockEvent('/memories', signed);
-    const resolve = vi.fn(async (e: unknown) => new Response('ok'));
+    const resolve = vi.fn(async (_e: unknown) => new Response('ok'));
 
     const result = await handle({ event, resolve } as any);
 
@@ -204,12 +204,12 @@ describe('handle() — verifyCookie flow', () => {
   test('protected path with tampered signature: redirects to /login', async () => {
     enableAuth();
     const email = 'user@example.com';
-    const signed = await signSession(email, TEST_SECRET);
+    const _signed = await signSession(email, TEST_SECRET);
     // Corrupt the hex signature
     const tampered =
       '0000000000000000000000000000000000000000000000000000000000000000' + '.' + email;
     const event = createMockEvent('/memories', tampered);
-    const resolve = vi.fn(async (e: unknown) => new Response('ok'));
+    const resolve = vi.fn(async (_e: unknown) => new Response('ok'));
 
     const result = (await handle({ event, resolve } as any)) as Response;
 
@@ -224,7 +224,7 @@ describe('handle() — verifyCookie flow', () => {
     const wrongSecret = 'this-is-the-wrong-secret';
     const signed = await signSession(email, wrongSecret);
     const event = createMockEvent('/memories', signed);
-    const resolve = vi.fn(async (e: unknown) => new Response('ok'));
+    const resolve = vi.fn(async (_e: unknown) => new Response('ok'));
 
     const result = (await handle({ event, resolve } as any)) as Response;
 
@@ -238,7 +238,7 @@ describe('handle() — verifyCookie flow', () => {
     mockVerifyCookie.mockResolvedValueOnce(email);
     const signed = await signSession(email, TEST_SECRET);
     const event = createMockEvent('/memories', signed);
-    const resolve = vi.fn(async (e: unknown) => new Response('ok'));
+    const resolve = vi.fn(async (_e: unknown) => new Response('ok'));
 
     const result = await handle({ event, resolve } as any);
 
@@ -249,7 +249,7 @@ describe('handle() — verifyCookie flow', () => {
   test('protected path with short hex signature: redirects to /login (length check)', async () => {
     enableAuth();
     const event = createMockEvent('/memories', 'short.user@example.com');
-    const resolve = vi.fn(async (e: unknown) => new Response('ok'));
+    const resolve = vi.fn(async (_e: unknown) => new Response('ok'));
 
     const result = (await handle({ event, resolve } as any)) as Response;
 
@@ -260,7 +260,7 @@ describe('handle() — verifyCookie flow', () => {
   test('protected /settings path requires auth', async () => {
     enableAuth();
     const event = createMockEvent('/settings');
-    const resolve = vi.fn(async (e: unknown) => new Response('ok'));
+    const resolve = vi.fn(async (_e: unknown) => new Response('ok'));
 
     const result = (await handle({ event, resolve } as any)) as Response;
 
@@ -271,7 +271,7 @@ describe('handle() — verifyCookie flow', () => {
   test('protected /workspaces path requires auth', async () => {
     enableAuth();
     const event = createMockEvent('/workspaces');
-    const resolve = vi.fn(async (e: unknown) => new Response('ok'));
+    const resolve = vi.fn(async (_e: unknown) => new Response('ok'));
 
     const result = (await handle({ event, resolve } as any)) as Response;
 
@@ -282,7 +282,7 @@ describe('handle() — verifyCookie flow', () => {
   test('unprotected root path passes through without auth', async () => {
     enableAuth();
     const event = createMockEvent('/');
-    const resolve = vi.fn(async (e: unknown) => new Response('ok'));
+    const resolve = vi.fn(async (_e: unknown) => new Response('ok'));
 
     const result = await handle({ event, resolve } as any);
 
@@ -298,7 +298,7 @@ describe('handle() — verifyCookie flow', () => {
     const [hex] = signed.split('.');
     const shortSig = hex.slice(0, 16) + '.' + email;
     const event = createMockEvent('/memories', shortSig);
-    const resolve = vi.fn(async (e: unknown) => new Response('ok'));
+    const resolve = vi.fn(async (_e: unknown) => new Response('ok'));
 
     const result = (await handle({ event, resolve } as any)) as Response;
 

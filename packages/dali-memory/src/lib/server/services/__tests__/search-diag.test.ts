@@ -1,5 +1,5 @@
 import { describe, test, expect, vi, beforeAll, afterAll } from 'vitest';
-import { RecordId } from 'surrealdb';
+// RecordId removed — unused
 import { DaliORM } from '@woss/dali-orm';
 import { pushSchemaFromTableDefs } from '@woss/dali-orm/migration/api';
 import { schema } from '../../db/schema';

@@ -136,7 +136,7 @@ describe('register actions.default — input validation', () => {
   });
 
   test('missing confirm_password: returns fail 400', async () => {
-    const result = await actions.default({
+    const _result = await actions.default({
       request: createRegisterRequest('user@example.com', 'Password123'),
       cookies: mockCookies,
     } as any);
@@ -164,7 +164,7 @@ describe('register actions.default — input validation', () => {
   });
 
   test('password mismatch: returns fail 400', async () => {
-    const result = await actions.default({
+    const _result = await actions.default({
       request: createRegisterRequest('user@example.com', 'Password123', 'different', 'Test User'),
       cookies: mockCookies,
     } as any);
@@ -206,7 +206,7 @@ describe('register actions.default — transaction error handling', () => {
   test('duplicate email ("already exists" message): returns fail 409', async () => {
     mockTx.query.mockRejectedValueOnce(new Error('Record already exists'));
 
-    const result = await actions.default({
+    const _result = await actions.default({
       request: createRegisterRequest(
         'existing@example.com',
         'Password123',
@@ -240,7 +240,7 @@ describe('register actions.default — transaction error handling', () => {
     // tx.query resolves but returns empty array — user creation returned nothing
     mockTx.query.mockResolvedValueOnce([]);
 
-    const result = await actions.default({
+    const _result = await actions.default({
       request: createRegisterRequest(
         'newuser@example.com',
         'Password123',
@@ -261,7 +261,7 @@ describe('register actions.default — transaction error handling', () => {
     // Step 2: create workspace fails
     mockTx.query.mockRejectedValueOnce(new Error('Connection timeout'));
 
-    const result = await actions.default({
+    const _result = await actions.default({
       request: createRegisterRequest(
         'newuser@example.com',
         'Password123',
@@ -281,7 +281,7 @@ describe('register actions.default — transaction error handling', () => {
     ]);
     mockTx.query.mockResolvedValueOnce([]);
 
-    const result = await actions.default({
+    const _result = await actions.default({
       request: createRegisterRequest(
         'newuser@example.com',
         'Password123',
@@ -325,7 +325,7 @@ describe('register actions.default — successful transaction (user + workspace)
         cookies: mockCookies,
       } as any);
       expect.unreachable('Expected redirect to be thrown');
-    } catch (err: any) {
+    } catch (_err: any) {
       // Expected redirect
     }
 
@@ -349,7 +349,7 @@ describe('register actions.default — successful transaction (user + workspace)
         cookies: mockCookies,
       } as any);
       expect.unreachable('Expected redirect to be thrown');
-    } catch (err: any) {
+    } catch (_err: any) {
       // Expected redirect
     }
 
@@ -377,7 +377,7 @@ describe('register actions.default — successful transaction (user + workspace)
         cookies: mockCookies,
       } as any);
       expect.unreachable('Expected redirect to be thrown');
-    } catch (err: any) {
+    } catch (_err: any) {
       // Expected redirect
     }
 
@@ -405,7 +405,7 @@ describe('register actions.default — successful transaction (user + workspace)
         cookies: mockCookies,
       } as any);
       expect.unreachable('Expected redirect to be thrown');
-    } catch (err: any) {
+    } catch (_err: any) {
       // Expected redirect
     }
 
@@ -432,7 +432,7 @@ describe('register actions.default — successful transaction (user + workspace)
         cookies: mockCookies,
       } as any);
       expect.unreachable('Expected redirect to be thrown');
-    } catch (err: any) {
+    } catch (_err: any) {
       // Expected redirect
     }
 
@@ -494,7 +494,7 @@ describe('register actions.default — redirect and sign-in', () => {
         cookies: mockCookies,
       } as any);
       expect.unreachable('Expected redirect to be thrown');
-    } catch (err: any) {
+    } catch (_err: any) {
       // Expected redirect
     }
 
@@ -528,7 +528,7 @@ describe('register actions.default — transaction rollback semantics', () => {
         cookies: mockCookies,
       } as any);
       expect.unreachable('Expected redirect to be thrown');
-    } catch (err: any) {
+    } catch (_err: any) {
       // Expected redirect
     }
 
@@ -559,7 +559,7 @@ describe('register actions.default — transaction rollback semantics', () => {
         cookies: mockCookies,
       } as any);
       expect.unreachable('Expected redirect to be thrown');
-    } catch (err: any) {
+    } catch (_err: any) {
       // Expected redirect
     }
 
@@ -578,7 +578,7 @@ describe('register actions.default — transaction rollback semantics', () => {
     // At the mock level, the error rejects the promise from the mock.
     mockTx.query.mockRejectedValueOnce(new Error('Failed to create workspace'));
 
-    const result = await actions.default({
+    const _result = await actions.default({
       request: createRegisterRequest(
         'newuser@example.com',
         'Password123',
@@ -606,7 +606,7 @@ describe('register actions.default — transaction rollback semantics', () => {
     // Step 3 fails
     mockTx.query.mockRejectedValueOnce(new Error('Failed to update user'));
 
-    const result = await actions.default({
+    const _result = await actions.default({
       request: createRegisterRequest(
         'newuser@example.com',
         'Password123',

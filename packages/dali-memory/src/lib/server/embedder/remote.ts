@@ -49,7 +49,7 @@ export class RemoteEmbedder implements EmbedderProvider {
     }
 
     const json = (await res.json()) as any;
-    return json.data.map((d: any, i: number) => ({
+    return json.data.map((d: any, _i: number) => ({
       embedding: d.embedding as number[],
       model: this.model,
       dimensions: this.dims,

@@ -306,7 +306,7 @@ describe('Workspace memory detail page — edit action', () => {
   test('missing content returns fail 400', async () => {
     mockGetMemory.mockResolvedValue(sampleMemory);
 
-    const result = await pageServerModule.actions.edit({
+    const _result = await pageServerModule.actions.edit({
       request: createEditRequest({ content: '' }),
       params: { id: 'ws_001', slug: 'test-memory' },
     });
@@ -379,7 +379,7 @@ describe('Workspace memory detail page — edit action', () => {
     mockGetMemory.mockResolvedValue(sampleMemory);
     mockUpdateMemory.mockRejectedValueOnce('string error');
 
-    const result = await pageServerModule.actions.edit({
+    const _result = await pageServerModule.actions.edit({
       request: createEditRequest(),
       params: { id: 'ws_001', slug: 'test-memory' },
     });
@@ -459,7 +459,7 @@ describe('Workspace memory detail page — delete action', () => {
     mockGetMemory.mockResolvedValueOnce(sampleMemory);
     mockDeleteMemory.mockRejectedValueOnce('string error');
 
-    const result = await pageServerModule.actions.delete({
+    const _result = await pageServerModule.actions.delete({
       request: createDeleteRequest({ id: 'mem_abc123' }),
       params: { id: 'ws_001', slug: 'test-memory' },
     });
@@ -491,7 +491,7 @@ describe('Workspace memory detail page — add_tag action', () => {
   test('whitespace-only tag_name returns fail 400', async () => {
     mockGetMemory.mockResolvedValue(sampleMemory);
 
-    const result = await pageServerModule.actions.add_tag({
+    const _result = await pageServerModule.actions.add_tag({
       request: createAddTagRequest({ tag_name: '   ' }),
       params: { id: 'ws_001', slug: 'test-memory' },
     });
@@ -580,7 +580,7 @@ describe('Workspace memory detail page — add_tag action', () => {
     mockGetMemory.mockResolvedValue(sampleMemory);
     mockAddTagToMemory.mockRejectedValueOnce('string error');
 
-    const result = await pageServerModule.actions.add_tag({
+    const _result = await pageServerModule.actions.add_tag({
       request: createAddTagRequest(),
       params: { id: 'ws_001', slug: 'test-memory' },
     });
@@ -724,7 +724,7 @@ describe('Workspace memory detail page — remove_tag action', () => {
     mockGetMemory.mockResolvedValue(sampleMemory);
     mockRemoveTagFromMemory.mockRejectedValueOnce('string error');
 
-    const result = await pageServerModule.actions.remove_tag({
+    const _result = await pageServerModule.actions.remove_tag({
       request: createRemoveTagRequest(),
       params: { id: 'ws_001', slug: 'test-memory' },
     });

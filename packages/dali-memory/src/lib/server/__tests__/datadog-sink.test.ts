@@ -92,7 +92,7 @@ describe('createDatadogSink', () => {
     const { createDatadogSink } = await import('../datadog-sink');
     const sink = createDatadogSink()!;
     await sink(mockLogRecord() as any);
-    await vi.runAllTimersAsync();
+    vi.runAllTimers();
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
     const call = fetchMock.mock.calls[0];
@@ -121,7 +121,7 @@ describe('createDatadogSink', () => {
     const { createDatadogSink } = await import('../datadog-sink');
     const sink = createDatadogSink()!;
     await sink(mockLogRecord() as any);
-    await vi.runAllTimersAsync();
+    vi.runAllTimers();
 
     const body = JSON.parse(fetchMock.mock.calls[0][1].body);
     expect(body[0].dd).toEqual({ trace_id: 'abc-123', span_id: 'def-456' });
@@ -137,7 +137,7 @@ describe('createDatadogSink', () => {
     const { createDatadogSink } = await import('../datadog-sink');
     const sink = createDatadogSink()!;
     await sink(mockLogRecord() as any);
-    await vi.runAllTimersAsync();
+    vi.runAllTimers();
 
     const body = JSON.parse(fetchMock.mock.calls[0][1].body);
     expect(body[0].dd).toBeUndefined();
@@ -154,7 +154,7 @@ describe('createDatadogSink', () => {
     const { createDatadogSink } = await import('../datadog-sink');
     const sink = createDatadogSink()!;
     await sink(mockLogRecord() as any);
-    await vi.runAllTimersAsync();
+    vi.runAllTimers();
 
     const body = JSON.parse(fetchMock.mock.calls[0][1].body);
     expect(body[0].hostname).toBe('my-host');
@@ -171,7 +171,7 @@ describe('createDatadogSink', () => {
     const { createDatadogSink } = await import('../datadog-sink');
     const sink = createDatadogSink()!;
     await sink(mockLogRecord() as any);
-    await vi.runAllTimersAsync();
+    vi.runAllTimers();
 
     const body = JSON.parse(fetchMock.mock.calls[0][1].body);
     expect(body[0].ddtags).toBe('env:test,team:eng');
@@ -188,7 +188,7 @@ describe('createDatadogSink', () => {
     const { createDatadogSink } = await import('../datadog-sink');
     const sink = createDatadogSink()!;
     await sink(mockLogRecord() as any);
-    await vi.runAllTimersAsync();
+    vi.runAllTimers();
 
     const body = JSON.parse(fetchMock.mock.calls[0][1].body);
     expect(body[0].ddtags).toBeUndefined();

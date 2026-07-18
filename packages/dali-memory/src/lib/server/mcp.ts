@@ -13,7 +13,6 @@ import { MemoryService } from './services/memory';
 import { TagService } from './services/tag';
 import { HybridSearch } from './services/hybrid-search';
 import { EmbedderService, getEmbedder } from './embedder/index';
-import { validateApiKey } from './auth/api-keys';
 import { connect, getDB } from './db/connection';
 import { createLogger } from './logger';
 import type { SearchOptions } from './services/types';
@@ -62,7 +61,7 @@ const TagsRemoveSchema = z.object({
   tag_name: z.string(),
 });
 
-const WorkspacesListSchema = z.object({
+const _WorkspacesListSchema = z.object({
   limit: z.number().optional(),
 });
 
@@ -277,7 +276,7 @@ async function timedTool(
   log: Logger,
   name: string,
   fn: () => Promise<ToolResult>,
-  args?: Record<string, unknown>,
+  _args?: Record<string, unknown>,
 ): Promise<ToolResult> {
   const start = performance.now();
   try {

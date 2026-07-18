@@ -542,7 +542,7 @@ describe('Workspace memories page server — create action', () => {
       body: form,
     });
 
-    const result = await pageServerModule.actions.create({
+    const _result = await pageServerModule.actions.create({
       request,
       params: { id: 'ws_001' },
     });
@@ -562,7 +562,7 @@ describe('Workspace memories page server — create action', () => {
       body: form,
     });
 
-    const result = await pageServerModule.actions.create({
+    const _result = await pageServerModule.actions.create({
       request,
       params: { id: 'ws_001' },
     });
@@ -582,7 +582,7 @@ describe('Workspace memories page server — create action', () => {
       body: form,
     });
 
-    const result = await pageServerModule.actions.create({
+    const _result = await pageServerModule.actions.create({
       request,
       params: { id: 'ws_001' },
     });
@@ -713,7 +713,7 @@ describe('Workspace memories page server — delete action', () => {
       body: form,
     });
 
-    const result = await pageServerModule.actions.delete({
+    const _result = await pageServerModule.actions.delete({
       request,
       params: { id: 'ws_001' },
     });
@@ -731,7 +731,7 @@ describe('Workspace memories page server — delete action', () => {
       body: form,
     });
 
-    const result = await pageServerModule.actions.delete({
+    const _result = await pageServerModule.actions.delete({
       request,
       params: { id: 'ws_001' },
     });

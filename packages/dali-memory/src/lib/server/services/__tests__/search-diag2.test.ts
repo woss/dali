@@ -1,9 +1,8 @@
-import { describe, test, expect, vi, beforeAll, afterAll } from 'vitest';
+import { describe, test, vi, beforeAll, afterAll } from 'vitest';
 import { RecordId } from 'surrealdb';
 import { DaliORM } from '@woss/dali-orm';
 import { pushSchemaFromTableDefs } from '@woss/dali-orm/migration/api';
 import { schema } from '../../db/schema';
-import { MemoryService } from '../memory';
 
 const { mockState } = (vi as any).hoisted(() => ({
   mockState: { orm: null as any, embed: vi.fn(), embedBatch: vi.fn() },

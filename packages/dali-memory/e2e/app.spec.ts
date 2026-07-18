@@ -1,6 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 
-const TEST_EMAIL = `test-${Date.now()}@example.com`;
+const _TEST_EMAIL = `test-${Date.now()}@example.com`;
 const TEST_PASS = 'Password123';
 const TEST_NAME = 'Test User';
 
@@ -48,7 +48,7 @@ async function registerUserWithEmail(
  * Log in with given credentials and wait for redirect to /memories.
  * Returns true on success, false on failure.
  */
-async function login(page: Page, email: string, pass: string): Promise<boolean> {
+async function _login(page: Page, email: string, pass: string): Promise<boolean> {
   await page.goto('/login');
   await page.fill('#email', email);
   await page.fill('#password', pass);
@@ -146,7 +146,7 @@ test.describe('dali-memory Web UI', () => {
 
   test('settings - update profile', async ({ page }) => {
     // Register a dedicated user for this test
-    const email = await registerUser(page, TEST_NAME, TEST_PASS);
+    const _email = await registerUser(page, TEST_NAME, TEST_PASS);
 
     // Go to settings
     await page.goto('/settings');

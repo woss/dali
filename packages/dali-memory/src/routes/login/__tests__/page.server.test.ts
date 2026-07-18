@@ -102,7 +102,7 @@ describe('login actions.default — signSession and cookie creation', () => {
   });
 
   test('missing password: returns fail 400', async () => {
-    const result = await actions.default({
+    const _result = await actions.default({
       request: createLoginRequest('user@example.com'),
       cookies: mockCookies,
     } as any);
@@ -129,7 +129,7 @@ describe('login actions.default — signSession and cookie creation', () => {
   test('invalid credentials (null result from query): returns fail 401', async () => {
     (mockGetDB().getDriver() as any).query.mockResolvedValueOnce(null);
 
-    const result = await actions.default({
+    const _result = await actions.default({
       request: createLoginRequest('user@example.com', 'wrong-password'),
       cookies: mockCookies,
     } as any);
@@ -147,7 +147,7 @@ describe('login actions.default — signSession and cookie creation', () => {
       } as any);
       // Should not reach here — redirect throws
       expect.unreachable('Expected redirect to be thrown');
-    } catch (err: any) {
+    } catch (_err: any) {
       // We need to catch the redirect throw from our mock
     }
 
@@ -178,7 +178,7 @@ describe('login actions.default — signSession and cookie creation', () => {
         cookies: mockCookies,
       } as any);
       expect.unreachable('Expected redirect to be thrown');
-    } catch (err: any) {
+    } catch (_err: any) {
       // Expected
     }
 
@@ -196,7 +196,7 @@ describe('login actions.default — signSession and cookie creation', () => {
         cookies: mockCookies,
       } as any);
       expect.unreachable('Expected redirect to be thrown');
-    } catch (err: any) {
+    } catch (_err: any) {
       // Expected
     }
 
@@ -208,7 +208,7 @@ describe('login actions.default — signSession and cookie creation', () => {
   test('DB query throws error: returns fail 401', async () => {
     (mockGetDB().getDriver() as any).query.mockRejectedValueOnce(new Error('Connection lost'));
 
-    const result = await actions.default({
+    const _result = await actions.default({
       request: createLoginRequest('user@example.com', 'password'),
       cookies: mockCookies,
     } as any);

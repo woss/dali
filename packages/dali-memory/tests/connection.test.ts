@@ -11,6 +11,8 @@
  * 7. Non-Error values thrown by DaliORM.connect() are wrapped in ConnectionError
  */
 
+/* eslint-disable @typescript-eslint/unbound-method -- DaliORM is vi.mock()'d, all .connect refs are mock-safe */
+
 import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest';
 import { ConnectionError, MigrationError } from '@woss/dali-orm/core/errors';
 
@@ -63,7 +65,7 @@ describe('connect — error handling', () => {
   beforeEach(async () => {
     vi.clearAllMocks();
     // Reset the singleton between tests
-    const { connect, disconnect } = await import('../src/lib/server/db/connection');
+    const { disconnect } = await import('../src/lib/server/db/connection');
     await disconnect();
   });
 

@@ -4,7 +4,7 @@ import { getConfig } from '$lib/server/config';
 import { fail, redirect } from '@sveltejs/kit';
 import type { Actions, PageServerLoad } from './$types';
 
-export const load: PageServerLoad = async ({ locals, url }) => {
+export const load: PageServerLoad = async ({ locals, url: _url }) => {
   if (locals.authenticated) {
     redirect(303, '/workspaces');
   }

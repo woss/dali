@@ -89,7 +89,7 @@ const sampleWorkspaceRows = [
 ];
 
 /** SurrealDB query returns Result[] — { result: [...] } wrapper */
-const wsQueryResult = (rows: typeof sampleWorkspaceRows) => [{ result: rows }];
+const _wsQueryResult = (rows: typeof sampleWorkspaceRows) => [{ result: rows }];
 
 const sampleMemories = [
   {

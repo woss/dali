@@ -1,4 +1,4 @@
-import { connect, getDB } from '$lib/server/db/connection';
+import { connect } from '$lib/server/db/connection';
 import { toPlain } from '$lib/utils/serialization';
 import type { LayoutServerLoad } from './$types';
 

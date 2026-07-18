@@ -1,6 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { spawn } from 'child_process';
-import { resolve } from 'path';
+// spawn/resolve removed — unused
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -32,7 +31,7 @@ async function registerUser(page: Page, name = TEST_NAME, pass = TEST_PASS): Pro
 /**
  * Login with credentials.
  */
-async function login(page: Page, email: string, pass: string): Promise<void> {
+async function _login(page: Page, email: string, pass: string): Promise<void> {
   await page.goto('/login');
   await page.fill('#email', email);
   await page.fill('#password', pass);
@@ -55,7 +54,7 @@ async function createWorkspace(page: Page, name: string, desc?: string): Promise
 /**
  * Navigate into a workspace's memories by clicking its "View →" link.
  */
-async function enterWorkspace(page: Page, workspaceName: string): Promise<void> {
+async function enterWorkspace(page: Page, _workspaceName: string): Promise<void> {
   await page.goto('/workspaces');
   await page.locator(`a[href*="/workspaces/"]`).filter({ hasText: 'View →' }).first().click();
   await page.waitForURL(/\/workspaces\/.+\/memories/);
@@ -379,7 +378,7 @@ test.describe('Mobile Navigation', () => {
 test.describe('MCP API via Generated API Key', () => {
   test('generate API key from settings and call MCP endpoints', async ({ page }) => {
     // Register user
-    const email = await registerUser(page);
+    const _email = await registerUser(page);
 
     // Go to settings and generate an API key
     await page.goto('/settings');
@@ -413,7 +412,7 @@ test.describe('MCP API via Generated API Key', () => {
     ).toBeVisible({ timeout: 5000 });
 
     // Get workspace slug from the URL
-    const wsUrl = page.url(); // Should be /workspaces
+    const _wsUrl = page.url(); // Should be /workspaces
     const wsLink = page.locator(`a[href*="/workspaces/"]`).filter({ hasText: 'View →' }).first();
     const href = await wsLink.getAttribute('href');
     const workspaceId = href?.replace('/workspaces/', '').replace('/memories', '') || '';

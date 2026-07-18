@@ -161,7 +161,7 @@ export class MemoryService {
         .execute(),
     );
 
-    const memoryRecord = result[0] as Record<string, unknown>;
+    const _memoryRecord = result[0] as Record<string, unknown>;
 
     // Find or create model record
     const config = getConfig();

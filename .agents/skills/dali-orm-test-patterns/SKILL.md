@@ -70,6 +70,61 @@ expect(status.pending).toHaveLength(1);
 expect(status.applied).toHaveLength(0);
 ```
 
+## SchemaBuilder Tests
+
+SchemaBuilder tests use a mock queryFn instead of real SurrealDB:
+
+```typescript
+import { createSchemaBuilder } from '../schema-builder.js';
+
+describe('SchemaBuilder', () => {
+  it('defineTable generates correct SQL', () => {
+    const queryFn = vi.fn().mockResolvedValue(undefined);
+    const builder = createSchemaBuilder(queryFn);
+    const sql = builder.defineTable('user').toSQL();
+    expect(sql).toEqual(['DEFINE TABLE user SCHEMAFULL TYPE normal']);
+  });
+
+  it('defineIndex generates correct SQL', () => {
+    const queryFn = vi.fn().mockResolvedValue(undefined);
+    const builder = createSchemaBuilder(queryFn);
+    const sql = builder
+      .defineIndex('user_email_idx', {
+        table: 'user',
+        fields: ['email'],
+        type: 'unique',
+      })
+      .toSQL();
+    expect(sql).toEqual(['DEFINE INDEX user_email_unique ON TABLE user COLUMNS email UNIQUE']);
+  });
+
+  it('chaining returns same builder', () => {
+    const queryFn = vi.fn().mockResolvedValue(undefined);
+    const builder = createSchemaBuilder(queryFn);
+    const result = builder
+      .defineTable('user')
+      .defineField('user', 'name', { type: 'string' })
+      .removeTable('legacy');
+    expect(result).toBe(builder);
+  });
+
+  it('execute calls queryFn for each statement', async () => {
+    const queryFn = vi.fn().mockResolvedValue(undefined);
+    const builder = createSchemaBuilder(queryFn);
+    await builder.defineTable('user').defineField('user', 'name', { type: 'string' }).execute();
+    expect(queryFn).toHaveBeenCalledTimes(2);
+  });
+});
+```
+
+**Key patterns:**
+
+- Mock `queryFn` with `vi.fn().mockResolvedValue(undefined)` — no real DB needed
+- Test `toSQL()` for SQL generation correctness
+- Test chaining by verifying `result === builder`
+- Test `execute()` by verifying `queryFn` call count and arguments
+- Adversarial tests: empty strings, SQL injection via `raw()`, multiple `execute()` calls
+
 ## Test File Placement
 
 | Package             | Test Directory                        |

@@ -295,7 +295,7 @@ describe('Workspaces page — create action', () => {
       body: form,
     });
 
-    const result = await pageModule.actions.create({ request } as any);
+    const _result = await pageModule.actions.create({ request } as any);
 
     expect(mockFail).toHaveBeenCalledWith(400, { error: 'Workspace name is required' });
   });
@@ -330,7 +330,7 @@ describe('Workspaces page — create action', () => {
       body: form,
     });
 
-    const result = await pageModule.actions.create({ request } as any);
+    const _result = await pageModule.actions.create({ request } as any);
 
     expect(mockFail).toHaveBeenCalledWith(400, { error: 'Failed to create workspace' });
   });
@@ -407,7 +407,7 @@ describe('Workspaces page — delete action', () => {
       body: form,
     });
 
-    const result = await pageModule.actions.delete({ request } as any);
+    const _result = await pageModule.actions.delete({ request } as any);
 
     expect(mockFail).toHaveBeenCalledWith(400, { error: 'Workspace ID is required' });
   });
@@ -428,7 +428,7 @@ describe('Workspaces page — delete action', () => {
       body: form,
     });
 
-    const result = await pageModule.actions.delete({
+    const _result = await pageModule.actions.delete({
       request,
       locals: { userEmail: 'user@test.com' },
     } as any);

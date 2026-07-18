@@ -14,9 +14,10 @@ Type-safe TypeScript ORM for SurrealDB. Provides fluent query builders, schema d
 src/
   index.ts           — Main entry: DaliORM, OrmSchema, connect, types
   sdk/
-    dali-orm.ts      — DaliORM class (connect, CRUD, query, execute)
+    dali-orm.ts      — DaliORM class (connect, CRUD, query, execute, schema)
     orm-schema.ts    — OrmSchema container (tables, access, variables, functions)
     table.ts         — defineTable, defineRelationTable, ColumnBuilder
+    schema-builder.ts — SchemaBuilder (runtime DDL: DEFINE TABLE/FIELD/INDEX, REMOVE)
     schema.ts        — AccessConfig definitions, accessToSQL
     driver/          — SurrealDriver, NodeDriver, EmbeddedDriver, config, auth
     functions/       — SurrealDB function wrappers (math, string, vector, etc.)
@@ -193,6 +194,60 @@ await userModel
 
 Each method call creates a **fresh** builder — safe to reuse the same model across concurrent calls.
 
+## Runtime Schema Builder
+
+`SchemaBuilder` provides a fluent API for runtime DDL operations without migration files or journal tracking.
+
+### Creating a SchemaBuilder
+
+```typescript
+const schema = orm.schema(); // returns SchemaBuilder
+```
+
+### Methods
+
+| Method                                      | Description                           | Returns         |
+| ------------------------------------------- | ------------------------------------- | --------------- |
+| `defineTable(name, config?)`                | DEFINE TABLE with optional config     | SchemaBuilder   |
+| `defineField(table, name, config)`          | DEFINE FIELD on a table               | SchemaBuilder   |
+| `defineIndex(name, {table, fields, type?})` | DEFINE INDEX (unique/normal/fulltext) | SchemaBuilder   |
+| `removeTable(name)`                         | REMOVE TABLE                          | SchemaBuilder   |
+| `removeField(table, name)`                  | REMOVE FIELD FROM TABLE               | SchemaBuilder   |
+| `removeIndex(name, table)`                  | REMOVE INDEX FROM TABLE               | SchemaBuilder   |
+| `raw(sql)`                                  | Raw DDL statement passthrough         | SchemaBuilder   |
+| `toSQL()`                                   | Generate all statements as string[]   | string[]        |
+| `execute()`                                 | Run all statements via orm.query()    | Promise\<void\> |
+
+### Usage
+
+```typescript
+// Chain operations
+const schema = orm.schema();
+schema
+  .defineTable('user', { type: 'normal' })
+  .defineField('user', 'name', { type: 'string', notNull: true })
+  .defineField('user', 'email', { type: 'string', notNull: true })
+  .defineIndex('user_email_idx', { table: 'user', fields: ['email'], type: 'unique' });
+
+// Generate SQL without executing
+const statements = schema.toSQL();
+// → ["DEFINE TABLE user SCHEMAFULL TYPE normal", "DEFINE FIELD name ON TABLE user TYPE string ASSERT $input != NONE", ...]
+
+// Execute all statements
+await schema.execute();
+
+// Raw DDL for unsupported operations
+schema.raw('DEFINE ANALYZER my_analyzer TOKENIZERS blank CLASS FILTERS lowercase');
+```
+
+### Notes
+
+- All methods return `this` for chaining
+- `id` field is automatically skipped by `generateFieldDefinition` (SurrealDB manages it)
+- `raw()` passes SQL through verbatim — no escaping or validation
+- `execute()` runs statements sequentially without transaction wrapping
+- Type-safe definitions reuse the same types as the migration system (`TableDefinition`, `IndexDefinition`, `ColumnDefinition`)
+
 ## Reference Files
 
 | Task                                      | File                                                               |
@@ -211,7 +266,7 @@ Each method call creates a **fresh** builder — safe to reuse the same model ac
 **Load reference files based on task:**
 
 - [ ] [references/schema-definition.md](references/schema-definition.md) — if defining tables, columns, OrmSchema
-- [ ] [references/dali-orm-class.md](references/dali-orm-class.md) — if connecting, CRUD, transactions
+- [ ] [references/dali-orm-class.md](references/dali-orm-class.md) — if connecting, CRUD, transactions, runtime DDL (orm.schema())
 - [ ] [references/query-builders.md](references/query-builders.md) — if writing select/insert/update/delete queries
 - [ ] [references/query-builders.md](references/query-builders.md) — Model section — if using Model class for ad-hoc queries
 - [ ] [references/conditions.md](references/conditions.md) — if building complex WHERE conditions
@@ -224,7 +279,7 @@ Each method call creates a **fresh** builder — safe to reuse the same model ac
 
 | Import Path                                        | Exports                                                                                                                                                              |
 | -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `@woss/dali-orm`                                   | DaliORM, OrmSchema, createOrmSchema, connect, SurrealDriver, TableDefinition, ColumnDefinition                                                                       |
+| `@woss/dali-orm`                                   | DaliORM, OrmSchema, createOrmSchema, connect, SurrealDriver, TableDefinition, ColumnDefinition, SchemaBuilder, createSchemaBuilder                                   |
 | `@woss/dali-orm/query`                             | select, insert, update, delete\_, upsert, create, relate, live, bindTable, Model, createModel, all condition helpers, InferSelectResult, InferInsertInput, ColumnRef |
 | `@woss/dali-orm/query/select`                      | SelectBuilder, WhereBuilder, select                                                                                                                                  |
 | `@woss/dali-orm/query/insert`                      | InsertBuilder, insert                                                                                                                                                |

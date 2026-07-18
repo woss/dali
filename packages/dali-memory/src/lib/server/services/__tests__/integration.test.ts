@@ -1,4 +1,4 @@
-import { describe, test, expect, vi, beforeAll, afterAll, beforeEach } from 'vitest';
+import { describe, test, expect, vi, beforeAll, afterAll } from 'vitest';
 
 // ---------------------------------------------------------------------------
 // Hoisted mocks — referenced inside vi.mock() factories
@@ -43,7 +43,6 @@ vi.mock('$env/dynamic/private', () => ({
 // ---------------------------------------------------------------------------
 // Imports
 // ---------------------------------------------------------------------------
-import { RecordId } from 'surrealdb';
 import { DaliORM } from '@woss/dali-orm';
 import { pushSchemaFromTableDefs } from '@woss/dali-orm/migration/api';
 import { schema } from '../../db/schema';

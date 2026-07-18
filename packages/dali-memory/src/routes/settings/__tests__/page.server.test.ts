@@ -1,4 +1,4 @@
-import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, test, expect, vi, beforeEach } from 'vitest';
 
 // =============================================================================
 // Hoisted mocks
@@ -237,7 +237,7 @@ describe('settings actions.generate-key — user_id linkage with api_keys', () =
 
     driverQuery.mockResolvedValueOnce([[]]);
 
-    const result = await actions['generate-key']({
+    const _result = await actions['generate-key']({
       request: createGenerateKeyRequest('empty-key'),
       locals: { userEmail: 'nobody@example.com', authenticated: true },
     } as any);
