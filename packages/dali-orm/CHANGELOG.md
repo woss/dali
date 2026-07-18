@@ -4,6 +4,7 @@
 
 ### Added
 
+- Depth range support for graph traversal: `.traverse('out', 'edge', 'target', 'alias', { depth: { min: 1, max: 3 } })` and `graphPath().out('edge').depth(1, 3).to('target')` — generates SurrealQL depth syntax `->edge->table{min,max}` (bounded) or `->edge->table{min,}` (unbounded)
 - `DeleteBuilder.where()` with 3 overloads matching `SelectBuilder` API: (a) callback `(w: WhereBuilder) => WhereBuilder`, (b) `SerializedCondition` object, (c) raw string clause
 - `DeleteBuilder.limit(n)` — limits deleted records via subquery wrap (`DELETE FROM (SELECT id FROM table WHERE ... LIMIT n)`)
 - `DeleteBuilder.toSQL()` — public method returning `{ sql, params }` for SurrealQL compilation

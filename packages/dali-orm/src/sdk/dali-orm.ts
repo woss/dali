@@ -4,6 +4,8 @@ import type { InferSelectResult, InferInsertData, InferUpdateData } from './infe
 import type { TableDefinition } from './table.js';
 import { createModel } from '../query/model.js';
 import type { Model } from '../query/model.js';
+import { createSchemaBuilder } from './schema-builder.js';
+import type { SchemaBuilder } from './schema-builder.js';
 
 /**
  * DaliORM configuration - extends SurrealORMConfig with optional schema
@@ -43,11 +45,11 @@ export class DaliORM {
   private readonly driver: import('./driver/types.js').SurrealDriver;
 
   /** Schema definition if provided */
-  readonly schema: OrmSchema | undefined;
+  readonly schemaDefinition: OrmSchema | undefined;
 
   private constructor(driver: import('./driver/types.js').SurrealDriver, schema?: OrmSchema) {
     this.driver = driver;
-    this.schema = schema;
+    this.schemaDefinition = schema;
   }
 
   /**
@@ -173,10 +175,26 @@ export class DaliORM {
   // ==================== Schema & Connection Management ====================
 
   /**
+   * Create a runtime SchemaBuilder for defining/modifying database schema
+   * without migration files.
+   *
+   * @example
+   * ```typescript
+   * await orm.schema()
+   *   .defineTable('user', { schema: 'full' })
+   *   .defineField('user', 'name', { type: 'string' })
+   *   .execute();
+   * ```
+   */
+  schema(): SchemaBuilder {
+    return createSchemaBuilder((sql: string) => this.query(sql));
+  }
+
+  /**
    * Get a table definition by name from the schema
    */
   table(name: string) {
-    return this.schema?.getTable(name);
+    return this.schemaDefinition?.getTable(name);
   }
 
   /**

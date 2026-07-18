@@ -50,6 +50,12 @@ A TypeScript ORM for SurrealDB with schema definitions, fluent query builders, a
     - [Usage](#usage)
     - [Authentication Types](#authentication-types)
     - [Shadow Database](#shadow-database)
+  - [Runtime Schema Builder](#runtime-schema-builder)
+    - [Basic Usage](#basic-usage)
+    - [Defining Tables and Fields](#defining-tables-and-fields)
+    - [Indexes](#indexes)
+    - [Removing Schema Objects](#removing-schema-objects)
+    - [Raw SQL and Inspection](#raw-sql-and-inspection)
   - [Migrations](#migrations)
     - [CLI Commands](#cli-commands)
     - [Shadow DB Pre-validation](#shadow-db-pre-validation)
@@ -285,6 +291,42 @@ select(orm, userTable)
   .fetch('posts') // FETCH related records
   .parallel() // PARALLEL
   .timeout(5) // TIMEOUT (seconds)
+  .execute();
+```
+
+#### Graph Traversal with Depth
+
+Traverse graph edges with optional depth/range constraints:
+
+```typescript
+import { select, graphPath } from '@woss/dali-orm/query';
+
+// Basic traversal — follow 'wrote' edges to posts
+select(orm, userTable).traverse('out', 'wrote', 'post', 'posts').execute();
+// SELECT *, ->wrote->post.* AS posts FROM user
+
+// Bounded depth — traverse 1 to 3 levels deep
+select(orm, userTable)
+  .traverse('out', 'wrote', 'post', 'posts', { depth: { min: 1, max: 3 } })
+  .execute();
+// SELECT *, ->wrote->post{1,3}.* AS posts FROM user
+
+// Unbounded depth — traverse from level 2 onward
+select(orm, userTable)
+  .traverse('in', 'authored', 'posts', { depth: { min: 2 } })
+  .execute();
+// SELECT *, <-authored<-posts{2,}.* AS posts FROM user
+
+// GraphPath builder — chainable with .depth()
+const path = graphPath().out('follows').depth(1, 4).to('user').out('wrote').depth(1, 2).to('post');
+// ->follows->user{1,4}->wrote->post{1,2}
+
+// Graph traversal + WHERE + ORDER BY
+select(orm, userTable)
+  .traverse('out', 'wrote', 'post', 'posts', { depth: { min: 1, max: 3 } })
+  .where((w) => w.contains(w.field('posts.status'), 'published'))
+  .orderBy('name', 'ASC')
+  .limit(10)
   .execute();
 ```
 
@@ -827,6 +869,12 @@ const result = await orm.query('SELECT * FROM user WHERE age > $age', { age: 18 
 // Execute a query builder object directly
 const result = await orm.execute(select(orm, userTable).where(eq('active', true)));
 
+// Runtime schema DDL (see Runtime Schema Builder section)
+const ddl = orm
+  .schema()
+  .defineTable('user', { type: 'normal' })
+  .defineField('user', 'name', { type: 'string' });
+
 // Check connection
 const connected = orm.isConnected();
 
@@ -1029,6 +1077,103 @@ const runner = new MigrationRunner(driver);
 await runner.init();
 await runner.up();
 const status = await runner.status();
+```
+
+## Runtime Schema Builder
+
+The `SchemaBuilder` provides a fluent, runtime DDL API for defining and modifying database schema directly — no migration files or journal required. Useful for programmatic schema setup, testing, or dynamic schema changes.
+
+### Basic Usage
+
+```typescript
+import { DaliORM } from '@woss/dali-orm';
+
+const orm = await DaliORM.connect({
+  nodeDriver: { driver: 'node', url: 'ws://localhost:10101', namespace: 'test', database: 'test' },
+});
+
+// Create a SchemaBuilder via the ORM instance
+const schema = orm.schema();
+
+// Chain DDL operations
+schema
+  .defineTable('user', { type: 'normal' })
+  .defineField('user', 'name', { type: 'string', notNull: true })
+  .defineField('user', 'email', { type: 'string' });
+
+// Execute all queued statements
+await schema.execute();
+```
+
+### Defining Tables and Fields
+
+```typescript
+// Define a table with options
+orm
+  .schema()
+  .defineTable('article', {
+    schema: 'full',
+    type: 'normal',
+    permissions: {
+      select: 'WHERE true',
+      create: 'WHERE true',
+      update: 'WHERE true',
+      delete: 'WHERE true',
+    },
+  })
+  .execute();
+
+// Define fields with column config
+orm
+  .schema()
+  .defineField('article', 'title', { type: 'string', notNull: true })
+  .defineField('article', 'content', { type: 'string' })
+  .defineField('article', 'published_at', { type: 'datetime', optional: true })
+  .execute();
+```
+
+### Indexes
+
+```typescript
+orm
+  .schema()
+  .defineIndex('user_email_idx', {
+    table: 'user',
+    fields: ['email'],
+    type: 'unique',
+  })
+  .defineIndex('article_search', {
+    table: 'article',
+    fields: ['title'],
+    type: 'fulltext',
+  })
+  .execute();
+```
+
+### Removing Schema Objects
+
+```typescript
+orm
+  .schema()
+  .removeTable('legacy_table')
+  .removeField('user', 'deprecated_field')
+  .removeIndex('old_idx', 'user')
+  .execute();
+```
+
+### Raw SQL and Inspection
+
+```typescript
+// Queue arbitrary SurrealQL
+orm.schema().raw('DEFINE ANALYZER my_analyzer TOKENIZERS blank CLASS FILTERS lowercase').execute();
+
+// Inspect generated SQL without executing
+const statements = orm
+  .schema()
+  .defineTable('user', { type: 'normal' })
+  .defineField('user', 'name', { type: 'string' })
+  .toSQL();
+// ['DEFINE TABLE user TYPE normal SCHEMAFULL', 'DEFINE FIELD name ON user TYPE string']
 ```
 
 ## Demo Example

@@ -338,7 +338,7 @@ describe('DaliORM.connect() — schema propagation', () => {
     });
 
     // DaliORM stores schema on itself
-    expect(orm.schema).toBe(mockSchema);
+    expect(orm.schemaDefinition).toBe(mockSchema);
 
     // The underlying driver also has schema set (via orm-connection)
     const driver = orm.getDriver();
@@ -350,7 +350,7 @@ describe('DaliORM.connect() — schema propagation', () => {
       nodeDriver: { driver: 'node', url: 'ws://localhost:8000' },
     });
 
-    expect(orm.schema).toBeUndefined();
+    expect(orm.schemaDefinition).toBeUndefined();
     expect(orm.getDriver().schema).toBeUndefined();
   });
 
@@ -361,7 +361,7 @@ describe('DaliORM.connect() — schema propagation', () => {
       schema: mockSchema,
     });
 
-    expect(orm.schema).toBe(mockSchema);
+    expect(orm.schemaDefinition).toBe(mockSchema);
     expect(orm.getDriver().schema).toBe(mockSchema);
   });
 

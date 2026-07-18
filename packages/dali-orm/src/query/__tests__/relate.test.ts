@@ -211,6 +211,52 @@ describe('GraphPath', () => {
   it('graphPath throws on empty edge for out()', () => {
     expect(() => graphPath().out('')).toThrow('Edge name is required');
   });
+
+  it('graphPath out().depth(1,3).to()', () => {
+    const path = graphPath().out('wrote').depth(1, 3).to('post');
+    expect(path.toString()).toBe('->wrote->post{1,3}');
+  });
+
+  it('graphPath out().depth(1).to()', () => {
+    const path = graphPath().out('wrote').depth(1).to('post');
+    expect(path.toString()).toBe('->wrote->post{1,}');
+  });
+
+  it('graphPath out().depth(0,5).to()', () => {
+    const path = graphPath().out('follows').depth(0, 5).to('user');
+    expect(path.toString()).toBe('->follows->user{0,5}');
+  });
+
+  it('graphPath in().depth(2,4).to()', () => {
+    const path = graphPath().in('wrote').depth(2, 4).to('user');
+    expect(path.toString()).toBe('<-wrote<-user{2,4}');
+  });
+
+  it('graphPath multiple steps with depth', () => {
+    const path = graphPath()
+      .out('follows')
+      .depth(1, 3)
+      .to('user')
+      .out('wrote')
+      .depth(0, 2)
+      .to('post');
+    expect(path.toString()).toBe('->follows->user{1,3}->wrote->post{0,2}');
+  });
+
+  it('graphPath depth validates min >= 0', () => {
+    expect(() => graphPath().out('wrote').depth(-1).to('post')).toThrow('Depth min must be >= 0');
+  });
+
+  it('graphPath depth validates max >= min', () => {
+    expect(() => graphPath().out('wrote').depth(3, 1).to('post')).toThrow(
+      'Depth max must be >= min',
+    );
+  });
+
+  it('graphPath depth with alias', () => {
+    const path = graphPath().out('wrote').depth(2, 5).alias('posts');
+    expect(path.toString()).toBe('->wrote->posts{2,5}');
+  });
 });
 
 // ============================================================================

@@ -35,6 +35,8 @@
 export type { EventDefinition } from './migration/ddl/schemas.js';
 export type { DaliORMConfig } from './sdk/dali-orm.js';
 export { DaliORM } from './sdk/dali-orm.js';
+export type { SchemaBuilder } from './sdk/schema-builder.js';
+export { createSchemaBuilder } from './sdk/schema-builder.js';
 export { connect } from './sdk/driver/orm-connection.js';
 export type {
   LiveAction,

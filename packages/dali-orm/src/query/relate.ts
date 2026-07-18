@@ -19,6 +19,7 @@ interface GraphStep {
   edge: string;
   table?: string;
   alias?: string;
+  depth?: { min: number; max?: number };
 }
 
 export class GraphPath {
@@ -42,7 +43,14 @@ export class GraphPath {
       .map((step) => {
         const arrow = step.direction === 'out' ? '->' : '<-';
         const parts = [`${arrow}${step.edge}`];
-        if (step.table) parts.push(`${arrow}${step.table}`);
+        if (step.table) {
+          let target = `${arrow}${step.table}`;
+          if (step.depth) {
+            const { min, max } = step.depth;
+            target += max !== undefined ? `{${min},${max}}` : `{${min},}`;
+          }
+          parts.push(target);
+        }
         return parts.join('');
       })
       .join('');
@@ -64,6 +72,7 @@ export class GraphPathContinuation {
   private graphPath: GraphPath;
   private direction: 'out' | 'in';
   private edge: string;
+  private _depth?: { min: number; max?: number };
 
   constructor(graphPath: GraphPath, direction: 'out' | 'in', edge: string) {
     this.graphPath = graphPath;
@@ -71,10 +80,23 @@ export class GraphPathContinuation {
     this.edge = edge;
   }
 
+  /** Set depth range for this traversal step */
+  depth(min: number, max?: number): GraphPathContinuation {
+    if (min < 0) throw new Error('Depth min must be >= 0');
+    if (max !== undefined && max < min) throw new Error('Depth max must be >= min');
+    this._depth = { min, max };
+    return this;
+  }
+
   /** Complete the traversal with target table */
   to(table: string): GraphPath {
     if (!table || typeof table !== 'string') throw new Error('Table name is required');
-    return this.graphPath.addStep({ direction: this.direction, edge: this.edge, table });
+    return this.graphPath.addStep({
+      direction: this.direction,
+      edge: this.edge,
+      table,
+      depth: this._depth,
+    });
   }
 
   /** Complete the traversal with an alias (target inferred from alias) */
@@ -85,6 +107,7 @@ export class GraphPathContinuation {
       edge: this.edge,
       table: name,
       alias: name,
+      depth: this._depth,
     });
   }
 }

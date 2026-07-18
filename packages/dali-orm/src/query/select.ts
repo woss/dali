@@ -36,6 +36,7 @@ interface GraphTraversal {
   edge: string;
   target: string;
   alias: string;
+  depth?: { min: number; max?: number };
 }
 
 // ============================================================================
@@ -201,15 +202,49 @@ export class SelectBuilder<TDef extends TableDefinition, TResult = InferSelectRe
    * Generates: ->wrote->posts.* AS posts
    */
   traverse(direction: GraphDirection, edge: string, alias: string): this;
+  traverse(
+    direction: GraphDirection,
+    edge: string,
+    alias: string,
+    options: { depth?: { min: number; max?: number } },
+  ): this;
   traverse(direction: GraphDirection, edge: string, target: string, alias: string): this;
-  traverse(direction: GraphDirection, edge: string, targetOrAlias: string, alias?: string): this {
+  traverse(
+    direction: GraphDirection,
+    edge: string,
+    target: string,
+    alias: string,
+    options: { depth?: { min: number; max?: number } },
+  ): this;
+  traverse(
+    direction: GraphDirection,
+    edge: string,
+    targetOrAlias: string,
+    aliasOrOptions?: string | { depth?: { min: number; max?: number } },
+    maybeOptions?: { depth?: { min: number; max?: number } },
+  ): this {
     if (!edge || typeof edge !== 'string') throw new Error('Edge name is required for traverse');
     if (!targetOrAlias) throw new Error('Target or alias is required for traverse');
 
-    const target = alias ? targetOrAlias : '';
-    const actualAlias = alias ?? targetOrAlias;
+    let target = '';
+    let actualAlias = '';
+    let depth: { min: number; max?: number } | undefined;
 
-    this.graphTraversals.push({ direction, edge, target, alias: actualAlias });
+    if (typeof aliasOrOptions === 'string') {
+      // 4-arg form (with or without options): traverse('out', 'wrote', 'post', 'posts') or traverse('out', 'wrote', 'post', 'posts', { depth: ... })
+      target = targetOrAlias;
+      actualAlias = aliasOrOptions;
+      depth = maybeOptions?.depth;
+    } else if (typeof aliasOrOptions === 'object' && aliasOrOptions !== null) {
+      // 3-arg form with options: traverse('out', 'wrote', 'posts', { depth: { min: 1, max: 3 } })
+      actualAlias = targetOrAlias;
+      depth = aliasOrOptions.depth;
+    } else {
+      // 3-arg form: traverse('out', 'wrote', 'posts')
+      actualAlias = targetOrAlias;
+    }
+
+    this.graphTraversals.push({ direction, edge, target, alias: actualAlias, depth });
     return this;
   }
 
@@ -405,10 +440,16 @@ export class SelectBuilder<TDef extends TableDefinition, TResult = InferSelectRe
 
     // Add graph traversal fields
     for (const traversal of this.graphTraversals) {
-      const arrow =
-        traversal.direction === 'out'
-          ? `->${traversal.edge}->${traversal.target || traversal.alias}`
-          : `<-${traversal.edge}<-${traversal.target || traversal.alias}`;
+      let arrow: string;
+      if (traversal.direction === 'out') {
+        arrow = `->${traversal.edge}->${traversal.target || traversal.alias}`;
+      } else {
+        arrow = `<-${traversal.edge}<-${traversal.target || traversal.alias}`;
+      }
+      if (traversal.depth) {
+        const { min, max } = traversal.depth;
+        arrow += max !== undefined ? `{${min},${max}}` : `{${min},}`;
+      }
       fieldsStr += `, ${arrow}.* AS ${traversal.alias}`;
     }
 
