@@ -15,6 +15,7 @@ jobs:
     permissions:
       contents: write
       id-token: write
+      pull-requests: write
 
     steps:
       - uses: actions/checkout@v6
@@ -37,39 +38,14 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
 
-      - name: Check version
-        id: version
-        run: |
-          VERSION=$(node -e "console.log(require('./packages/dali-orm/package.json').version)")
-          if git rev-parse "v$VERSION" >/dev/null 2>&1; then
-            echo "Tag v$VERSION already exists — nothing to publish"
-            echo "publish=false" >> $GITHUB_OUTPUT
-          else
-            echo "Detected new version v$VERSION"
-            echo "publish=true" >> $GITHUB_OUTPUT
-            echo "version=$VERSION" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Publish @woss/dali-orm
-        if: steps.version.outputs.publish == 'true'
-        run: |
-          cd packages/dali-orm
-          pnpm publish --no-git-checks --provenance --access public
+      - name: Create Release Pull Request or Publish to npm
+        uses: changesets/action@v1
+        with:
+          publish: pnpm release
+          version: pnpm version-packages
+          commit: 'chore: version packages'
+          title: 'chore: version packages'
+          createGithubReleases: true
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-
-      - name: Publish @woss/dali-memory
-        if: steps.version.outputs.publish == 'true'
-        run: |
-          cd packages/dali-memory
-          pnpm publish --no-git-checks --provenance --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-
-      - name: Create GitHub Release
-        if: steps.version.outputs.publish == 'true'
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          gh release create "v${{ steps.version.outputs.version }}" \
-            --generate-notes
+          GITHUB_TOKEN: ${{ github.token }}
+          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}

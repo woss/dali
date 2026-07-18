@@ -3,10 +3,18 @@
   "instructions": ["../AGENTS.md", "./tools/philosophy.md"],
   "lsp": true,
   "mcp": {
-    "backlog": {
+    "dali-memory": {
+      "type": "remote",
+      "enabled": true,
+      "url": "http://localhost:7777/api/mcp",
+      "headers": {
+        "Authorization": "Bearer 8d2583772c854424b102afb9da7aef8f-7410acaef8954e4f8f1f422054d75a6c",
+      },
+    },
+    "task-manager": {
       "type": "local",
       "enabled": true,
-      "command": ["backlog-new", "mcp", "start"],
+      "command": ["deno", "run", "-A", "/Users/woss/projects/woss/mcp-task-manager/main.ts"],
     },
     "mcp-fetch-server": {
       "type": "local",
@@ -39,7 +47,7 @@
     },
   },
   "plugin": [
-    "@tarquinen/opencode-dcp@3.1.3",
+    "@tarquinen/opencode-dcp@3.1.13",
     "@franlol/opencode-md-table-formatter@0.0.6",
     "caveman-opencode-plugin@latest",
     "./plugins/notify.ts",
