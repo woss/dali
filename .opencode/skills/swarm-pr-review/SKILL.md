@@ -238,19 +238,21 @@ gh pr view <PR_NUMBER> --json mergeable,mergeStateStatus
 The response has two independent fields. Handle each:
 
 **`mergeable` field** — whether GitHub can compute mergeability:
-| Value | Meaning | Action |
-|-------|---------|--------|
-| `MERGEABLE` | No conflicts detected | Proceed — check `mergeStateStatus` below |
-| `CONFLICTING` | Merge conflicts exist | Record the blocker, keep the review read-only, and hand conflict resolution to `swarm-pr-feedback` |
-| `UNKNOWN` | GitHub still computing | Wait 30s, re-check |
+
+| Value         | Meaning                | Action                                                                                             |
+| ------------- | ---------------------- | -------------------------------------------------------------------------------------------------- |
+| `MERGEABLE`   | No conflicts detected  | Proceed — check `mergeStateStatus` below                                                           |
+| `CONFLICTING` | Merge conflicts exist  | Record the blocker, keep the review read-only, and hand conflict resolution to `swarm-pr-feedback` |
+| `UNKNOWN`     | GitHub still computing | Wait 30s, re-check                                                                                 |
 
 **`mergeStateStatus` field** — overall branch state:
-| Value | Action |
-|-------|--------|
-| `CLEAN` | All checks pass, no conflicts — proceed to Phase 0 |
-| `BEHIND` | Branch behind base — note in report; non-blocking if merge queue handles it |
-| `DIRTY` | Merge conflicts exist — keep reviewing, but record the conflict as a first-class blocker in the ledger and handoff artifact |
-| `BLOCKED` | External blocker (branch protection, failing required check) — investigate and record the blocker |
+
+| Value     | Action                                                                                                                      |
+| --------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `CLEAN`   | All checks pass, no conflicts — proceed to Phase 0                                                                          |
+| `BEHIND`  | Branch behind base — note in report; non-blocking if merge queue handles it                                                 |
+| `DIRTY`   | Merge conflicts exist — keep reviewing, but record the conflict as a first-class blocker in the ledger and handoff artifact |
+| `BLOCKED` | External blocker (branch protection, failing required check) — investigate and record the blocker                           |
 
 ### Step 2 — Record conflicts and blockers (when CONFLICTING or DIRTY)
 

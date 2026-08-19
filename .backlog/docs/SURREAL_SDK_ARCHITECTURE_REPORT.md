@@ -2166,9 +2166,7 @@ type Values =
 ```ts
 const db = new Surreal({
   codecs: {
-    custom: {
-      /* codec factory */
-    },
+    custom: {/* codec factory */},
   },
   codecOptions: {
     valueEncodeVisitor: (value) => value,
@@ -2182,9 +2180,7 @@ const db = new Surreal({
 ```ts
 const db = new Surreal({
   engines: {
-    myprotocol: (connection) => ({
-      /* engine implementation */
-    }),
+    myprotocol: (connection) => ({/* engine implementation */}),
   },
 });
 ```

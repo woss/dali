@@ -314,12 +314,10 @@ describe('migrateDeploy', () => {
 
   it('applies pending migrations with shadow validation', async () => {
     // Create a migration file
-    await createMigrationFile(
-      migrationsDir,
-      'create_user',
-      ['DEFINE TABLE deploy_user SCHEMAFULL', 'DEFINE FIELD name ON deploy_user TYPE string'],
-      ['REMOVE TABLE deploy_user'],
-    );
+    await createMigrationFile(migrationsDir, 'create_user', [
+      'DEFINE TABLE deploy_user SCHEMAFULL',
+      'DEFINE FIELD name ON deploy_user TYPE string',
+    ]);
 
     const shadowNs = `shadow_${Date.now()}`;
     const shadowDb = `shadow_db_${Date.now()}`;

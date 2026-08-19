@@ -1,3 +1,233 @@
 {
-  "agents": {}
+  "execution_mode": "fast",
+  "max_iterations": 3,
+  "qa_retry_limit": 2,
+  "turbo_mode": true,
+  "turbo": {
+    "strategy": "lean",
+    "lean": {
+      "max_parallel_coders": 4,
+      "require_declared_scope": true,
+      "conflict_policy": "serialize",
+      "degrade_on_risk": true,
+      "phase_reviewer": true,
+      "phase_critic": false,
+      "integrated_diff_required": true,
+      "allow_docs_only_without_reviewer": true,
+      "worktree_isolation": true
+    }
+  },
+  "parallelization": {
+    "enabled": true,
+    "maxConcurrentTasks": 4,
+    "max_coders": 4,
+    "max_reviewers": 2
+  },
+  "agents": {
+    "architect": {
+      "model": "opencode/big-pickle",
+      "fallback_models": [
+        "opencode/deepseek-v4-flash-free",
+        "opencode/deepseek-v4-flash"
+      ],
+      "options": {
+        "reasoningEffort": "high"
+      }
+    },
+    "coder": {
+      "model": "opencode/big-pickle",
+      "fallback_models": [
+        "opencode/deepseek-v4-flash-free"
+      ],
+      "options": {
+        "reasoningEffort": "high"
+      }
+    },
+    "reviewer": {
+      "model": "opencode/big-pickle",
+      "fallback_models": [
+        "opencode/deepseek-v4-flash-free"
+      ]
+    },
+    "test_engineer": {
+      "model": "opencode/big-pickle",
+      "fallback_models": [
+        "opencode/deepseek-v4-flash-free"
+      ]
+    },
+    "explorer": {
+      "model": "opencode/big-pickle",
+      "fallback_models": [
+        "opencode/nemotron-3-ultra-free"
+      ]
+    },
+    "sme": {
+      "model": "opencode/big-pickle",
+      "fallback_models": [
+        "opencode/nemotron-3-ultra-free"
+      ]
+    },
+    "researcher": {
+      "model": "opencode/big-pickle",
+      "fallback_models": [
+        "opencode/nemotron-3-ultra-free"
+      ]
+    },
+    "critic": {
+      "model": "opencode/big-pickle",
+      "fallback_models": [
+        "opencode/nemotron-3-ultra-free"
+      ]
+    },
+    "docs": {
+      "model": "opencode/big-pickle",
+      "fallback_models": [
+        "opencode/deepseek-v4-flash-free"
+      ]
+    },
+    "docs_design": {
+      "model": "opencode/big-pickle",
+      "fallback_models": [
+        "opencode/deepseek-v4-flash-free"
+      ]
+    },
+    "designer": {
+      "model": "opencode/big-pickle",
+      "fallback_models": [
+        "opencode/deepseek-v4-flash-free"
+      ]
+    },
+    "critic_sounding_board": {
+      "model": "opencode/big-pickle",
+      "fallback_models": [
+        "opencode/deepseek-v4-flash-free"
+      ]
+    },
+    "critic_drift_verifier": {
+      "model": "opencode/big-pickle",
+      "fallback_models": [
+        "opencode/deepseek-v4-flash-free"
+      ]
+    },
+    "critic_hallucination_verifier": {
+      "model": "opencode/big-pickle",
+      "fallback_models": [
+        "opencode/deepseek-v4-flash-free"
+      ]
+    },
+    "critic_oversight": {
+      "model": "opencode/big-pickle",
+      "fallback_models": [
+        "opencode/deepseek-v4-flash-free"
+      ]
+    },
+    "critic_architecture_supervisor": {
+      "model": "opencode/big-pickle",
+      "fallback_models": [
+        "opencode/deepseek-v4-flash-free"
+      ]
+    },
+    "critic_finding_validator": {
+      "model": "opencode/big-pickle",
+      "fallback_models": [
+        "opencode/deepseek-v4-flash-free"
+      ]
+    },
+    "curator_init": {
+      "model": "opencode/big-pickle",
+      "fallback_models": [
+        "opencode/deepseek-v4-flash-free"
+      ]
+    },
+    "curator_phase": {
+      "model": "opencode/big-pickle",
+      "fallback_models": [
+        "opencode/deepseek-v4-flash-free"
+      ]
+    },
+    "curator_postmortem": {
+      "model": "opencode/big-pickle",
+      "fallback_models": [
+        "opencode/deepseek-v4-flash-free"
+      ]
+    },
+    "curator_consolidation": {
+      "model": "opencode/big-pickle",
+      "fallback_models": [
+        "opencode/deepseek-v4-flash-free"
+      ]
+    },
+    "skill_improver": {
+      "model": "opencode/big-pickle",
+      "fallback_models": [
+        "opencode/nemotron-3-ultra-free"
+      ]
+    },
+    "spec_writer": {
+      "model": "opencode/big-pickle",
+      "fallback_models": [
+        "opencode/nemotron-3-ultra-free"
+      ]
+    }
+  },
+  "default_swarm": "default",
+  "phase_complete": {
+    "require_docs": false
+  },
+  "full_auto": {
+    "enabled": false
+  },
+  "council": {
+    "enabled": false
+  },
+  "memory": {
+    "enabled": true,
+    "provider": "sqlite",
+    "storageDir": ".swarm/memory",
+    "sqlite": {
+      "path": ".swarm/memory/memory.db",
+      "busyTimeoutMs": 5000
+    },
+    "recall": {
+      "defaultMaxItems": 8,
+      "defaultTokenBudget": 1200,
+      "minScore": 0.05
+    },
+    "writes": {
+      "mode": "propose"
+    },
+    "redaction": {
+      "rejectDurableSecrets": true
+    },
+    "embeddings": {
+      "enabled": false,
+      "model": "Xenova/all-MiniLM-L6-v2",
+      "dimension": 384,
+      "cacheSize": 256
+    },
+    "retrieval": {
+      "rrfK": 60,
+      "weights": {
+        "lexical": 0.5,
+        "dense": 0.4,
+        "metadata": 0.1
+      },
+      "rerank": {
+        "enabled": false,
+        "model": "Xenova/ms-marco-MiniLM-L-6-v2"
+      },
+      "latencyBudgetMs": 250
+    },
+    "learning": {
+      "learningRate": 0.1,
+      "propagationFactor": 0.3,
+      "qValueBoostWeight": 0.1,
+      "suppressionThreshold": 0.15,
+      "promotionThreshold": 0.85,
+      "propagationTokenOverlapThreshold": 0.4,
+      "propagationEmbeddingCosineThreshold": 0.7,
+      "propagationFanout": 20,
+      "propagationLookbackDays": 30
+    }
+  }
 }

@@ -155,12 +155,10 @@ describe('migrateSync', () => {
   });
 
   it('syncs journal from database after migration applied', async () => {
-    await createMigrationFile(
-      migrationsDir,
-      'create_user',
-      ['DEFINE TABLE user SCHEMAFULL', 'DEFINE FIELD name ON user TYPE string'],
-      ['REMOVE TABLE user'],
-    );
+    await createMigrationFile(migrationsDir, 'create_user', [
+      'DEFINE TABLE user SCHEMAFULL',
+      'DEFINE FIELD name ON user TYPE string',
+    ]);
 
     const config = makeConfig({
       migrations: {
@@ -296,7 +294,7 @@ describe('getMigrationProgressString', () => {
   });
 
   it('returns no statements for empty migration', async () => {
-    const filePath = await createMigrationFile(migrationsDir, 'empty_mig', [], []);
+    const filePath = await createMigrationFile(migrationsDir, 'empty_mig', []);
     path.dirname(filePath);
 
     // Delete migration.surql and create empty one
@@ -360,12 +358,10 @@ describe('handleResumeWithProgress', () => {
 
   it('skips migration when file not found for a partial entry', async () => {
     // First apply a migration
-    const _filePath = await createMigrationFile(
-      migrationsDir,
-      'create_user',
-      ['DEFINE TABLE user SCHEMAFULL', 'DEFINE FIELD name ON user TYPE string'],
-      ['REMOVE TABLE user'],
-    );
+    const _filePath = await createMigrationFile(migrationsDir, 'create_user', [
+      'DEFINE TABLE user SCHEMAFULL',
+      'DEFINE FIELD name ON user TYPE string',
+    ]);
 
     await runner.up();
     vi.mocked(console.log).mockClear();
@@ -378,12 +374,10 @@ describe('handleResumeWithProgress', () => {
 
   it('resumes partial migration when journal has incomplete breakpoints', async () => {
     // Create migration with multiple statements
-    await createMigrationFile(
-      migrationsDir,
-      'resume_me',
-      ['DEFINE TABLE resume_target SCHEMAFULL', 'DEFINE FIELD name ON resume_target TYPE string'],
-      ['REMOVE TABLE resume_target'],
-    );
+    await createMigrationFile(migrationsDir, 'resume_me', [
+      'DEFINE TABLE resume_target SCHEMAFULL',
+      'DEFINE FIELD name ON resume_target TYPE string',
+    ]);
 
     // Pre-create the first statement's state in DB (like it was partially applied)
     await driver.query('DEFINE TABLE resume_target SCHEMAFULL');
@@ -471,12 +465,10 @@ describe('MigrationRunner integration', () => {
   });
 
   it('applies migration via runner.up()', async () => {
-    await createMigrationFile(
-      migrationsDir,
-      'create_user',
-      ['DEFINE TABLE user SCHEMAFULL', 'DEFINE FIELD name ON user TYPE string'],
-      ['REMOVE TABLE user'],
-    );
+    await createMigrationFile(migrationsDir, 'create_user', [
+      'DEFINE TABLE user SCHEMAFULL',
+      'DEFINE FIELD name ON user TYPE string',
+    ]);
 
     runner = new MigrationRunner(driver, {
       migrationsDir,
@@ -495,12 +487,10 @@ describe('MigrationRunner integration', () => {
   });
 
   it('reports correct status after applying migration', async () => {
-    await createMigrationFile(
-      migrationsDir,
-      'create_user',
-      ['DEFINE TABLE user SCHEMAFULL', 'DEFINE FIELD name ON user TYPE string'],
-      ['REMOVE TABLE user'],
-    );
+    await createMigrationFile(migrationsDir, 'create_user', [
+      'DEFINE TABLE user SCHEMAFULL',
+      'DEFINE FIELD name ON user TYPE string',
+    ]);
 
     runner = new MigrationRunner(driver, {
       migrationsDir,
@@ -516,12 +506,9 @@ describe('MigrationRunner integration', () => {
   });
 
   it('applies migration via runner.up() (dryRun option not available, verifies basic apply)', async () => {
-    await createMigrationFile(
-      migrationsDir,
-      'create_dryrun',
-      ['DEFINE TABLE dryrun_test SCHEMAFULL'],
-      ['REMOVE TABLE dryrun_test'],
-    );
+    await createMigrationFile(migrationsDir, 'create_dryrun', [
+      'DEFINE TABLE dryrun_test SCHEMAFULL',
+    ]);
 
     runner = new MigrationRunner(driver, {
       migrationsDir,

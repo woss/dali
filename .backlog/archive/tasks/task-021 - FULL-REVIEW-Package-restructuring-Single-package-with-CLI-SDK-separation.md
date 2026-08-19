@@ -72,6 +72,7 @@ REFERENCES:
 - ref:resonant-gray-skink for full file tree
 - orm/src/driver/types.ts:387 lines (DriverConfig, SurrealDriver interface)
 - kit/src/config.ts:147 lines (loadConfig, defineConfig)
+
 <!-- SECTION:DESCRIPTION:END -->
 
 ## Acceptance Criteria
@@ -83,4 +84,5 @@ REFERENCES:
 - [ ] #3 All existing functionality mapped to new structure
 - [ ] #4 Import paths designed for backward compatibility
 - [ ] #5 Config system consolidation strategy defined
+
 <!-- AC:END -->

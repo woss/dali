@@ -1,6 +1,9 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "instructions": ["../AGENTS.md", "./tools/philosophy.md"],
+  "instructions": [
+    "../AGENTS.md",
+    "./tools/philosophy.md"
+  ],
   "lsp": true,
   "mcp": {
     "dali-memory": {
@@ -14,20 +17,36 @@
     "task-manager": {
       "type": "local",
       "enabled": true,
-      "command": ["deno", "run", "-A", "/Users/woss/projects/woss/mcp-task-manager/main.ts"],
+      "command": [
+        "deno",
+        "run",
+        "-A",
+        "/Users/woss/projects/woss/mcp-task-manager/main.ts"
+      ],
     },
     "mcp-fetch-server": {
       "type": "local",
-      "command": ["npx", "mcp-fetch-server"],
+      "command": [
+        "npx",
+        "mcp-fetch-server"
+      ],
       "enabled": true,
     },
     "sequential-thinking": {
-      "command": ["npx", "-y", "@modelcontextprotocol/server-sequential-thinking"],
+      "command": [
+        "npx",
+        "-y",
+        "@modelcontextprotocol/server-sequential-thinking"
+      ],
       "type": "local",
       "enabled": true,
     },
     "code-review-graph": {
-      "command": ["uvx", "code-review-graph", "serve"],
+      "command": [
+        "uvx",
+        "code-review-graph",
+        "serve"
+      ],
       "type": "local",
     },
     "context7": {
@@ -47,9 +66,9 @@
     },
   },
   "plugin": [
-    "@tarquinen/opencode-dcp@3.1.13",
+    "opencode-swarm@7.143.1",
+    "@tarquinen/opencode-dcp",
     "@franlol/opencode-md-table-formatter@0.0.6",
-    "caveman-opencode-plugin@latest",
     "./plugins/notify.ts",
     "./plugins/background-agents.ts",
     "./plugins/kdco-primitives",

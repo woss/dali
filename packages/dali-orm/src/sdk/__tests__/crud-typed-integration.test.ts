@@ -364,7 +364,7 @@ describe('type safety', () => {
     type UserSelect = InferSelectResult<typeof users>;
 
     // Update is Partial of Select
-    expectTypeOf<UserUpdate>().toEqualTypeOf<Partial<UserSelect>>();
+    expectTypeOf<UserUpdate>().toEqualTypeOf<Partial<Omit<UserSelect, 'id'>>>();
   });
 
   it('updateTable accepts Partial update data', () => {

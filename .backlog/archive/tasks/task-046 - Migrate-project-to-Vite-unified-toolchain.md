@@ -44,6 +44,7 @@ Migrate the dali-orm monorepo from separate tooling (Biome, tsdown, tsup, Vitest
 - Vite+ requires Vite 8+ and Vitest 4.1+
 - Per-package configs (tsdown, vitest) need consolidation into vite.config.ts at project root
 - Publint/attw validation not built into Vite+ — may need separate manual scripts
+
 <!-- SECTION:DESCRIPTION:END -->
 
 ## Acceptance Criteria
@@ -61,6 +62,7 @@ Migrate the dali-orm monorepo from separate tooling (Biome, tsdown, tsup, Vitest
 - [x] #9 Old config files removed (tsdown.config.ts, vitest.config.ts per package, biome.json)
 - [x] #10 CI pipeline updated to use vp commands
 - [x] #11 Biome → Oxlint rule differences audited and documented
+
 <!-- AC:END -->
 
 ## Final Summary

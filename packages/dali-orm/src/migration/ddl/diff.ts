@@ -798,10 +798,6 @@ function diffViews(
     const v1 = v1Map.get(name);
     if (v1 && (v1.query !== v2.query || v1.comment !== v2.comment)) {
       statements.push({
-        type: 'drop_view',
-        name,
-      });
-      statements.push({
         type: 'create_view',
         view: { name, query: v2.query, comment: v2.comment },
       });

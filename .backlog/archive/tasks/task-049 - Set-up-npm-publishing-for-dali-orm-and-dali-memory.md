@@ -66,6 +66,7 @@ CURRENT STRUCTURE:
 - packages/orm/ and packages/kit/: dead dirs (no package.json, not publishable)
 - .npmrc: auto-install-peers=true, catalog=default
 - No .gitignore for coverage/coverage-summary.json — test:coverage script exists but output path in CI
+
 <!-- SECTION:DESCRIPTION:END -->
 
 ## Acceptance Criteria
@@ -81,6 +82,7 @@ CURRENT STRUCTURE:
 - [ ] #7 #7 README updated for both packages if outdated API references exist
 - [ ] #8 #8 LICENSE file added to repo root
 - [ ] #9 #9 User decisions on open questions documented/implemented before CI workflow finalized
+
 <!-- AC:END -->
 
 ## Implementation Notes

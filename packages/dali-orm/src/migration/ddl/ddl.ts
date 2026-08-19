@@ -210,7 +210,6 @@ export type SurrealStatement =
   | CreateFunctionStatement
   | DropFunctionStatement
   | CreateViewStatement
-  | DropViewStatement
   | CreateNamespaceStatement
   | DropNamespaceStatement
   | CreateDatabaseStatement
@@ -365,11 +364,6 @@ export interface DropFunctionStatement {
 export interface CreateViewStatement {
   type: 'create_view';
   view: { name: string; query: string; comment?: string };
-}
-
-export interface DropViewStatement {
-  type: 'drop_view';
-  def: SurrealView;
 }
 
 export interface CreateSequenceStatement {

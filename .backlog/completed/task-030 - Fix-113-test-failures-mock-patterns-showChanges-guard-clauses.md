@@ -30,4 +30,5 @@ Approach:
 - Export showChanges as method OR update tests to use util function
 - Restore guard clauses in BaseDriver for early validation
 - Skip DB-dependent tests with proper guards
+
 <!-- SECTION:DESCRIPTION:END -->

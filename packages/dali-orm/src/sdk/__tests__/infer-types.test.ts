@@ -200,7 +200,7 @@ describe('InferUpdateData', () => {
     type Result = InferUpdateData<TestTable>;
     type Full = InferSelectResult<TestTable>;
     // All fields should be optional: id?, name?, age?
-    type Expected = Partial<Full>;
+    type Expected = Partial<Omit<Full, 'id'>>;
     expectTypeOf<Result>().toEqualTypeOf<Expected>();
   });
 });

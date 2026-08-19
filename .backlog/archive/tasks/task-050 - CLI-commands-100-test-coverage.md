@@ -67,6 +67,7 @@ Priority order:
 3. push.test.ts + pull.test.ts (schema sync commands)
 4. diff.test.ts (diff display)
 5. generate-integration.test.ts (loadSchemaFiles, generateMigration with real fs)
+
 <!-- SECTION:DESCRIPTION:END -->
 
 ## Acceptance Criteria
@@ -82,6 +83,7 @@ Priority order:
 - [x] #7 100% CLI command coverage — no untested exported functions in cli/ directory
 - [x] #8 Tests use embedded SurrealDB (memory or file-based), no remote connections, no mocks for DB layer
 - [x] #9 All tests pass with pnpm test
+
 <!-- AC:END -->
 
 ## Implementation Plan

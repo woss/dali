@@ -30,6 +30,7 @@ Replace client-side SHA256 hashing with SurrealDB's built-in crypto::blake3() fu
 - [x] #3 surreal-client.ts: remove contentHash from params, change dedup to INSERT-first + catch unique violation
 - [x] #4 Migration created to add DEFAULT crypto::blake3(content) to content_hash field
 - [x] #5 All existing tests still pass
+
 <!-- AC:END -->
 
 ## Implementation Notes
@@ -42,6 +43,7 @@ Delegated to build agent. Implementation includes:
 2. memory-service.ts: remove sha256(), contentHash
 3. surreal-client.ts: remove contentHash param, change dedup to INSERT-first with unique violation catch
 4. Migration: content-hash-blake3 with DEFAULT crypto::blake3(content)
+
 <!-- SECTION:NOTES:END -->
 
 ## Final Summary

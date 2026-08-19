@@ -21,6 +21,7 @@ Make explicit that changesets/action creates GitHub Releases for both @woss/dali
 
 1. Add `createGithubReleases: true` to changesets/action config in publish.yml
 2. Fix `baseBranch` from `origin/main` to `main` in .changeset/config.json
+
 <!-- SECTION:DESCRIPTION:END -->
 
 ## Acceptance Criteria
@@ -30,4 +31,5 @@ Make explicit that changesets/action creates GitHub Releases for both @woss/dali
 - [x] #1 publish.yml has `createGithubReleases: true` on changesets/action step
 - [x] #2 .changeset/config.json `baseBranch` is `"main"` not `"origin/main"`
 - [x] #3 Changes committed to a branch
+
 <!-- AC:END -->

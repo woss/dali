@@ -73,4 +73,5 @@ orm.showChanges('todo', { since: '2024-01-01', limit: 10 });
 - Changefeeds persist for duration (e.g., '7d')
 - Uses versionstamp for sequential ordering
 - LIVE SELECT per-client, SHOW CHANGES global
+
 <!-- SECTION:DESCRIPTION:END -->

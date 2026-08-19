@@ -80,7 +80,6 @@ export function orderStatements(statements: SurrealStatement[]): SurrealStatemen
     'create_function',
     'drop_function',
     'create_view',
-    'drop_view',
     'rename_table',
     'add_column',
     'alter_column',
@@ -161,8 +160,6 @@ export function statementToSql(stmt: SurrealStatement): string {
       return generator.generateRemoveFunction(stmt.name);
     case 'create_view':
       return generator.generateViewDefinition(stmt.view);
-    case 'drop_view':
-      return generator.generateRemoveView(stmt.name);
     case 'create_namespace':
       return generator.generateNamespaceDefinition(stmt.name, {
         comment: (stmt as CreateNamespaceStatement).comment,

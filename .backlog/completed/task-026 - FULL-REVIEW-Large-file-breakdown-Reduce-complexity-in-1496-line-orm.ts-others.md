@@ -126,6 +126,7 @@ REFERENCES:
 - kit/src/ddl/diff.ts:742 lines
 - orm/src/schema/query-builders.ts:739 lines
 - ref:resonant-gray-skink
+
 <!-- SECTION:DESCRIPTION:END -->
 
 ## Acceptance Criteria
@@ -138,4 +139,5 @@ REFERENCES:
 - [ ] #4 Large function identification complete (100+ line functions)
 - [ ] #5 Breakdown plan proposed (extract classes, split files)
 - [ ] #6 SurrealORM class refactoring strategy (extract Connection, Query, Transaction managers)
+
 <!-- AC:END -->

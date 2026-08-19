@@ -114,6 +114,7 @@ REFERENCES:
 - orm/src/driver/embedded-driver.ts:869 lines
 - orm/src/driver/types.ts:387 lines (SurrealDriver interface)
 - ref:resonant-gray-skink for full file tree
+
 <!-- SECTION:DESCRIPTION:END -->
 
 ## Acceptance Criteria
@@ -127,4 +128,5 @@ REFERENCES:
 - [ ] #5 Event handling centralized in base class
 - [ ] #6 NodeDriver extends BaseDriver planned
 - [ ] #7 EmbeddedDriver extends BaseDriver planned
+
 <!-- AC:END -->

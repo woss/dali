@@ -589,25 +589,31 @@ export type InferModelFromColumns<
     ? // INSERT MODE
       {
         // Required columns: not null AND no default AND not generated
-        [Key in keyof TColumns & string as RequiredKeyOnly<
-          MapColumnName<Key, TColumns[Key], TConfig['dbColumnNames']>,
-          TColumns[Key]
-        >]: GetColumnData<TColumns[Key], 'query'>;
+        [
+          Key in keyof TColumns & string as RequiredKeyOnly<
+            MapColumnName<Key, TColumns[Key], TConfig['dbColumnNames']>,
+            TColumns[Key]
+          >
+        ]: GetColumnData<TColumns[Key], 'query'>;
       } & {
         // Optional columns: nullable OR has default OR is generated
-        [Key in keyof TColumns & string as OptionalKeyOnly<
-          MapColumnName<Key, TColumns[Key], TConfig['dbColumnNames']>,
-          TColumns[Key],
-          TConfig['override']
-        >]?: GetColumnData<TColumns[Key], 'query'> | undefined;
+        [
+          Key in keyof TColumns & string as OptionalKeyOnly<
+            MapColumnName<Key, TColumns[Key], TConfig['dbColumnNames']>,
+            TColumns[Key],
+            TConfig['override']
+          >
+        ]?: GetColumnData<TColumns[Key], 'query'> | undefined;
       }
     : // SELECT MODE - all columns are returned
       {
-        [Key in keyof TColumns & string as MapColumnName<
-          Key,
-          TColumns[Key],
-          TConfig['dbColumnNames']
-        >]: GetColumnData<TColumns[Key], 'query'>;
+        [
+          Key in keyof TColumns & string as MapColumnName<
+            Key,
+            TColumns[Key],
+            TConfig['dbColumnNames']
+          >
+        ]: GetColumnData<TColumns[Key], 'query'>;
       }
 >;
 

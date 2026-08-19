@@ -58,6 +58,7 @@ Note: `packages/orm/` excluded per TASK-042 gap analysis — it's superseded leg
 - [x] #8 ddl-generator.ts (kit) 2 sites render defaultRaw
 - [x] #9 Build passes for all packages
 - [x] #10 Test: string('content_hash').defaultRaw('crypto::blake3(content)') produces DEFAULT crypto::blake3(content) unquoted
+
 <!-- AC:END -->
 
 ## Final Summary
@@ -99,4 +100,5 @@ Note: `packages/orm/` excluded per TASK-042 gap analysis — it's superseded leg
 ### Notes
 
 - `format.ts` not modified — `defaultRaw` handled at call sites in generator explicitly instead of trying to guess function patterns in `formatDefaultValue`. This follows "Parse Don't Validate": the builder boundary parses the `defaultRaw` field, internal code trusts it.
+
 <!-- SECTION:FINAL_SUMMARY:END -->

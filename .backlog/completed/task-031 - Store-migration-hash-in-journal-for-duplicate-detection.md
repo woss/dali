@@ -31,6 +31,7 @@ Files to modify:
 - `packages/dali-orm/src/migration/core/runner.ts` - store hash on apply
 - `packages/dali-orm/src/migration/cli/generate.ts` - check hash before creating migration
 - `packages/dali-orm/src/migration/cli/pull.ts` - update generateAndApplyMigration to use hash check
+
 <!-- SECTION:DESCRIPTION:END -->
 
 ## Acceptance Criteria
@@ -42,4 +43,5 @@ Files to modify:
 - [x] #3 If hash matches existing migration, skip file creation and log message
 - [x] #4 Existing journal entries without hash field handled gracefully (backward compatible)
 - [x] #5 Build passes
+
 <!-- AC:END -->

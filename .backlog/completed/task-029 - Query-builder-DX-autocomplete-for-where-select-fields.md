@@ -83,4 +83,5 @@ SUCCESS CRITERIA:
 - Table-bound builders (users.select(), users.where())
 - Return type inference from field selection
 - All existing tests still pass
+
 <!-- SECTION:DESCRIPTION:END -->

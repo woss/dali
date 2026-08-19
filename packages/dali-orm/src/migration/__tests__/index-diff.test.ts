@@ -169,7 +169,7 @@ describe('index migration integration', () => {
       },
     );
 
-    const sqlStatements = generator.generateTableMigration(table, 'up');
+    const sqlStatements = generator.generateTableMigration(table);
     const indexStatements = sqlStatements.filter((s) => s.startsWith('DEFINE INDEX'));
     expect(indexStatements).toHaveLength(1);
     expect(indexStatements[0]).toBe(
@@ -195,7 +195,7 @@ describe('index migration integration', () => {
       },
     );
 
-    const sqlStatements = generator.generateTableMigration(table, 'up');
+    const sqlStatements = generator.generateTableMigration(table);
 
     // Order should be: DEFINE TABLE, DEFINE FIELD, DEFINE INDEX
     expect(sqlStatements[0]).toContain('DEFINE TABLE');

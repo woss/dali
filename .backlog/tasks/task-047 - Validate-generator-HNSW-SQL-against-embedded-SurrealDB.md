@@ -45,6 +45,7 @@ See the HNSW test helpers at generator.test.ts:27-33 (index() helper) and the ex
 - [x] #4 Covers HNSW with and without vectorType (float32, float64)
 - [x] #5 Test fails if generated SQL is rejected by SurrealDB engine
 - [x] #6 All existing 2419 tests still pass
+
 <!-- AC:END -->
 
 ## Final Summary

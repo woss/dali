@@ -519,8 +519,7 @@ export abstract class MySqlPreparedQuery<T extends MySqlPreparedQueryConfig> {
   constructor(
     private cache: Cache | undefined,
     private queryMetadata:
-      | { type: 'select' | 'update' | 'delete' | 'insert'; tables: string[] }
-      | undefined,
+      { type: 'select' | 'update' | 'delete' | 'insert'; tables: string[] } | undefined,
     private cacheConfig?: WithCacheConfig,
   ) {}
 

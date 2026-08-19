@@ -76,6 +76,7 @@ DEPENDENCIES:
 
 - Task 1 (Package restructuring) - drivers live in sdk/driver/
 - Must complete before any driver code changes
+
 <!-- SECTION:DESCRIPTION:END -->
 
 ## Acceptance Criteria
@@ -88,4 +89,5 @@ DEPENDENCIES:
 - [ ] #4 Transaction logic unified
 - [ ] #5 Connection state management unified
 - [ ] #6 Event handling centralized
+
 <!-- AC:END -->

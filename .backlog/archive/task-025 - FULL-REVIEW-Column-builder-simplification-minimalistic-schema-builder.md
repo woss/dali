@@ -151,6 +151,7 @@ REFERENCES:
 - orm/src/schema/column/ (13 files total)
 - orm/src/schema/column/types.ts:67 lines (ColumnDefinition, SurrealColumnType)
 - ref:resonant-gray-skink
+
 <!-- SECTION:DESCRIPTION:END -->
 
 ## Acceptance Criteria
@@ -163,6 +164,7 @@ REFERENCES:
 - [ ] #4 Consolidation strategy proposed (reduce files or factory pattern)
 - [ ] #5 formatDefault() override analysis complete
 - [ ] #6 Minimalistic schema builder design sketched
+
 <!-- AC:END -->
 
 ## Implementation Notes
@@ -234,4 +236,5 @@ REFERENCES:
 - Parse Don't Validate: Factory centralizes type creation
 - Fail Fast: Invalid types caught at builder creation
 - Intentional Naming: Function names match SurrealDB types exactly
+
 <!-- SECTION:NOTES:END -->

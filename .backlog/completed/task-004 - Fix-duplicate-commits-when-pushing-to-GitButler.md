@@ -27,6 +27,7 @@ Fix duplicate commits being created when pushing to GitButler branches. Current 
 1. Investigate what causes duplicate commit creation
 2. Fix commit logic to prevent duplicates
 3. Test the fix with actual push operations
+
 <!-- SECTION:DESCRIPTION:END -->
 
 ## Final Summary
@@ -50,4 +51,5 @@ Fixed duplicate commits when pushing to GitButler - investigated the issue and f
 
 - The DEFAULT_URL issue is in the original code (const DEFAULT_URL = process.env.SURREALDB_URL || ''), not a regression
 - migrate-integration.test.ts uses old import `@surrealdb-orm/core` which doesn't exist (merged to orm)
+
 <!-- SECTION:FINAL_SUMMARY:END -->

@@ -44,9 +44,7 @@ function isAdmin(account: User | Admin): account is Admin {
 ```typescript
 // Tagged union pattern
 type Result<T, E = Error> =
-  | { status: 'success'; data: T }
-  | { status: 'error'; error: E }
-  | { status: 'loading' };
+  { status: 'success'; data: T } | { status: 'error'; error: E } | { status: 'loading' };
 
 function handleResult<T>(result: Result<T>) {
   switch (result.status) {

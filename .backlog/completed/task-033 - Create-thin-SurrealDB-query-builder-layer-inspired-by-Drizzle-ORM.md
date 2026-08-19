@@ -53,6 +53,7 @@ SurrealDriver.execute()
 3. INSERT/UPDATE/DELETE with RETURN options
 4. Driver integration via SurrealDriver
 5. Joins via FETCH and subqueries (SurrealDB's approach, not SQL JOINs)
+
 <!-- SECTION:DESCRIPTION:END -->
 
 ## Acceptance Criteria
@@ -64,6 +65,7 @@ SurrealDriver.execute()
 - [ ] #3 QueryBuilder integrates with SurrealDriver via execute() or toSQL()/toParams()
 - [ ] #4 Type inference from TableDefinition for column autocomplete and result types
 - [ ] #5 Unit tests for all builders with SurrealQL output verification
+
 <!-- AC:END -->
 
 ## Implementation Plan
@@ -252,4 +254,5 @@ select(userTable)
 - Edge tables carry `in`/`out` table types for graph traversal validation
 - Field selection narrows result types via `Pick<>`
 - Graph traversals add aliased fields with inferred target types
+
 <!-- SECTION:PLAN:END -->

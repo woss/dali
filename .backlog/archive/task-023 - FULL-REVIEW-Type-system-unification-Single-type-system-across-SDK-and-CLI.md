@@ -107,6 +107,7 @@ REFERENCES:
 - kit/src/ddl/types.ts:181 lines
 - kit/src/commands/generate.ts:56-100 (conversion code)
 - ref:resonant-gray-skink
+
 <!-- SECTION:DESCRIPTION:END -->
 
 ## Acceptance Criteria
@@ -119,4 +120,5 @@ REFERENCES:
 - [ ] #4 Conversion points mapped (generate.ts:56-100)
 - [ ] #5 Unified type system design proposed
 - [ ] #6 Migration impact assessed for both SDK and CLI
+
 <!-- AC:END -->

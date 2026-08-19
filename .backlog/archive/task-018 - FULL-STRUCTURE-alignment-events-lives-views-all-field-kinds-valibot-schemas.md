@@ -65,14 +65,14 @@ Also: `flexible` only present when `true` (not `false`).
 
 Current `SurrealColumnType` misses:
 
-| Rust Variant          | Serialized String     | Status     |
+| Rust Variant | Serialized String | Status |
 | --------------------- | --------------------- | ---------- | ----------------------------- |
-| `Kind::Regex`         | `"regex"`             | ❌ Missing |
-| `Kind::Range`         | `"range"`             | ❌ Missing |
+| `Kind::Regex` | `"regex"` | ❌ Missing |
+| `Kind::Range` | `"range"` | ❌ Missing |
 | `Kind::Table(tables)` | `"table<user, post>"` | ❌ Missing |
-| `Kind::File(buckets)` | `"file<bucket>"`      | ❌ Missing |
-| `Kind::Either(kinds)` | `"int                 | string"`   | ❌ Partial (only `option<T>`) |
-| `Kind::Literal(lit)`  | `"\"exact_value\""`   | ❌ Missing |
+| `Kind::File(buckets)` | `"file<bucket>"` | ❌ Missing |
+| `Kind::Either(kinds)` | `"int                 | string"` | ❌ Partial (only `option<T>`) |
+| `Kind::Literal(lit)` | `"\"exact_value\""` | ❌ Missing |
 
 `parseKind()` must handle ALL of these.
 
@@ -361,6 +361,7 @@ export interface SurrealDbDDL {
 - [x] #10 Tests for events, lives, views with EmbeddedDriver
 - [x] #11 All tests pass (1568+ expected)
 - [x] #12 No backward compat code remains
+
 <!-- SECTION:DESCRIPTION:END -->
 
 <!-- AC:END -->
@@ -396,4 +397,5 @@ Full STRUCTURE alignment implemented with valibot schema validation. No backward
 - Parse Don't Validate: valibot schemas at boundary
 - Fail Fast: Invalid STRUCTURE throws immediately
 - No backward compat: Breaking changes intentional
+
 <!-- SECTION:FINAL_SUMMARY:END -->

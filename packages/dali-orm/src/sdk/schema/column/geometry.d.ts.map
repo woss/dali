@@ -1,0 +1,1 @@
+{"version":3,"file":"geometry.d.ts","sourceRoot":"","sources":["geometry.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,iBAAiB,EAAE,MAAM,WAAW,CAAC;AAE9C,qBAAa,qBAAsB,SAAQ,iBAAiB,CAAC,qBAAqB,CAAC;gBACrE,IAAI,EAAE,MAAM;IAIxB,SAAS,CAAC,aAAa,CAAC,KAAK,EAAE,OAAO,GAAG,MAAM;CAGhD;AAED,wBAAgB,QAAQ,CAAC,IAAI,EAAE,MAAM,GAAG,qBAAqB,CAE5D"}

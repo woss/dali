@@ -99,6 +99,7 @@ export const embedderConfigSchema = z.object({
 - [x] #7 All existing tests pass (remote-provider.test.ts, memory-service.integration.test.ts)
 - [x] #8 Transformers embed tests use fixture vectors, no mocked pipeline calls
 - [x] #9 package.json exports updated for ./embedding path
+
 <!-- AC:END -->
 
 ## Final Summary
@@ -112,6 +113,7 @@ export const embedderConfigSchema = z.object({
 - Fix: added 3-attempt retry loop with linear backoff (500ms/1000ms/1500ms) to applyPendingMigrations()
 
 - All 2458 tests pass under workspace pnpm test:coverage
+
 <!-- SECTION:FINAL_SUMMARY:END -->
 
 ## Definition of Done
@@ -120,4 +122,5 @@ export const embedderConfigSchema = z.object({
 
 - [x] #1 pnpm lint passes with 0 errors
 - [x] #2 pnpm test:coverage runs green for dali-memory tests
+
 <!-- DOD:END -->

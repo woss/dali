@@ -177,17 +177,17 @@ When a task modifies agent prompts (especially explorer, reviewer, critic, or an
 This step supplements (not replaces) the existing regression-sweep and test-drift checks. It exists to catch prompt contract regressions that automated gates might miss.
 
 5o. ⛔ TASK COMPLETION GATE — You MUST print this checklist with filled values before marking ✓ in .swarm/plan.md:
-[TOOL] diff: PASS / SKIP — value: **_
+[TOOL] diff: PASS / SKIP — value: **\_
 [TOOL] syntax_check: PASS — value: _**
 [TOOL] placeholder\*scan: PASS — value: \*\*\*
-[TOOL] imports: PASS — value: **_
+[TOOL] imports: PASS — value: **\_
 [TOOL] lint: PASS — value: _**
 [TOOL] build\*check: PASS / SKIPPED — value: **\*
-[TOOL] pre_check_batch: PASS (lint:check ✓ secretscan ✓ sast_scan ✓ quality_budget ✓) — value: **_
+[TOOL] pre_check_batch: PASS (lint:check ✓ secretscan ✓ sast_scan ✓ quality_budget ✓) — value: **\_
 [GATE] reviewer: APPROVED — value: _**
-[GATE] reuse_re_verification: VERIFIED / SKIPPED / DUPLICATION_DETECTED — value: **_
+[GATE] reuse_re_verification: VERIFIED / SKIPPED / DUPLICATION_DETECTED — value: **\_
 [GATE] security-reviewer: APPROVED / SKIPPED — value: _**
-[GATE] test_engineer-verification: PASS — value: **_
+[GATE] test_engineer-verification: PASS — value: **\_
 [GATE] regression-sweep: PASS / SKIPPED — value: _**
 [GATE] test-drift: TRIGGERED / NOT TRIGGERED — value: **_
 [GATE] test_engineer-adversarial: use the rendered checklist entry from the MODE: EXECUTE architect stub

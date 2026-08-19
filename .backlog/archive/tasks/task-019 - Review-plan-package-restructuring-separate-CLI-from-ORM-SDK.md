@@ -45,6 +45,7 @@ DEPENDENCIES:
 - Task 2 (Driver consolidation) - drivers live in sdk/
 - Task 3 (Type system unification)
 - Task 4 (DDL simplification)
+
 <!-- SECTION:DESCRIPTION:END -->
 
 ## Acceptance Criteria
@@ -56,4 +57,5 @@ DEPENDENCIES:
 - [ ] #3 All existing functionality preserved
 - [ ] #4 Clear import paths established
 - [ ] #5 Backward compatibility layer for existing imports
+
 <!-- AC:END -->

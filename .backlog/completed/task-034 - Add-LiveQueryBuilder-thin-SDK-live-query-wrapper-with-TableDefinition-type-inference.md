@@ -41,4 +41,5 @@ Create a LiveQueryBuilder that wraps the SurrealDB SDK's fluent live query API (
 - `packages/dali-orm/src/sdk/driver/embedded-driver.ts` - Add liveWithOptions() override
 - `packages/dali-orm/src/query/index.ts` - Export new types and builders
 - `packages/dali-orm/src/query/__tests__/live.test.ts` - NEW test file for live query tests
+
 <!-- SECTION:DESCRIPTION:END -->

@@ -19,6 +19,7 @@ Implement query builder chains, session management, and live query config:
 1. .where(), .limit(), .orderBy() via SDK's SelectPromise
 2. newSession(), forkSession(), sessions(), closeSession()
 3. .diff(), .fields(), .where() on live queries
+
 <!-- SECTION:DESCRIPTION:END -->
 
 ## Final Summary
@@ -73,4 +74,5 @@ await orm.live('users', callback).diff().fields('name', 'email');
 
 - Build: ✅ Pass
 - Tests: ✅ 535 passed
+
 <!-- SECTION:FINAL_SUMMARY:END -->

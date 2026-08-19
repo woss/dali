@@ -55,6 +55,7 @@ Introspection must handle union record types from STRUCTURE output. When Surreal
 - [x] #5 RelateBuilder + type inference unchanged (runtime .from()/.to() use record IDs, not schema)
 - [x] #6 All existing tests pass; new tests added for array in/out config
 - [x] #7 DDL push/diff/generate CLI commands handle array in/out correctly
+
 <!-- AC:END -->
 
 ## Implementation Plan
@@ -75,11 +76,11 @@ Support `string | string[]` for `in`/`out` in `defineRelationTable` across SDK +
 
 ## Context & Decisions
 
-| Decision                                      | Rationale                                                                                    | Source                                                         |
+| Decision | Rationale | Source |
 | --------------------------------------------- | -------------------------------------------------------------------------------------------- | -------------------------------------------------------------- | ------------------------ |
-| `string                                       | string[]` type                                                                               | SurrealQL uses comma-separated table names for multiple IN/OUT | `ref:conversation-m0014` |
-| `parseKind` must return multiple recordTables | Introspection from STRUCTURE returns union types like `record<memories> \| record<sessions>` | `ref:conversation-m0014`                                       |
-| RelateBuilder unchanged                       | `.from()`/`.to()` deal with runtime record IDs, not schema-level table constraints           | `ref:conversation-m0014`                                       |
+| `string                                       | string[]` type | SurrealQL uses comma-separated table names for multiple IN/OUT | `ref:conversation-m0014` |
+| `parseKind` must return multiple recordTables | Introspection from STRUCTURE returns union types like `record<memories> \| record<sessions>` | `ref:conversation-m0014` |
+| RelateBuilder unchanged | `.from()`/`.to()` deal with runtime record IDs, not schema-level table constraints | `ref:conversation-m0014` |
 
 ## Phase 1: SDK Type Changes + Generator [PENDING]
 
@@ -103,6 +104,7 @@ Support `string | string[]` for `in`/`out` in `defineRelationTable` across SDK +
 ## Notes
 
 - 2026-05-14: Full analysis in conversation — 8 files affected, key complexity in parseKind union handling `ref:conversation-m0014`
+
 <!-- SECTION:PLAN:END -->
 
 ## Final Summary

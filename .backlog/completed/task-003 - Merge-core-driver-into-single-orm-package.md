@@ -34,6 +34,7 @@ Merge core + driver into single @surrealdb-orm/orm package, remove old packages.
 - packages/orm (new merged package)
 - packages/kit (updated dependencies)
 - examples (updated imports)
+
 <!-- SECTION:DESCRIPTION:END -->
 
 ## Final Summary
@@ -58,4 +59,5 @@ Merged core + driver into single @surrealdb-orm/orm package, removed old package
 - packages/orm (new merged package)
 - packages/kit (updated dependencies)
 - examples (updated imports)
+
 <!-- SECTION:FINAL_SUMMARY:END -->

@@ -33,6 +33,7 @@ Migration system exists primarily as CLI commands in `packages/dali-orm/src/migr
 - Create/modify exports in package index
 - Verify driver connection abstraction supports embedded mode
 - Add integration tests for embedded driver migrations
+
 <!-- SECTION:DESCRIPTION:END -->
 
 ## Acceptance Criteria
@@ -43,4 +44,5 @@ Migration system exists primarily as CLI commands in `packages/dali-orm/src/migr
 - [x] #2 Embedded driver (memory/surrealkv/rocksdb) supported by migration runner
 - [x] #3 TypeScript API accepts driver config matching SurrealORM.connect() signature
 - [x] #4 Integration tests pass for both remote and embedded drivers
+
 <!-- AC:END -->

@@ -39,6 +39,7 @@ Target structure:
 - src/tools/events.ts: event handler logic
 - src/tools/types.ts: Shared types for tool inputs/outputs
 - opencode.ts: Thin wiring layer (<80 lines)
+
 <!-- SECTION:DESCRIPTION:END -->
 
 ## Acceptance Criteria
@@ -51,6 +52,7 @@ Target structure:
 - [ ] #4 [x] All existing tests pass without modification
 - [ ] #5 [x] Both plugin and future MCP server can import same core functions
 - [ ] #6 [x] No behavior changes - same inputs, outputs, error handling
+
 <!-- AC:END -->
 
 ## Implementation Plan
@@ -112,6 +114,7 @@ Extract all tool/hook/event logic from opencode.ts (334 lines) into pure functio
 - 2026-05-19: Current opencode.ts has 334 lines with tools, hooks, events, initialization all mixed ref:light-yellow-gayal
 - 2026-05-19: src/tools/ directory exists but is empty ref:light-yellow-gayal
 - 2026-05-19: memory-service.ts (457 lines) and surreal-client.ts (821 lines) stay unchanged
+
 <!-- SECTION:PLAN:END -->
 
 ## Final Summary
@@ -145,4 +148,5 @@ Extracted all tool, hook, and event logic from opencode.ts (334 lines) into 5 pu
 
 - 233 tests passed, 1 skipped, 0 failed
 - No test files modified
+
 <!-- SECTION:FINAL_SUMMARY:END -->

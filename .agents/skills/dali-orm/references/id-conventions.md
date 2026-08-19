@@ -45,11 +45,11 @@ async getMemory(id: RecordId | string): Promise<MemoryRecord | null> {
 
 ## RecordId API Reference
 
-| Property/Method    | Returns    | Notes                                    |
+| Property/Method | Returns | Notes |
 | ------------------ | ---------- | ---------------------------------------- | ------ | ------ |
-| `.table`           | `Table`    | Table name wrapper                       |
-| `.id`              | `Id`       | Raw ID value (string                     | number | array) |
-| `.toString()`      | `string`   | SurrealQL-escaped (includes ⟨⟩ wrapping) |
-| `.toJSON()`        | `string`   | Clean unescaped string                   |
-| `String(id)`       | `string`   | Same as `.toJSON()` — clean output       |
-| `RecordId.parse()` | `RecordId` | Parse `"table:id"` string → RecordId     |
+| `.table` | `Table` | Table name wrapper |
+| `.id` | `Id` | Raw ID value (string | number | array) |
+| `.toString()` | `string` | SurrealQL-escaped (includes ⟨⟩ wrapping) |
+| `.toJSON()` | `string` | Clean unescaped string |
+| `String(id)` | `string` | Same as `.toJSON()` — clean output |
+| `RecordId.parse()` | `RecordId` | Parse `"table:id"` string → RecordId |

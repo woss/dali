@@ -30,6 +30,7 @@ Also includes crypto::joaat wrapper:
 - Add test case in packages/dali-orm/src/sdk/functions/**tests**/functions.test.ts
 - Update export in packages/dali-orm/src/sdk/functions/index.ts
 - Update skill reference in .agents/skills/dali-orm/references/functions.md
+
 <!-- SECTION:DESCRIPTION:END -->
 
 ## Acceptance Criteria
@@ -44,6 +45,7 @@ Also includes crypto::joaat wrapper:
 - [ ] #6 cryptoJoaat listed in skill ref functions.md import example
 - [ ] #7 All existing tests still pass (pnpm test)
 - [ ] #8 Lint passes (pnpm lint)
+
 <!-- AC:END -->
 
 ## Final Summary

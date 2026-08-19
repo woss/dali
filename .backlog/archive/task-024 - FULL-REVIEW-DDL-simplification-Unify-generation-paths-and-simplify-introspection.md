@@ -109,6 +109,7 @@ REFERENCES:
 - kit/src/ddl/ddl.ts:313 lines
 - kit/src/ddl/types.ts:181 lines
 - ref:resonant-gray-skink
+
 <!-- SECTION:DESCRIPTION:END -->
 
 ## Acceptance Criteria
@@ -121,4 +122,5 @@ REFERENCES:
 - [ ] #4 Simplified DDL generation design proposed
 - [ ] #5 Introspection simplification strategy (STRUCTURE vs INFO)
 - [ ] #6 Unified DDL types design (remove ddl.ts duplicates)
+
 <!-- AC:END -->

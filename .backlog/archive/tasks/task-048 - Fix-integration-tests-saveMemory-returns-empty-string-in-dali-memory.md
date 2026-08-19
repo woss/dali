@@ -38,6 +38,7 @@ priority: medium
 - [ ] #2 All 8 integration tests pass with SurrealDB running
 - [ ] #3 CI auto-skips integration tests when SURREALDB_URL is not set (existing describeDb pattern preserved)
 - [ ] #4 No regressions in unit tests (2020 passing)
+
 <!-- AC:END -->
 
 ## Implementation Notes
@@ -47,4 +48,5 @@ priority: medium
 Todo moved from session to task:
 
 - Fix 8 integration tests: apply dali-memory migration
+
 <!-- SECTION:NOTES:END -->

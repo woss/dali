@@ -103,6 +103,7 @@ function createSampleSnapshot(version = '001', name = 'initial'): SchemaSnapshot
     access: [],
     events: [],
     functions: [],
+    analyzers: [],
   };
 }
 
@@ -393,6 +394,7 @@ describe('restoreSnapshot', () => {
       access: [],
       events: [],
       functions: [],
+      analyzers: [],
     };
 
     const tables = manager.restoreSnapshot(snapshot);

@@ -37,6 +37,7 @@ Implement missing SDK parity features from the ORM documentation.
 7. **`surql` template tag** - Type-safe bound queries (requires additional wrapping)
 8. **Custom API** - `.api<T>()` for user-defined APIs
 9. **Query builder methods** - `.fetch(fields)`, `.groupBy()` - typed versions
+
 <!-- SECTION:DESCRIPTION:END -->
 
 ## Final Summary

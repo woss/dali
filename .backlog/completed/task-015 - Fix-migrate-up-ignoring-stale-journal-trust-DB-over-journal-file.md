@@ -41,6 +41,7 @@ Files affected:
 
 - `packages/kit/src/core/runner.ts` - `up()` method (lines 145-194)
 - Potentially `packages/kit/src/ddl/journal.ts` - journal sync logic
+
 <!-- SECTION:DESCRIPTION:END -->
 
 ## Acceptance Criteria
@@ -53,4 +54,5 @@ Files affected:
 - [ ] #4 Journal synced AFTER successful DB insert
 - [ ] #5 Inconsistency detected and reported (warn/error) to user
 - [ ] #6 Existing tests still pass
+
 <!-- AC:END -->

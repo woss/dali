@@ -47,6 +47,7 @@ Cross-referenced Surrealist Schema Designer's table creation logic with our ORM 
 4. Update diff logic for view tables and array IN/OUT
 5. Update all SQL generation for views, ENFORCED, proper permissions
 6. Add tests for new functionality
+
 <!-- SECTION:DESCRIPTION:END -->
 
 ## Acceptance Criteria
@@ -59,6 +60,7 @@ Cross-referenced Surrealist Schema Designer's table creation logic with our ORM 
 - [ ] #4 CHANGEFEED properly formats expiry and store_original
 - [ ] #5 Schema mode naming consistent with SurrealDB (SCHEMAFULL/SCHEMALESS)
 - [ ] #6 Permission generation matches SurrealDB syntax
+
 <!-- AC:END -->
 
 ## Implementation Plan
@@ -78,6 +80,7 @@ Cross-referenced Surrealist Schema Designer's table creation logic with our ORM 
 5. Update SQL generation: views (AS SELECT), ENFORCED, proper permission syntax
 
 6. Add tests for new table types and changefeed formatting
+
 <!-- SECTION:PLAN:END -->
 
 ## Implementation Notes
@@ -137,4 +140,5 @@ Cross-referenced task-014 issues against actual code using code-review-graph + d
 - **2 issues remain partially open**: view table type + ENFORCED keyword
 - Scope for view support: new SurrealStatement variant, generator method, convert mappings, and diff handler
 - Scope for ENFORCED: add to SurrealRelation + CreateRelationStatement, emit in generator + diff
+
 <!-- SECTION:NOTES:END -->
