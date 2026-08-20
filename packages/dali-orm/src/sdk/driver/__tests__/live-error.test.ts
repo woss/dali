@@ -263,7 +263,7 @@ describe('LiveSubscriptionHandle.onError', () => {
       handle.onError = onError;
 
       // Manually replace the iterator to throw a string
-      (handle as any)[Symbol.asyncIterator] = async function () {
+      (handle as any)[Symbol.asyncIterator] = async function* () {
         try {
           throw 'string error'; // eslint-disable-line no-throw-literal
         } catch (error) {
@@ -287,7 +287,7 @@ describe('LiveSubscriptionHandle.onError', () => {
       const onError = vi.fn();
       handle.onError = onError;
 
-      (handle as any)[Symbol.asyncIterator] = async function () {
+      (handle as any)[Symbol.asyncIterator] = async function* () {
         try {
           throw 42; // eslint-disable-line no-throw-literal
         } catch (error) {
@@ -311,7 +311,7 @@ describe('LiveSubscriptionHandle.onError', () => {
       const onError = vi.fn();
       handle.onError = onError;
 
-      (handle as any)[Symbol.asyncIterator] = async function () {
+      (handle as any)[Symbol.asyncIterator] = async function* () {
         try {
           throw null; // eslint-disable-line no-throw-literal
         } catch (error) {

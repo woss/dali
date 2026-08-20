@@ -43,9 +43,7 @@ dali-memory/
 │       ├── memory-service.ts # MemoryService (business logic layer)
 │       └── surreal-client.ts # SurrealClient (DaliORM data access)
 ├── migrations/               # DaliORM migration files
-├── scripts/
-│   └── generate-schema.ts    # JSON Schema generation script
-└── dali-memory.schema.json   # Generated JSON Schema for config
+
 ```
 
 ### Data Flow
@@ -381,9 +379,6 @@ pnpm build
 pnpm test
 pnpm test:all       # includes integration tests
 pnpm test:integration
-
-# Generate JSON Schema (from Zod config schema)
-pnpm generate:schema
 
 # Run migrations directly
 pnpm orm migrate dev
