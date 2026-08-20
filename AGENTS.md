@@ -104,12 +104,6 @@ Fall back to Grep/Glob/Read **only** when the graph doesn't cover what you need.
 
 ## Version Control
 
-Use `but` CLI for all write operations. Read-only git commands (`git log`, `git diff`, `git show`, `git blame`, `git reflog`) are acceptable per the official skill.
-
-Do NOT use the `but_gitbutler_update_branches` MCP tool — use `but commit --changes` CLI instead.
-
-Load the `but` skill for complete instructions.
-
 **Also prohibited:**
 
 - Bypassing git hooks (`--no-verify`, `-n`) — commits must pass pre-commit checks
@@ -244,21 +238,6 @@ cd packages/core && pnpm test
 ```
 
 Tests use Vitest plus. Mock the SurrealDB client when testing query builders in isolation.
-
-<!-- GitButler CLI Guidelines START -->
-
-**CRITICAL GUIDANCE**
-
-## GitButler CLI Instructions
-
-First load the `but` skill in the `.agents/skills/gitbutler/SKILL.md` file to access GitButler CLI.
-
-Branch naming convention: include task ID in branch name (e.g., `fix/task-051-something`). Create branch with `but branch new <branch-name>`. For stacked branches, use `but branch new <branch-name> -a <anchor-branch>`.
-If you are working on a bug feature with many tasks then you will create stacked branches. Only tasks for the feature and the files that are affected must be committed to the branch. If you have a task that is not related to the feature you are working on then do not commit it to the branch, leave it unassigned or assign it to another branch if it's related to that branch.
-
-If unsure about how to proceed first check the `but` skill then ask the user.
-
-<!-- GitButler CLI Guidelines END -->
 
 ## Subagent Management
 
