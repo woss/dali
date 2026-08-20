@@ -6,24 +6,6 @@
   ],
   "lsp": true,
   "mcp": {
-    "dali-memory": {
-      "type": "remote",
-      "enabled": true,
-      "url": "http://localhost:7777/api/mcp",
-      "headers": {
-        "Authorization": "Bearer 8d2583772c854424b102afb9da7aef8f-7410acaef8954e4f8f1f422054d75a6c",
-      },
-    },
-    "task-manager": {
-      "type": "local",
-      "enabled": true,
-      "command": [
-        "deno",
-        "run",
-        "-A",
-        "/Users/woss/projects/woss/mcp-task-manager/main.ts"
-      ],
-    },
     "mcp-fetch-server": {
       "type": "local",
       "command": [
@@ -36,7 +18,7 @@
       "command": [
         "npx",
         "-y",
-        "@modelcontextprotocol/server-sequential-thinking"
+        "@modelcontextprotocol/server-sequential-thinking",
       ],
       "type": "local",
       "enabled": true,
@@ -66,7 +48,7 @@
     },
   },
   "plugin": [
-    "opencode-swarm@7.143.1",
+    "opencode-swarm@7.144.0",
     "@tarquinen/opencode-dcp",
     "@franlol/opencode-md-table-formatter@0.0.6",
     "./plugins/notify.ts",
