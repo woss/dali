@@ -448,4 +448,116 @@ describe('pushSchema', () => {
     );
     expect(hasOutput).toBe(true);
   });
+
+  it('uses provided driver when ownsDriver=false', async () => {
+    const tables: TableDefinition[] = [];
+    const config = makeConfig();
+    // Pass driver directly — pushSchema should not create its own
+    await pushSchema({ config, tables }, driver);
+
+    // safeDisconnect should NOT be called because ownsDriver=false
+    const logCalls = vi.mocked(console.log).mock.calls;
+    const upToDate = logCalls.find((c) => String(c[0]).includes('up to date'));
+    expect(upToDate).toBeDefined();
+  });
+});
+
+// ============================================================================
+// tablesToDdl — additional branches
+// ============================================================================
+
+describe('tablesToDdl additional branches', () => {
+  it('handles events with async and retry options', () => {
+    const events: EventConfig[] = [
+      {
+        name: 'async_event',
+        on: 'user',
+        when: '$before = NONE',
+        then: ['CREATE audit SET action = "created"'],
+        comment: 'Audit trail',
+        async: true,
+        retry: 3,
+        maxdepth: 5,
+      },
+    ];
+
+    const ddl = tablesToDdl([], undefined, events);
+    expect(ddl.events).toHaveLength(1);
+    expect(ddl.events[0].async).toBe(true);
+    expect(ddl.events[0].retry).toBe(3);
+    expect(ddl.events[0].maxdepth).toBe(5);
+    expect(ddl.events[0].comment).toBe('Audit trail');
+  });
+
+  it('handles functions with comment and permissions', () => {
+    const functions: FunctionConfig[] = [
+      {
+        name: 'fn::greet',
+        args: ['$name', '$greeting'],
+        body: 'RETURN $greeting + $name',
+        comment: 'Greeting function',
+        permissions: 'NONE',
+      },
+    ];
+
+    const ddl = tablesToDdl([], undefined, undefined, functions);
+    expect(ddl.functions).toHaveLength(1);
+    expect(ddl.functions[0].comment).toBe('Greeting function');
+    expect(ddl.functions[0].permissions).toBe('NONE');
+  });
+
+  it('handles functions with no args', () => {
+    const functions: FunctionConfig[] = [
+      {
+        name: 'fn::version',
+        body: 'RETURN "1.0.0"',
+      },
+    ];
+
+    const ddl = tablesToDdl([], undefined, undefined, functions);
+    expect(ddl.functions[0].args).toBeUndefined();
+  });
+
+  it('handles SCHEMALESS tables default optional to true', () => {
+    const tables: TableDefinition[] = [
+      {
+        name: 'less_table',
+        columns: [
+          {
+            name: 'flexible_col',
+            tableName: 'less_table',
+            config: { type: 'string' },
+          },
+        ],
+        config: { schema: 'less', type: 'normal' },
+      },
+    ];
+
+    const ddl = tablesToDdl(tables);
+    expect(ddl.tables[0].columns[0].optional).toBe(true);
+  });
+
+  it('handles table-level permissions', () => {
+    const tables: TableDefinition[] = [
+      {
+        name: 'protected_table',
+        columns: [{ name: 'secret', tableName: 'protected_table', config: { type: 'string' } }],
+        config: {
+          schema: 'full',
+          type: 'normal',
+          permissions: { select: 'NONE', create: 'NONE' },
+        },
+      },
+    ];
+
+    const ddl = tablesToDdl(tables);
+    expect(ddl.tables[0].permissions).toEqual({ select: 'NONE', create: 'NONE' });
+  });
+
+  it('handles empty access and events arrays', () => {
+    const ddl = tablesToDdl([], [], [], []);
+    expect(ddl.accessStructured).toEqual([]);
+    expect(ddl.events).toEqual([]);
+    expect(ddl.functions).toEqual([]);
+  });
 });

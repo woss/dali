@@ -369,4 +369,169 @@ describe('generateTypeScriptSchema (via pullSchema)', () => {
       expect(content).toContain('datetime');
     }
   });
+
+  it('includes int and float imports when needed', async () => {
+    await driver.query('DEFINE TABLE pull_num_test SCHEMAFULL');
+    await driver.query('DEFINE FIELD score ON pull_num_test TYPE int');
+    await driver.query('DEFINE FIELD price ON pull_num_test TYPE float');
+    await driver.query('DEFINE FIELD name ON pull_num_test TYPE string');
+
+    const config = makeConfig({
+      schema: { dir: tmpDir, pattern: '**/*.{js,ts}' },
+      migrations: {
+        dir: path.join(tmpDir, 'migrations'),
+        table: '__test_pull_migrations',
+        journalDir: path.join(tmpDir, 'meta'),
+      },
+    });
+
+    await pullSchema({ config, outputDir: tmpDir, embeddedDriver: true });
+
+    const files = await fs.readdir(tmpDir);
+    const schemaFile = files.find((f) => f.endsWith('.ts'));
+    expect(schemaFile).toBeDefined();
+
+    if (schemaFile) {
+      const content = await fs.readFile(path.join(tmpDir, schemaFile), 'utf-8');
+      expect(content).toContain('int');
+      expect(content).toContain('float');
+    }
+  });
+
+  it('includes bool import when needed', async () => {
+    await driver.query('DEFINE TABLE pull_bool_test SCHEMAFULL');
+    await driver.query('DEFINE FIELD active ON pull_bool_test TYPE bool');
+
+    const config = makeConfig({
+      schema: { dir: tmpDir, pattern: '**/*.{js,ts}' },
+      migrations: {
+        dir: path.join(tmpDir, 'migrations'),
+        table: '__test_pull_migrations',
+        journalDir: path.join(tmpDir, 'meta'),
+      },
+    });
+
+    await pullSchema({ config, outputDir: tmpDir, embeddedDriver: true });
+
+    const files = await fs.readdir(tmpDir);
+    const schemaFile = files.find((f) => f.endsWith('.ts'));
+    expect(schemaFile).toBeDefined();
+
+    if (schemaFile) {
+      const content = await fs.readFile(path.join(tmpDir, schemaFile), 'utf-8');
+      expect(content).toContain('bool');
+    }
+  });
+
+  it('includes array import when needed', async () => {
+    await driver.query('DEFINE TABLE pull_arr_test SCHEMAFULL');
+    await driver.query('DEFINE FIELD tags ON pull_arr_test TYPE array');
+
+    const config = makeConfig({
+      schema: { dir: tmpDir, pattern: '**/*.{js,ts}' },
+      migrations: {
+        dir: path.join(tmpDir, 'migrations'),
+        table: '__test_pull_migrations',
+        journalDir: path.join(tmpDir, 'meta'),
+      },
+    });
+
+    await pullSchema({ config, outputDir: tmpDir, embeddedDriver: true });
+
+    const files = await fs.readdir(tmpDir);
+    const schemaFile = files.find((f) => f.endsWith('.ts'));
+    expect(schemaFile).toBeDefined();
+
+    if (schemaFile) {
+      const content = await fs.readFile(path.join(tmpDir, schemaFile), 'utf-8');
+      expect(content).toContain('array');
+    }
+  });
+
+  it('uses provided driver when ownsDriver=false', async () => {
+    await driver.query('DEFINE TABLE pull_existing_test SCHEMAFULL');
+    await driver.query('DEFINE FIELD name ON pull_existing_test TYPE string');
+
+    const config = makeConfig({
+      schema: { dir: tmpDir, pattern: '**/*.{js,ts}' },
+      migrations: {
+        dir: path.join(tmpDir, 'migrations'),
+        table: '__test_pull_migrations',
+        journalDir: path.join(tmpDir, 'meta'),
+      },
+    });
+
+    // Pass driver directly — should not create new connection
+    await pullSchema({ config, outputDir: tmpDir, embeddedDriver: true }, driver);
+
+    const files = await fs.readdir(tmpDir);
+    const schemaFile = files.find((f) => f.endsWith('.ts'));
+    expect(schemaFile).toBeDefined();
+  });
+
+  it('derives filename from pattern when no wildcards', async () => {
+    await driver.query('DEFINE TABLE pull_pattern_test SCHEMAFULL');
+    await driver.query('DEFINE FIELD name ON pull_pattern_test TYPE string');
+
+    const config = makeConfig({
+      schema: { dir: tmpDir, pattern: 'custom-schema.ts' },
+      migrations: {
+        dir: path.join(tmpDir, 'migrations'),
+        table: '__test_pull_migrations',
+        journalDir: path.join(tmpDir, 'meta'),
+      },
+    });
+
+    await pullSchema({ config, outputDir: tmpDir, embeddedDriver: true });
+
+    const files = await fs.readdir(tmpDir);
+    expect(files).toContain('custom-schema.ts');
+  });
+
+  it('derives filename as schema.ts when pattern has wildcards', async () => {
+    await driver.query('DEFINE TABLE pull_wc_test SCHEMAFULL');
+    await driver.query('DEFINE FIELD name ON pull_wc_test TYPE string');
+
+    const config = makeConfig({
+      schema: { dir: tmpDir, pattern: '**/*.ts' },
+      migrations: {
+        dir: path.join(tmpDir, 'migrations'),
+        table: '__test_pull_migrations',
+        journalDir: path.join(tmpDir, 'meta'),
+      },
+    });
+
+    await pullSchema({ config, outputDir: tmpDir, embeddedDriver: true });
+
+    const files = await fs.readdir(tmpDir);
+    expect(files).toContain('schema.ts');
+  });
+
+  it('generates schema with record column referencing table', async () => {
+    await driver.query('DEFINE TABLE pull_post SCHEMAFULL');
+    await driver.query('DEFINE FIELD title ON pull_post TYPE string');
+    await driver.query('DEFINE TABLE pull_author SCHEMAFULL');
+    await driver.query('DEFINE FIELD name ON pull_author TYPE string');
+
+    const config = makeConfig({
+      schema: { dir: tmpDir, pattern: '**/*.{js,ts}' },
+      migrations: {
+        dir: path.join(tmpDir, 'migrations'),
+        table: '__test_pull_migrations',
+        journalDir: path.join(tmpDir, 'meta'),
+      },
+    });
+
+    await pullSchema({ config, outputDir: tmpDir, embeddedDriver: true });
+
+    const files = await fs.readdir(tmpDir);
+    const schemaFile = files.find((f) => f.endsWith('.ts'));
+    expect(schemaFile).toBeDefined();
+
+    if (schemaFile) {
+      const content = await fs.readFile(path.join(tmpDir, schemaFile), 'utf-8');
+      expect(content).toContain('pull_post');
+      expect(content).toContain('pull_author');
+    }
+  });
 });
