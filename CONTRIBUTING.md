@@ -70,7 +70,7 @@ Prerequisites: `pnpm@10.33.0`, Node.js >=20.
 | `vp config`   | Setup project config (runs on `pnpm install`) |
 | `vp staged`   | Pre-commit hook — check + fix staged files    |
 
-Configured in root `vite.config.ts`:
+Configured in root `vitest.config.ts` (test configuration):
 
 ```ts
 import { defineConfig } from 'vite-plus';
@@ -127,7 +127,7 @@ pnpm --filter dali-memory test:all
 
 ## Linting & Formatting
 
-- **Tool**: Vite+ (Oxlint + Oxfmt, configured via `vite.config.ts`)
+- **Tool**: Biome (lint + format; config migration in progress)
 - **Check**: `vp check` — lint + format + type-check in one pass
 - **Format**: `vp fmt` — format code via Oxfmt
 - **Pre-commit**: `.vite-hooks/pre-commit` runs `vp staged` which calls `vp check --fix` on staged files only
@@ -144,7 +144,6 @@ dali-orm/
 │   ├── dali-memory/            # dali-memory — OpenCode memory plugin (SurrealDB-backed)
 │   ├── orm/                    # @dali-orm/orm — legacy ORM package
 │   └── kit/                    # @dali-orm/kit — CLI tooling
-├── vite.config.ts              # Root Vite+ config
 ├── package.json                # Root package (pnpm workspace root)
 └── pnpm-workspace.yaml         # Workspace definition
 ```

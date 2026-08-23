@@ -50,7 +50,7 @@
     "provenance": true
   },
   "scripts": {
-    "build": "vp pack",
+    "build": "tsup",
     "test": "vp test run",
     "test:watch": "vp test"
   },
@@ -62,8 +62,10 @@
     "valibot": "catalog:"
   },
   "devDependencies": {
+    "@microsoft/api-extractor": "^7.59.0",
     "@types/node": "catalog:",
     "@vitest/coverage-v8": "catalog:",
+    "tsup": "catalog:",
     "typescript": "catalog:",
     "vite-plus": "catalog:",
     "vitest": "catalog:"
