@@ -124,10 +124,10 @@ vi.mock('../orm-interfaces.js', () => {
 // Imports
 // ============================================================================
 
-import { BaseDriver } from '../base-driver.js';
-import type { DriverConfig, EmbeddedConfig } from '../types.js';
-import { connect as ormConnect } from '../orm-connection.js';
 import { DaliORM } from '../../dali-orm.js';
+import { BaseDriver } from '../base-driver.js';
+import { connect as ormConnect } from '../orm-connection.js';
+import type { DriverConfig, EmbeddedConfig } from '../types.js';
 
 // ============================================================================
 // Helpers
@@ -153,7 +153,10 @@ class TestDriver extends BaseDriver {
   // @ts-expect-error — mock db
   public db: Record<string, any>;
   connected = false;
-  subscriptions = new Map<string, { created: number; liveSubscription?: unknown }>();
+  subscriptions = new Map<
+    string,
+    { created: number; liveSubscription?: unknown }
+  >();
 
   constructor() {
     super();

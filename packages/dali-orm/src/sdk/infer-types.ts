@@ -1,5 +1,5 @@
 import type { SurrealColumnType } from './schema/column/types.js';
-import type { TableDefinition, ColumnBuilder } from './table.js';
+import type { ColumnBuilder, TableDefinition } from './table.js';
 
 /**
  * Maps SurrealDB column types to TypeScript types
@@ -54,7 +54,11 @@ type BuilderType<T> = T extends ColumnBuilder<infer TType> ? TType : never;
 export type InferSelectResult<T extends TableDefinition> = T extends {
   _columns: Record<string, ColumnBuilder>;
 }
-  ? { id: string } & { [K in keyof T['_columns']]: SurrealTypeToTS<BuilderType<T['_columns'][K]>> }
+  ? { id: string } & {
+      [K in keyof T['_columns']]: SurrealTypeToTS<
+        BuilderType<T['_columns'][K]>
+      >;
+    }
   : { id: string };
 
 /**

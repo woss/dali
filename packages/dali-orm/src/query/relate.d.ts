@@ -7,41 +7,42 @@
 import type { DaliORM } from '../sdk/dali-orm.js';
 import type { TableDefinition } from '../sdk/table.js';
 import type { InferRelateInput, InferRelateResult } from './types.js';
+
 interface GraphStep {
-    direction: 'out' | 'in';
-    edge: string;
-    table?: string;
-    alias?: string;
-    depth?: {
-        min: number;
-        max?: number;
-    };
+  direction: 'out' | 'in';
+  edge: string;
+  table?: string;
+  alias?: string;
+  depth?: {
+    min: number;
+    max?: number;
+  };
 }
 export declare class GraphPath {
-    private steps;
-    /** Start an outgoing traversal: out('wrote') */
-    out(edge: string): GraphPathContinuation;
-    /** Start an incoming traversal: in('authored') */
-    in(edge: string): GraphPathContinuation;
-    /** Get the serialized graph path string */
-    toString(): string;
-    /** Get steps for inspection */
-    getSteps(): ReadonlyArray<GraphStep>;
-    /** Add a step (internal) */
-    addStep(step: GraphStep): this;
+  private steps;
+  /** Start an outgoing traversal: out('wrote') */
+  out(edge: string): GraphPathContinuation;
+  /** Start an incoming traversal: in('authored') */
+  in(edge: string): GraphPathContinuation;
+  /** Get the serialized graph path string */
+  toString(): string;
+  /** Get steps for inspection */
+  getSteps(): ReadonlyArray<GraphStep>;
+  /** Add a step (internal) */
+  addStep(step: GraphStep): this;
 }
 export declare class GraphPathContinuation {
-    private graphPath;
-    private direction;
-    private edge;
-    private _depth?;
-    constructor(graphPath: GraphPath, direction: 'out' | 'in', edge: string);
-    /** Set depth range for this traversal step */
-    depth(min: number, max?: number): GraphPathContinuation;
-    /** Complete the traversal with target table */
-    to(table: string): GraphPath;
-    /** Complete the traversal with an alias (target inferred from alias) */
-    alias(name: string): GraphPath;
+  private graphPath;
+  private direction;
+  private edge;
+  private _depth?;
+  constructor(graphPath: GraphPath, direction: 'out' | 'in', edge: string);
+  /** Set depth range for this traversal step */
+  depth(min: number, max?: number): GraphPathContinuation;
+  /** Complete the traversal with target table */
+  to(table: string): GraphPath;
+  /** Complete the traversal with an alias (target inferred from alias) */
+  alias(name: string): GraphPath;
 }
 /**
  * Type-safe RELATE query builder for graph edges in SurrealDB.
@@ -113,33 +114,39 @@ export declare class GraphPathContinuation {
  * > which record types can appear on each side of `->`. The builder methods `.from()`
  * > and `.to()` map to the same underlying fields.
  */
-export declare class RelateBuilder<TEdgeDef extends TableDefinition, TResult = InferRelateResult<TEdgeDef>> {
-    private readonly driver;
-    private readonly edgeDef;
-    private _from;
-    private _to;
-    private _data;
-    constructor(orm: DaliORM, edgeDef: TEdgeDef);
-    /**
-     * Set the source record (e.g., "user:alice")
-     * Maps to SurrealDB's IN field (left side of `->`).
-     */
-    from(recordId: string): this;
-    /**
-     * Set the target record (e.g., "post:123")
-     * Maps to SurrealDB's OUT field (right side of `->`).
-     */
-    to(recordId: string): this;
-    /** Set a single field value on the edge (typed for edge columns) */
-    set<K extends keyof InferRelateInput<TEdgeDef>>(field: K, value: InferRelateInput<TEdgeDef>[K]): this;
-    /** Set a single field value on the edge (untyped fallback) */
-    set(field: string, value: unknown): this;
-    /** Set all edge data at once (typed for edge columns) */
-    data(obj: Partial<InferRelateInput<TEdgeDef>>): this;
-    /** Set all edge data at once (untyped fallback) */
-    data(obj: Record<string, unknown>): this;
-    /** Execute the RELATE query */
-    execute(): Promise<TResult[]>;
+export declare class RelateBuilder<
+  TEdgeDef extends TableDefinition,
+  TResult = InferRelateResult<TEdgeDef>,
+> {
+  private readonly driver;
+  private readonly edgeDef;
+  private _from;
+  private _to;
+  private _data;
+  constructor(orm: DaliORM, edgeDef: TEdgeDef);
+  /**
+   * Set the source record (e.g., "user:alice")
+   * Maps to SurrealDB's IN field (left side of `->`).
+   */
+  from(recordId: string): this;
+  /**
+   * Set the target record (e.g., "post:123")
+   * Maps to SurrealDB's OUT field (right side of `->`).
+   */
+  to(recordId: string): this;
+  /** Set a single field value on the edge (typed for edge columns) */
+  set<K extends keyof InferRelateInput<TEdgeDef>>(
+    field: K,
+    value: InferRelateInput<TEdgeDef>[K],
+  ): this;
+  /** Set a single field value on the edge (untyped fallback) */
+  set(field: string, value: unknown): this;
+  /** Set all edge data at once (typed for edge columns) */
+  data(obj: Partial<InferRelateInput<TEdgeDef>>): this;
+  /** Set all edge data at once (untyped fallback) */
+  data(obj: Record<string, unknown>): this;
+  /** Execute the RELATE query */
+  execute(): Promise<TResult[]>;
 }
 /**
  * Create a RELATE query builder for graph edges between records.
@@ -178,8 +185,10 @@ export declare class RelateBuilder<TEdgeDef extends TableDefinition, TResult = I
  * @param edgeDef - Edge table definition from `defineRelationTable()`
  * @returns A `RelateBuilder` instance for chaining `.from()`, `.to()`, `.set()`, `.execute()`
  */
-export declare function relate<TEdgeDef extends TableDefinition>(orm: DaliORM, edgeDef: TEdgeDef): RelateBuilder<TEdgeDef>;
+export declare function relate<TEdgeDef extends TableDefinition>(
+  orm: DaliORM,
+  edgeDef: TEdgeDef,
+): RelateBuilder<TEdgeDef>;
 /** Create a new GraphPath builder */
 export declare function graphPath(): GraphPath;
-export {};
 //# sourceMappingURL=relate.d.ts.map

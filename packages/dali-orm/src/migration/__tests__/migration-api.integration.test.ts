@@ -12,10 +12,10 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { EmbeddedDriver } from '../../sdk/driver/embedded-driver.js';
 import type { ColumnDefinition, TableDefinition } from '../../sdk/table.js';
 import {
+  _setTestConfigDir,
   getMigrationStatus,
   migrateToDatabase,
   pushSchemaFromTableDefs,
-  _setTestConfigDir,
 } from '../api.js';
 
 // ============================================================================
@@ -59,7 +59,11 @@ async function setupTestProject(): Promise<{
     "  database: 'test_db',",
     '};',
   ].join('\n');
-  await fs.writeFile(path.join(rootDir, 'dali-orm.config.ts'), configContent, 'utf-8');
+  await fs.writeFile(
+    path.join(rootDir, 'dali-orm.config.ts'),
+    configContent,
+    'utf-8',
+  );
 
   return { rootDir, migrationsDir, journalDir };
 }
@@ -86,7 +90,11 @@ async function createMigrationFile(
   return filePath;
 }
 
-function column(name: string, type: string, optional = false): ColumnDefinition {
+function column(
+  name: string,
+  type: string,
+  optional = false,
+): ColumnDefinition {
   return {
     name,
     tableName: 'user',
@@ -97,7 +105,11 @@ function column(name: string, type: string, optional = false): ColumnDefinition 
 function userTable(): TableDefinition {
   return {
     name: 'user',
-    columns: [column('name', 'string'), column('email', 'string'), column('age', 'int', true)],
+    columns: [
+      column('name', 'string'),
+      column('email', 'string'),
+      column('age', 'int', true),
+    ],
     config: { schema: 'full', type: 'normal' },
   };
 }
@@ -108,7 +120,11 @@ function userTable(): TableDefinition {
 
 describe('Migration API (integration)', () => {
   let driver: EmbeddedDriver;
-  let testProject: { rootDir: string; migrationsDir: string; journalDir: string };
+  let testProject: {
+    rootDir: string;
+    migrationsDir: string;
+    journalDir: string;
+  };
 
   beforeEach(async () => {
     driver = createDriver();
@@ -212,7 +228,11 @@ describe('Migration API (integration)', () => {
         "  database: 'test_db',",
         '};',
       ].join('\n');
-      await fs.writeFile(path.join(emptyDir, 'dali-orm.config.ts'), configContent, 'utf-8');
+      await fs.writeFile(
+        path.join(emptyDir, 'dali-orm.config.ts'),
+        configContent,
+        'utf-8',
+      );
 
       _setTestConfigDir(emptyDir);
       const result = await migrateToDatabase(driver);
@@ -254,14 +274,21 @@ describe('Migration API (integration)', () => {
     it('dryRun does not create tables in DB', async () => {
       const tables = [userTable()];
 
-      const result = await pushSchemaFromTableDefs(driver, tables, { dryRun: true });
+      const result = await pushSchemaFromTableDefs(driver, tables, {
+        dryRun: true,
+      });
 
       expect(result.sqlStatements.length).toBeGreaterThan(0);
 
       // Table should NOT exist
       const dbInfo = await driver.query('INFO FOR DB');
-      const tablesInDb = (Array.isArray(dbInfo) ? dbInfo[0] : dbInfo) as Record<string, unknown>;
-      const tablesObj = tablesInDb.tables as Record<string, unknown> | undefined;
+      const tablesInDb = (Array.isArray(dbInfo) ? dbInfo[0] : dbInfo) as Record<
+        string,
+        unknown
+      >;
+      const tablesObj = tablesInDb.tables as
+        | Record<string, unknown>
+        | undefined;
       expect(tablesObj?.user).toBeUndefined();
     });
 
@@ -282,8 +309,16 @@ describe('Migration API (integration)', () => {
         name: 'task',
         columns: [
           column('title', 'string'),
-          { name: 'due_date', tableName: 'task', config: { type: 'datetime' as const } },
-          { name: 'assignee', tableName: 'task', config: { type: 'record' as const } },
+          {
+            name: 'due_date',
+            tableName: 'task',
+            config: { type: 'datetime' as const },
+          },
+          {
+            name: 'assignee',
+            tableName: 'task',
+            config: { type: 'record' as const },
+          },
           {
             name: 'completed',
             tableName: 'task',
@@ -351,7 +386,11 @@ describe('Migration API (integration)', () => {
         "  database: 'test_db',",
         '};',
       ].join('\n');
-      await fs.writeFile(path.join(emptyDir, 'dali-orm.config.ts'), configContent, 'utf-8');
+      await fs.writeFile(
+        path.join(emptyDir, 'dali-orm.config.ts'),
+        configContent,
+        'utf-8',
+      );
 
       _setTestConfigDir(emptyDir);
       const status = await getMigrationStatus(driver);

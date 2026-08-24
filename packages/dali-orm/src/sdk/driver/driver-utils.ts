@@ -32,7 +32,8 @@ export function isDatetimeField(key: string): boolean {
 
 export function transformDatetimeValues(obj: unknown): unknown {
   if (obj === null || obj === undefined) return obj;
-  if (Array.isArray(obj)) return obj.map((item) => transformDatetimeValues(item));
+  if (Array.isArray(obj))
+    return obj.map((item) => transformDatetimeValues(item));
 
   if (typeof obj === 'object') {
     // Preserve class instances (RecordId, DateTime, Uint8Array, etc.)
@@ -41,7 +42,12 @@ export function transformDatetimeValues(obj: unknown): unknown {
 
     const result: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
-      if (isDatetimeField(key) && value !== null && value !== undefined && !Array.isArray(value)) {
+      if (
+        isDatetimeField(key) &&
+        value !== null &&
+        value !== undefined &&
+        !Array.isArray(value)
+      ) {
         result[key] = tryCreateDateTime(value);
       } else {
         result[key] = value;
@@ -59,11 +65,14 @@ export function coerceRecordIds(
   schema?: {
     getTable: (
       name: string,
-    ) => { $columns?: Record<string, { config: { recordTable?: string } }> } | undefined;
+    ) =>
+      | { $columns?: Record<string, { config: { recordTable?: string } }> }
+      | undefined;
   },
 ): unknown {
   if (input === null || input === undefined) return input;
-  if (Array.isArray(input)) return input.map((item) => coerceRecordIds(tableName, item, schema));
+  if (Array.isArray(input))
+    return input.map((item) => coerceRecordIds(tableName, item, schema));
   if (typeof input !== 'object') return input;
   if (!isPlainObject(input)) return input;
 
@@ -106,7 +115,8 @@ export function tryCoerceRecordId(value: unknown): unknown {
 
   // Foreign RecordId instance (different module instance): detect by constructor name
   if (typeof value === 'object' && value !== null) {
-    const ctorName = (value as { constructor?: { name?: string } }).constructor?.name;
+    const ctorName = (value as { constructor?: { name?: string } }).constructor
+      ?.name;
     if (ctorName === 'RecordId' || ctorName === 'StringRecordId') {
       return recordIdFromString(`${value as unknown as string}`);
     }
@@ -162,7 +172,9 @@ export function recordIdFromString(value: string): RecordId | string {
   return new RecordId(tableName, recordId);
 }
 
-export function isPlainObject(value: unknown): value is Record<string, unknown> {
+export function isPlainObject(
+  value: unknown,
+): value is Record<string, unknown> {
   if (!value || typeof value !== 'object') return false;
   const proto = Object.getPrototypeOf(value);
   return proto === Object.prototype || proto === null;

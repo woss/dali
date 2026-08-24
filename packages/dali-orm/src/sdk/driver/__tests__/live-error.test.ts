@@ -9,7 +9,7 @@
  */
 
 import { describe, expect, it, vi } from 'vitest';
-import type { LiveSubscriptionHandle, LiveMessageData } from '../types.js';
+import type { LiveMessageData, LiveSubscriptionHandle } from '../types.js';
 
 // ============================================================================
 // Helpers
@@ -25,7 +25,9 @@ function createTestHandle(opts: {
   throwAfterYield?: Error;
 }): LiveSubscriptionHandle {
   let callCount = 0;
-  const updates = opts.updates ?? [{ action: 'CREATE', value: { id: '1', name: 'Alice' } }];
+  const updates = opts.updates ?? [
+    { action: 'CREATE', value: { id: '1', name: 'Alice' } },
+  ];
 
   let onErrorCb: ((error: Error) => void) | undefined;
 

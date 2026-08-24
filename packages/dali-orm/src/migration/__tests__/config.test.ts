@@ -122,7 +122,9 @@ describe('defineConfig', () => {
   });
 
   it('throws for invalid config', () => {
-    expect(() => defineConfig({ url: 123 } as unknown as Partial<never>)).toThrow();
+    expect(() =>
+      defineConfig({ url: 123 } as unknown as Partial<never>),
+    ).toThrow();
   });
 
   it('throws when required fields missing', () => {
@@ -139,19 +141,21 @@ describe('processConfigObject', () => {
   const resolved = '/project/config/dali-orm.config.ts';
 
   it('throws for null', () => {
-    expect(() => processConfigObject(null, cfgFile, cfgDir, resolved)).toThrow('must be an object');
+    expect(() => processConfigObject(null, cfgFile, cfgDir, resolved)).toThrow(
+      'must be an object',
+    );
   });
 
   it('throws for undefined', () => {
-    expect(() => processConfigObject(undefined, cfgFile, cfgDir, resolved)).toThrow(
-      'must be an object',
-    );
+    expect(() =>
+      processConfigObject(undefined, cfgFile, cfgDir, resolved),
+    ).toThrow('must be an object');
   });
 
   it('throws for non-object', () => {
-    expect(() => processConfigObject('string', cfgFile, cfgDir, resolved)).toThrow(
-      'must be an object',
-    );
+    expect(() =>
+      processConfigObject('string', cfgFile, cfgDir, resolved),
+    ).toThrow('must be an object');
   });
 
   it('parses valid config', () => {
@@ -212,7 +216,10 @@ describe('createConfigFile', () => {
   it('writes template content', async () => {
     await createConfigFile('tmp-test-config.js');
     expect(mockWriteFile).toHaveBeenCalledTimes(1);
-    const [calledPath, content] = mockWriteFile.mock.calls[0] as unknown as [string, string];
+    const [calledPath, content] = mockWriteFile.mock.calls[0] as unknown as [
+      string,
+      string,
+    ];
     expect(calledPath).toContain('tmp-test-config.js');
     expect(content).toContain('defineConfig');
   });

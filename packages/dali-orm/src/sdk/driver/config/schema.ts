@@ -124,7 +124,10 @@ function formatErrors(
     const segments: string[] = [];
     const pathItems = issue.path ?? [];
     for (const p of pathItems) {
-      if (p.key !== undefined && (typeof p.key === 'string' || typeof p.key === 'number')) {
+      if (
+        p.key !== undefined &&
+        (typeof p.key === 'string' || typeof p.key === 'number')
+      ) {
         segments.push(String(p.key));
       }
     }
@@ -205,9 +208,15 @@ export function validateConfig(data: unknown): ValidationResult {
     const authObj = auth as Record<string, unknown>;
     const authType = authObj.type as string;
 
-    if (authType === 'root' || authType === 'namespace' || authType === 'database') {
-      const hasUsername = typeof authObj.username === 'string' && authObj.username !== '';
-      const hasPassword = typeof authObj.password === 'string' && authObj.password !== '';
+    if (
+      authType === 'root' ||
+      authType === 'namespace' ||
+      authType === 'database'
+    ) {
+      const hasUsername =
+        typeof authObj.username === 'string' && authObj.username !== '';
+      const hasPassword =
+        typeof authObj.password === 'string' && authObj.password !== '';
       if (!hasUsername || !hasPassword) {
         return {
           valid: false,
@@ -249,7 +258,9 @@ export function parseConfig(data: OrmConfig): ValidatedOrmConfig {
   const validation = validateConfig(data);
 
   if (!validation.valid) {
-    const errorMessages = validation.errors.map((e) => `${e.path}: ${e.message}`).join('; ');
+    const errorMessages = validation.errors
+      .map((e) => `${e.path}: ${e.message}`)
+      .join('; ');
     throw new Error(`Config validation failed: ${errorMessages}`);
   }
 

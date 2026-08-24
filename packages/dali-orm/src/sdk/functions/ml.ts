@@ -11,6 +11,10 @@ export function mlPredict(model: SqlExpr, input: SqlExpr): SqlExpr {
   return `ml::predict(${model}, ${input})` as SqlExpr;
 }
 
-export function mlTrain(model: SqlExpr, type: SqlExpr, input: SqlExpr): SqlExpr {
+export function mlTrain(
+  model: SqlExpr,
+  type: SqlExpr,
+  input: SqlExpr,
+): SqlExpr {
   return `ml::train(${model}, ${type}, ${input})` as SqlExpr;
 }

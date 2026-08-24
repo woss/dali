@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { SurrealQLGenerator } from '../core/generator.js';
 import { fromSurrealEvent, toSurrealEvent } from '../ddl/convert.js';
-import { createEmptyDdl, type SurrealDbDDL, type SurrealEvent } from '../ddl/ddl.js';
+import {
+  createEmptyDdl,
+  type SurrealDbDDL,
+  type SurrealEvent,
+} from '../ddl/ddl.js';
 import { ddlDiff } from '../ddl/diff.js';
 
 const generator = new SurrealQLGenerator();
@@ -25,7 +29,9 @@ describe('event DDL diff', () => {
     ]);
 
     const result = await ddlDiff(current, target);
-    const createStmts = result.statements.filter((s) => s.type === 'create_event');
+    const createStmts = result.statements.filter(
+      (s) => s.type === 'create_event',
+    );
     expect(createStmts).toHaveLength(1);
     if (createStmts[0].type === 'create_event') {
       expect(createStmts[0].event.name).toBe('user_created');
@@ -56,7 +62,9 @@ describe('event DDL diff', () => {
     ]);
 
     const result = await ddlDiff(current, target);
-    const createStmts = result.statements.filter((s) => s.type === 'create_event');
+    const createStmts = result.statements.filter(
+      (s) => s.type === 'create_event',
+    );
     expect(createStmts).toHaveLength(3);
   });
 
@@ -74,13 +82,18 @@ describe('event DDL diff', () => {
         name: 'user_created',
         what: 'user',
         when: '$before',
-        then: ['UPDATE user SET updated_at = time::now()', 'UPDATE audit SET action = "created"'],
+        then: [
+          'UPDATE user SET updated_at = time::now()',
+          'UPDATE audit SET action = "created"',
+        ],
       },
     ]);
 
     const result = await ddlDiff(current, target);
     const dropStmts = result.statements.filter((s) => s.type === 'drop_event');
-    const createStmts = result.statements.filter((s) => s.type === 'create_event');
+    const createStmts = result.statements.filter(
+      (s) => s.type === 'create_event',
+    );
     expect(dropStmts).toHaveLength(1);
     expect(createStmts).toHaveLength(1);
     if (dropStmts[0].type === 'drop_event') {
@@ -99,7 +112,9 @@ describe('event DDL diff', () => {
     const target = createDdlWithEvents([event]);
 
     const result = await ddlDiff(current, target);
-    const createStmts = result.statements.filter((s) => s.type === 'create_event');
+    const createStmts = result.statements.filter(
+      (s) => s.type === 'create_event',
+    );
     const dropStmts = result.statements.filter((s) => s.type === 'drop_event');
     expect(createStmts).toHaveLength(0);
     expect(dropStmts).toHaveLength(0);
@@ -110,7 +125,9 @@ describe('event DDL diff', () => {
     const target = createDdlWithEvents([]);
 
     const result = await ddlDiff(current, target);
-    const createStmts = result.statements.filter((s) => s.type === 'create_event');
+    const createStmts = result.statements.filter(
+      (s) => s.type === 'create_event',
+    );
     const dropStmts = result.statements.filter((s) => s.type === 'drop_event');
     expect(createStmts).toHaveLength(0);
     expect(dropStmts).toHaveLength(0);
@@ -157,7 +174,9 @@ describe('event DDL diff', () => {
     ]);
 
     const result = await ddlDiff(current, target);
-    const createStmts = result.statements.filter((s) => s.type === 'create_event');
+    const createStmts = result.statements.filter(
+      (s) => s.type === 'create_event',
+    );
     expect(createStmts).toHaveLength(1);
     if (createStmts[0].type === 'create_event') {
       expect(createStmts[0].event.name).toBe('new_event');
@@ -173,7 +192,9 @@ describe('event SQL generation', () => {
       when: '$before',
       then: ['UPDATE user SET updated_at = time::now()'],
     });
-    expect(sql).toContain('DEFINE EVENT IF NOT EXISTS user_created ON TABLE user');
+    expect(sql).toContain(
+      'DEFINE EVENT IF NOT EXISTS user_created ON TABLE user',
+    );
     expect(sql).toContain('WHEN ($before)');
     expect(sql).toContain('THEN { UPDATE user SET updated_at = time::now() }');
   });
@@ -217,7 +238,9 @@ describe('event SQL generation', () => {
       then: ['UPDATE user SET updated_at = time::now()'],
     };
     const sql = generator.generateEventMigration(event);
-    expect(sql).toContain('DEFINE EVENT IF NOT EXISTS user_created ON TABLE user');
+    expect(sql).toContain(
+      'DEFINE EVENT IF NOT EXISTS user_created ON TABLE user',
+    );
     expect(sql).toContain('WHEN ($before)');
   });
 });
@@ -237,11 +260,17 @@ describe('event statementToSql', () => {
     const result = await ddlDiff(current, target);
     expect(result.sqlStatements.length).toBeGreaterThan(0);
 
-    const eventSql = result.sqlStatements.find((s) => s.includes('DEFINE EVENT'));
+    const eventSql = result.sqlStatements.find((s) =>
+      s.includes('DEFINE EVENT'),
+    );
     expect(eventSql).toBeDefined();
-    expect(eventSql).toContain('DEFINE EVENT IF NOT EXISTS user_created ON TABLE user');
+    expect(eventSql).toContain(
+      'DEFINE EVENT IF NOT EXISTS user_created ON TABLE user',
+    );
     expect(eventSql).toContain('WHEN ($before)');
-    expect(eventSql).toContain('THEN { UPDATE user SET updated_at = time::now() }');
+    expect(eventSql).toContain(
+      'THEN { UPDATE user SET updated_at = time::now() }',
+    );
   });
 
   it('converts drop_event statement to SQL', async () => {
@@ -258,12 +287,17 @@ describe('event statementToSql', () => {
         name: 'user_created',
         what: 'user',
         when: '$before',
-        then: ['UPDATE user SET updated_at = time::now()', 'UPDATE audit SET action = "created"'],
+        then: [
+          'UPDATE user SET updated_at = time::now()',
+          'UPDATE audit SET action = "created"',
+        ],
       },
     ]);
 
     const result = await ddlDiff(current, target);
-    const dropSql = result.sqlStatements.find((s) => s.includes('REMOVE EVENT'));
+    const dropSql = result.sqlStatements.find((s) =>
+      s.includes('REMOVE EVENT'),
+    );
     expect(dropSql).toBeDefined();
     expect(dropSql).toBe('REMOVE EVENT IF EXISTS user_created ON TABLE user');
   });
@@ -354,14 +388,16 @@ describe('event conversion', () => {
   });
 
   it('throws for null/undefined input to toSurrealEvent', () => {
-    expect(() => toSurrealEvent(null as unknown as Parameters<typeof toSurrealEvent>[0])).toThrow(
-      'EventConfig required',
-    );
+    expect(() =>
+      toSurrealEvent(null as unknown as Parameters<typeof toSurrealEvent>[0]),
+    ).toThrow('EventConfig required');
   });
 
   it('throws for null/undefined input to fromSurrealEvent', () => {
     expect(() =>
-      fromSurrealEvent(null as unknown as Parameters<typeof fromSurrealEvent>[0]),
+      fromSurrealEvent(
+        null as unknown as Parameters<typeof fromSurrealEvent>[0],
+      ),
     ).toThrow('SurrealEvent required');
   });
 });

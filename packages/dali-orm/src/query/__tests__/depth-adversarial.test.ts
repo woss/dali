@@ -1,17 +1,17 @@
+import type { DaliORM } from '../../sdk/dali-orm.js';
+import type { EmbeddedDriver } from '../../sdk/driver/embedded-driver.js';
 import {
-  describe,
-  expect,
-  it,
-  beforeEach,
   afterEach,
+  beforeEach,
   createTestDriver,
   defineTables,
-  select,
+  describe,
+  expect,
   graphPath,
+  it,
+  select,
   users,
 } from './test-utils.js';
-import type { EmbeddedDriver } from '../../sdk/driver/embedded-driver.js';
-import type { DaliORM } from '../../sdk/dali-orm.js';
 
 let driver: EmbeddedDriver;
 let orm: DaliORM;
@@ -33,11 +33,15 @@ afterEach(async () => {
 
 describe('Adversarial: GraphPath.depth() validation', () => {
   it('depth(-1) throws error', () => {
-    expect(() => graphPath().out('wrote').depth(-1).to('post')).toThrow('Depth min must be >= 0');
+    expect(() => graphPath().out('wrote').depth(-1).to('post')).toThrow(
+      'Depth min must be >= 0',
+    );
   });
 
   it('depth(-100) throws error', () => {
-    expect(() => graphPath().out('wrote').depth(-100).to('post')).toThrow('Depth min must be >= 0');
+    expect(() => graphPath().out('wrote').depth(-100).to('post')).toThrow(
+      'Depth min must be >= 0',
+    );
   });
 
   it('depth(3, 1) throws error (max < min)', () => {
@@ -112,7 +116,13 @@ describe('Adversarial: Multiple traversals with different depths', () => {
   });
 
   it('one bounded, one unbounded depth', () => {
-    const path = graphPath().out('follows').depth(1, 3).to('user').out('wrote').depth(0).to('post');
+    const path = graphPath()
+      .out('follows')
+      .depth(1, 3)
+      .to('user')
+      .out('wrote')
+      .depth(0)
+      .to('post');
     expect(path.toString()).toBe('->follows->user{1,3}->wrote->post{0,}');
   });
 
@@ -133,12 +143,22 @@ describe('Adversarial: Multiple traversals with different depths', () => {
   });
 
   it('step without depth followed by step with depth', () => {
-    const path = graphPath().out('wrote').to('post').out('tagged').depth(1, 2).to('tag');
+    const path = graphPath()
+      .out('wrote')
+      .to('post')
+      .out('tagged')
+      .depth(1, 2)
+      .to('tag');
     expect(path.toString()).toBe('->wrote->post->tagged->tag{1,2}');
   });
 
   it('step with depth followed by step without depth', () => {
-    const path = graphPath().out('wrote').depth(2, 3).to('post').out('tagged').to('tag');
+    const path = graphPath()
+      .out('wrote')
+      .depth(2, 3)
+      .to('post')
+      .out('tagged')
+      .to('tag');
     expect(path.toString()).toBe('->wrote->post{2,3}->tagged->tag');
   });
 });
@@ -153,7 +173,9 @@ describe('Adversarial: SelectBuilder traverse() with depth', () => {
 
   it('traverse with large depth range generates correct SQL', () => {
     const result = select(orm, users)
-      .traverse('out', 'wrote', 'post', 'posts', { depth: { min: 1, max: 100 } })
+      .traverse('out', 'wrote', 'post', 'posts', {
+        depth: { min: 1, max: 100 },
+      })
       .toSQL();
     expect(result.sql).toContain('->wrote->post{1,100}.* AS posts');
   });
@@ -161,7 +183,9 @@ describe('Adversarial: SelectBuilder traverse() with depth', () => {
   it('multiple traversals with different depth ranges', () => {
     const result = select(orm, users)
       .traverse('out', 'wrote', 'post', 'posts', { depth: { min: 1, max: 3 } })
-      .traverse('in', 'followed_by', 'user', 'followers', { depth: { min: 0, max: 2 } })
+      .traverse('in', 'followed_by', 'user', 'followers', {
+        depth: { min: 0, max: 2 },
+      })
       .toSQL();
     expect(result.sql).toContain('->wrote->post{1,3}.* AS posts');
     expect(result.sql).toContain('<-followed_by<-user{0,2}.* AS followers');
@@ -220,7 +244,12 @@ describe('Adversarial: getSteps() integrity with depth', () => {
   });
 
   it('getSteps() on multi-step path preserves per-step depth', () => {
-    const path = graphPath().out('follows').depth(1, 2).to('user').out('wrote').to('post');
+    const path = graphPath()
+      .out('follows')
+      .depth(1, 2)
+      .to('user')
+      .out('wrote')
+      .to('post');
     const steps = path.getSteps();
     expect(steps).toHaveLength(2);
     expect(steps[0].depth).toEqual({ min: 1, max: 2 });
@@ -230,7 +259,12 @@ describe('Adversarial: getSteps() integrity with depth', () => {
 
 describe('Adversarial: Chaining after depth()', () => {
   it('can call depth() then to() then add another step', () => {
-    const path = graphPath().out('wrote').depth(1, 3).to('post').out('tagged').to('tag');
+    const path = graphPath()
+      .out('wrote')
+      .depth(1, 3)
+      .to('post')
+      .out('tagged')
+      .to('tag');
     expect(path.toString()).toBe('->wrote->post{1,3}->tagged->tag');
     expect(path.getSteps()).toHaveLength(2);
   });

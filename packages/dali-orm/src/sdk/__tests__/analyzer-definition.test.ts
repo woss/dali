@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { AnalyzerDefinition } from '../table.js';
 import { OrmSchema, type OrmSchemaConfig } from '../orm-schema.js';
+import type { AnalyzerDefinition } from '../table.js';
 
 // =============================================================================
 // AnalyzerDefinition type + OrmSchema analyzers integration
@@ -68,7 +68,9 @@ describe('OrmSchema with analyzers', () => {
   });
 
   it('getAnalyzers returns a copy of analyzers', () => {
-    const analyzers: AnalyzerDefinition[] = [{ name: 'a1', tokenizers: 'class' }];
+    const analyzers: AnalyzerDefinition[] = [
+      { name: 'a1', tokenizers: 'class' },
+    ];
 
     const schema = new OrmSchema({ tables: {}, analyzers });
     const result = schema.getAnalyzers();
@@ -90,7 +92,9 @@ describe('OrmSchema with analyzers', () => {
   it('works with create factory method', () => {
     const schema = OrmSchema.create({
       tables: {},
-      analyzers: [{ name: 'ft_analyzer', tokenizers: 'class', filters: ['lowercase'] }],
+      analyzers: [
+        { name: 'ft_analyzer', tokenizers: 'class', filters: ['lowercase'] },
+      ],
     });
 
     const result = schema.getAnalyzers();

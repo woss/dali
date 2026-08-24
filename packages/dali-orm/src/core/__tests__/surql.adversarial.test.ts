@@ -9,9 +9,9 @@ import { describe, expect, it } from 'vitest';
 import {
   escapeIdent,
   escapeString,
+  isRaw,
   quoteString,
   raw,
-  isRaw,
   serializeValue,
   surql,
 } from '../surql.js';
@@ -294,7 +294,10 @@ describe('serializeValue — adversarial', () => {
 
   it('handles Symbol keys (ignored by Object.entries)', () => {
     const sym = Symbol('evil');
-    const obj = { [sym]: 'hidden', visible: true } as Record<string | symbol, unknown>;
+    const obj = { [sym]: 'hidden', visible: true } as Record<
+      string | symbol,
+      unknown
+    >;
     const result = serializeValue(obj);
     // Symbol keys are not enumerable via Object.entries
     expect(result).toBe('{ visible: true }');
@@ -475,7 +478,9 @@ describe('raw — adversarial', () => {
 describe('surql — adversarial', () => {
   it('interpolates SQL injection string safely', () => {
     const r = surql`SELECT * FROM users WHERE name = ${"'; DROP TABLE users; --"}`;
-    expect(r.sql).toBe("SELECT * FROM users WHERE name = '\\'; DROP TABLE users; --'");
+    expect(r.sql).toBe(
+      "SELECT * FROM users WHERE name = '\\'; DROP TABLE users; --'",
+    );
   });
 
   it('interpolates null byte string', () => {

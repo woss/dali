@@ -15,12 +15,17 @@
  * - WithGraphAliases, wildcard column exclusion
  */
 
-import { describe, expect, it, expectTypeOf } from 'vitest';
-import { columnRef, isRelationTable, recordId } from '../types.js';
+import { describe, expect, expectTypeOf, it } from 'vitest';
+import type { ColumnConfig } from '../../sdk/schema/column/types.js';
+import type {
+  ColumnBuilder,
+  TableConfig,
+  TableDefinition,
+} from '../../sdk/table.js';
 import type {
   ColumnRef,
-  ColumnType,
   ColumnsToRecord,
+  ColumnType,
   InferInsertInput,
   InferRelateInput,
   InferRelateResult,
@@ -31,16 +36,16 @@ import type {
   SelectField,
   WithGraphAliases,
 } from '../types.js';
-import type { ColumnConfig } from '../../sdk/schema/column/types.js';
-import type { ColumnBuilder, TableConfig, TableDefinition } from '../../sdk/table.js';
+import { columnRef, isRelationTable, recordId } from '../types.js';
 
 // ============================================================================
 // Helper types for building test table definitions
 // ============================================================================
 
-type MockTableDef<TColumns extends Record<string, ColumnBuilder>> = TableDefinition & {
-  _columns: TColumns;
-};
+type MockTableDef<TColumns extends Record<string, ColumnBuilder>> =
+  TableDefinition & {
+    _columns: TColumns;
+  };
 
 // ============================================================================
 // 1. columnRef - Branded Column Reference Factory
@@ -76,7 +81,11 @@ describe('columnRef', () => {
   });
 
   it('creates ColumnRef with complex generic names', () => {
-    const ref = columnRef<'user.first_name', string>('user.first_name', '' as string, 'employee');
+    const ref = columnRef<'user.first_name', string>(
+      'user.first_name',
+      '' as string,
+      'employee',
+    );
 
     expect(ref.name).toBe('user.first_name');
     expect(ref.tableName).toBe('employee');
@@ -142,11 +151,15 @@ describe('recordId', () => {
   });
 
   it('throws on undefined id', () => {
-    expect(() => recordId('user', undefined as unknown as string)).toThrow('Record ID is required');
+    expect(() => recordId('user', undefined as unknown as string)).toThrow(
+      'Record ID is required',
+    );
   });
 
   it('throws on null id', () => {
-    expect(() => recordId('user', null as unknown as string)).toThrow('Record ID is required');
+    expect(() => recordId('user', null as unknown as string)).toThrow(
+      'Record ID is required',
+    );
   });
 
   it('extracts name from table-like object with name property', () => {
@@ -176,7 +189,11 @@ describe('isRelationTable', () => {
   });
 
   it('returns true for multi-IN relation config', () => {
-    const config = { type: 'relation' as const, in: ['user', 'admin'], out: 'post' };
+    const config = {
+      type: 'relation' as const,
+      in: ['user', 'admin'],
+      out: 'post',
+    };
     expect(isRelationTable(config)).toBe(true);
   });
 
@@ -266,7 +283,9 @@ describe('ColumnType', () => {
   });
 
   it('maps datetime to Date | string', () => {
-    expectTypeOf<ColumnType<{ type: 'datetime' }>>().toEqualTypeOf<Date | string>();
+    expectTypeOf<ColumnType<{ type: 'datetime' }>>().toEqualTypeOf<
+      Date | string
+    >();
   });
 
   it('maps duration to string', () => {
@@ -278,7 +297,9 @@ describe('ColumnType', () => {
   });
 
   it('maps object to Record<string, unknown>', () => {
-    expectTypeOf<ColumnType<{ type: 'object' }>>().toEqualTypeOf<Record<string, unknown>>();
+    expectTypeOf<ColumnType<{ type: 'object' }>>().toEqualTypeOf<
+      Record<string, unknown>
+    >();
   });
 
   it('maps record to string', () => {

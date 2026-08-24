@@ -9,6 +9,7 @@ import { createDebug as debug } from 'obug';
 import * as v from 'valibot';
 import type { SurrealDriver } from '../../sdk/driver/types.js';
 import type { TablePermissions } from '../../sdk/table.js';
+import { SurrealQLGenerator } from '../core/generator.js';
 import type {
   SurrealColumn,
   SurrealDbDDL,
@@ -22,7 +23,6 @@ import type {
 import { createEmptyDdl } from './ddl.js';
 import { InfoForTableSchema } from './schemas.js';
 import { parseKind } from './types.js';
-import { SurrealQLGenerator } from '../core/generator.js';
 
 const log = debug('dali-orm:kit:introspect');
 
@@ -38,7 +38,10 @@ export interface IntrospectFilter {
 /**
  * Introspect filter function type
  */
-export type IntrospectFilterFn = (name: string, type: 'table' | 'index' | 'relation') => boolean;
+export type IntrospectFilterFn = (
+  name: string,
+  type: 'table' | 'index' | 'relation',
+) => boolean;
 
 /**
  * Main entry point - introspect database and return DDL structure
@@ -187,7 +190,9 @@ async function getTableList(driver: SurrealDriver): Promise<string[]> {
 /**
  * Get list of existing access names from database
  */
-export async function introspectAccess(driver: SurrealDriver): Promise<string[]> {
+export async function introspectAccess(
+  driver: SurrealDriver,
+): Promise<string[]> {
   log('Query: INFO FOR DB (access)');
   const result = await driver.query('INFO FOR DB');
 
@@ -215,7 +220,9 @@ export async function introspectAccess(driver: SurrealDriver): Promise<string[]>
  *
  * Returns the raw DEFINE ACCESS SQL strings (Object.values).
  */
-export async function introspectAccessSQL(driver: SurrealDriver): Promise<string[]> {
+export async function introspectAccessSQL(
+  driver: SurrealDriver,
+): Promise<string[]> {
   log('Query: INFO FOR DB (access SQL)');
   const result = await driver.query('INFO FOR DB');
 
@@ -267,8 +274,10 @@ export async function introspectTable(
   const isRelation = inField !== undefined && outField !== undefined;
 
   // Extract related table names from record type definitions
-  const parsedInKind = isRelation && inField?.kind ? parseKind(inField.kind) : undefined;
-  const parsedOutKind = isRelation && outField?.kind ? parseKind(outField.kind) : undefined;
+  const parsedInKind =
+    isRelation && inField?.kind ? parseKind(inField.kind) : undefined;
+  const parsedOutKind =
+    isRelation && outField?.kind ? parseKind(outField.kind) : undefined;
 
   const inTable: string | string[] | undefined = parsedInKind?.recordTables
     ? parsedInKind.recordTables.length === 1
@@ -314,13 +323,16 @@ export async function introspectTable(
       // Compute optional from kind: option<T>, T | none, or none | T
       const isOptional = Boolean(
         hasKind &&
-        (rawKind.startsWith('option<') ||
-          /\|\s*none\s*$/.test(rawKind) ||
-          /^none\s*\|/.test(rawKind)),
+          (rawKind.startsWith('option<') ||
+            /\|\s*none\s*$/.test(rawKind) ||
+            /^none\s*\|/.test(rawKind)),
       );
       const parsedKind = hasKind
         ? parseKind(kind)
-        : { type: undefined as unknown as SurrealColumn['kind'], recordTable: undefined };
+        : {
+            type: undefined as unknown as SurrealColumn['kind'],
+            recordTable: undefined,
+          };
 
       const column: SurrealColumn = {
         name: fieldName,
@@ -344,7 +356,12 @@ export async function introspectTable(
         comment: field.comment,
       };
 
-      log('Field %s: kind=%s, default=%s', fieldName, column.kind, column.default);
+      log(
+        'Field %s: kind=%s, default=%s',
+        fieldName,
+        column.kind,
+        column.default,
+      );
 
       return column;
     });
@@ -374,7 +391,12 @@ export async function introspectTable(
       comment: idx.comment,
       prepare_remove: idx.prepare_remove,
       dimension,
-      distance: distance as 'EUCLIDEAN' | 'MANHATTAN' | 'COSINE' | 'MINKOWSKI' | undefined,
+      distance: distance as
+        | 'EUCLIDEAN'
+        | 'MANHATTAN'
+        | 'COSINE'
+        | 'MINKOWSKI'
+        | undefined,
       vectorType,
     };
 
@@ -480,7 +502,9 @@ function extractHnswDistance(indexStr: string): string | undefined {
  * E.g., "HNSW TYPE F32 ..." → 'float32'
  * Maps: F32 → float32, F64 → float64
  */
-function extractHnswVectorType(indexStr: string): 'float32' | 'float64' | undefined {
+function extractHnswVectorType(
+  indexStr: string,
+): 'float32' | 'float64' | undefined {
   const match = /TYPE\s+(F\d+)/i.exec(indexStr);
   if (!match) return undefined;
   const type = match[1].toUpperCase();
@@ -495,7 +519,9 @@ function extractHnswVectorType(indexStr: string): 'float32' | 'float64' | undefi
  * STRUCTURE returns permissions as an object like:
  * { select: "FULL", create: "NONE" } or { select: true, create: false }
  */
-function parseTablePermissions(permValue: unknown): TablePermissions | undefined {
+function parseTablePermissions(
+  permValue: unknown,
+): TablePermissions | undefined {
   if (!permValue || typeof permValue !== 'object') {
     return undefined;
   }
@@ -577,7 +603,9 @@ function extractAnalyzer(indexDef: string): string | undefined {
  * SurrealDB returns functions as raw "DEFINE FUNCTION ..." SQL strings,
  * which we parse into SurrealFunction[] objects.
  */
-export async function introspectFunctions(driver: SurrealDriver): Promise<SurrealFunction[]> {
+export async function introspectFunctions(
+  driver: SurrealDriver,
+): Promise<SurrealFunction[]> {
   log('Query: INFO FOR DB (functions)');
   const result = await driver.query('INFO FOR DB');
 
@@ -616,7 +644,10 @@ export async function introspectFunctions(driver: SurrealDriver): Promise<Surrea
  *
  * Handles: DEFINE FUNCTION [IF NOT EXISTS] fn_name($arg1: type, $arg2: type) { body } [COMMENT "..." ] [PERMISSIONS ...]
  */
-export function parseFunctionSQL(_name: string, rawSQL: string): SurrealFunction {
+export function parseFunctionSQL(
+  _name: string,
+  rawSQL: string,
+): SurrealFunction {
   const func: SurrealFunction = {
     name: _name,
     body: '',
@@ -698,7 +729,11 @@ async function introspectNamespaces(driver: SurrealDriver): Promise<string[]> {
         const name = String(obj.name ?? '');
         if (name) {
           const comment = obj.comment ? String(obj.comment) : undefined;
-          namespaces.push(new SurrealQLGenerator().generateNamespaceDefinition(name, { comment }));
+          namespaces.push(
+            new SurrealQLGenerator().generateNamespaceDefinition(name, {
+              comment,
+            }),
+          );
         }
       }
     }
@@ -715,7 +750,9 @@ async function introspectNamespaces(driver: SurrealDriver): Promise<string[]> {
  * Uses INFO FOR DB to list all defined databases.
  * Falls back to empty array when not at namespace level.
  */
-export async function introspectDatabases(driver: SurrealDriver): Promise<string[]> {
+export async function introspectDatabases(
+  driver: SurrealDriver,
+): Promise<string[]> {
   try {
     const result = await driver.query('INFO FOR DB');
     if (!result || !Array.isArray(result)) {
@@ -733,12 +770,18 @@ export async function introspectDatabases(driver: SurrealDriver): Promise<string
           for (const [name, info] of Object.entries(dbObj)) {
             if (info && typeof info === 'object') {
               const dbInfo = info as Record<string, unknown>;
-              const comment = dbInfo.comment ? String(dbInfo.comment) : undefined;
+              const comment = dbInfo.comment
+                ? String(dbInfo.comment)
+                : undefined;
               databases.push(
-                new SurrealQLGenerator().generateDatabaseDefinition(name, { comment }),
+                new SurrealQLGenerator().generateDatabaseDefinition(name, {
+                  comment,
+                }),
               );
             } else {
-              databases.push(new SurrealQLGenerator().generateDatabaseDefinition(name));
+              databases.push(
+                new SurrealQLGenerator().generateDatabaseDefinition(name),
+              );
             }
           }
         }
@@ -781,7 +824,9 @@ function createFilterFn(filter?: IntrospectFilter): IntrospectFilterFn {
  *
  * Returns parsed SurrealSequence objects.
  */
-async function introspectSequences(driver: SurrealDriver): Promise<SurrealSequence[]> {
+async function introspectSequences(
+  driver: SurrealDriver,
+): Promise<SurrealSequence[]> {
   try {
     const result = await driver.query('INFO FOR DB');
     const dbInfo = Array.isArray(result) ? result[0] : result;
@@ -818,7 +863,10 @@ async function introspectSequences(driver: SurrealDriver): Promise<SurrealSequen
  * Handles: DEFINE SEQUENCE [IF NOT EXISTS] <name> [START <n>] [INCREMENT <n>]
  *          [MIN <n>] [MAX <n>] [CACHE <n>] [CYCLE] [COMMENT '<str>']
  */
-function parseSequenceSQL(_name: string, rawSQL: string): SurrealSequence | null {
+function parseSequenceSQL(
+  _name: string,
+  rawSQL: string,
+): SurrealSequence | null {
   const seq: SurrealSequence = { name: _name };
 
   const startMatch = rawSQL.match(/START\s+(-?\d+)/i);

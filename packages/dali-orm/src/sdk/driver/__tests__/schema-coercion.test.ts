@@ -98,7 +98,10 @@ class TestDriver extends BaseDriver {
   // @ts-expect-error — mock db, not real Surreal instance
   public db: Record<string, unknown>;
   connected = false;
-  subscriptions = new Map<string, { created: number; liveSubscription?: unknown }>();
+  subscriptions = new Map<
+    string,
+    { created: number; liveSubscription?: unknown }
+  >();
 
   constructor(mockDb: Record<string, unknown>) {
     super();
@@ -136,7 +139,9 @@ class TestDriver extends BaseDriver {
 
 function createMockDb() {
   return {
-    query: vi.fn().mockReturnValue({ collect: vi.fn().mockResolvedValue([[]]) }),
+    query: vi
+      .fn()
+      .mockReturnValue({ collect: vi.fn().mockResolvedValue([[]]) }),
     select: vi.fn().mockReturnValue(thenableResolve([])),
     create: vi.fn().mockReturnValue(builderThenable([])),
     insert: vi.fn().mockReturnValue(thenableResolve([])),
@@ -169,8 +174,14 @@ function createMockSchema(): any {
           $columns: {
             name: { name: 'name', config: { type: 'string' } },
             email: { name: 'email', config: { type: 'string' } },
-            profile: { name: 'profile', config: { type: 'record', recordTable: 'profile' } },
-            owner: { name: 'owner', config: { type: 'record', recordTable: 'user' } },
+            profile: {
+              name: 'profile',
+              config: { type: 'record', recordTable: 'profile' },
+            },
+            owner: {
+              name: 'owner',
+              config: { type: 'record', recordTable: 'user' },
+            },
           },
         };
       }

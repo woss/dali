@@ -89,7 +89,9 @@ describe('crypto', () => {
   });
 
   it('cryptoArgon2Compare()', () => {
-    expect(cryptoArgon2Compare($('pw'), $('hash'))).toBe('crypto::argon2::compare(pw, hash)');
+    expect(cryptoArgon2Compare($('pw'), $('hash'))).toBe(
+      'crypto::argon2::compare(pw, hash)',
+    );
   });
 
   it('cryptoBlake3()', () => {
@@ -105,7 +107,9 @@ describe('crypto', () => {
   });
 
   it('cryptoBcryptCompare()', () => {
-    expect(cryptoBcryptCompare($('pw'), $('hash'))).toBe('crypto::bcrypt::compare(pw, hash)');
+    expect(cryptoBcryptCompare($('pw'), $('hash'))).toBe(
+      'crypto::bcrypt::compare(pw, hash)',
+    );
   });
 
   it('cryptoScryptGenerate()', () => {
@@ -113,15 +117,21 @@ describe('crypto', () => {
   });
 
   it('cryptoScryptCompare()', () => {
-    expect(cryptoScryptCompare($('pw'), $('hash'))).toBe('crypto::scrypt::compare(pw, hash)');
+    expect(cryptoScryptCompare($('pw'), $('hash'))).toBe(
+      'crypto::scrypt::compare(pw, hash)',
+    );
   });
 
   it('cryptoPbkdf2Generate()', () => {
-    expect(cryptoPbkdf2Generate($('pw'), $('key'))).toBe('crypto::pbkdf2::generate(pw, key)');
+    expect(cryptoPbkdf2Generate($('pw'), $('key'))).toBe(
+      'crypto::pbkdf2::generate(pw, key)',
+    );
   });
 
   it('cryptoPbkdf2Compare()', () => {
-    expect(cryptoPbkdf2Compare($('pw'), $('hash'))).toBe('crypto::pbkdf2::compare(pw, hash)');
+    expect(cryptoPbkdf2Compare($('pw'), $('hash'))).toBe(
+      'crypto::pbkdf2::compare(pw, hash)',
+    );
   });
 
   it('cryptoUuidV4()', () => {
@@ -156,11 +166,15 @@ describe('geo', () => {
   });
 
   it('geoHashEncode() without len', () => {
-    expect(geoHashEncode($('lng'), $('lat'))).toBe('geo::hash::encode(lng, lat)');
+    expect(geoHashEncode($('lng'), $('lat'))).toBe(
+      'geo::hash::encode(lng, lat)',
+    );
   });
 
   it('geoHashEncode() with len', () => {
-    expect(geoHashEncode($('lng'), $('lat'), $('5'))).toBe('geo::hash::encode(lng, lat, 5)');
+    expect(geoHashEncode($('lng'), $('lat'), $('5'))).toBe(
+      'geo::hash::encode(lng, lat, 5)',
+    );
   });
 
   it('geoIsValid()', () => {

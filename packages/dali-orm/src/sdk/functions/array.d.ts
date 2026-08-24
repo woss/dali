@@ -30,9 +30,16 @@ export declare function arrayPush(arr: SqlExpr, value: SqlExpr): SqlExpr;
 export declare function arrayRemove(arr: SqlExpr, value: SqlExpr): SqlExpr;
 export declare function arrayReverse(arr: SqlExpr): SqlExpr;
 export declare function arrayShuffle(arr: SqlExpr): SqlExpr;
-export declare function arraySlice(arr: SqlExpr, start: SqlExpr, end?: SqlExpr): SqlExpr;
+export declare function arraySlice(
+  arr: SqlExpr,
+  start: SqlExpr,
+  end?: SqlExpr,
+): SqlExpr;
 export declare function arraySort(arr: SqlExpr, order?: SqlExpr): SqlExpr;
-export declare function arrayStringJoin(arr: SqlExpr, separator: SqlExpr): SqlExpr;
+export declare function arrayStringJoin(
+  arr: SqlExpr,
+  separator: SqlExpr,
+): SqlExpr;
 export declare function arraySum(arr: SqlExpr): SqlExpr;
 export declare function arrayUnion(arr1: SqlExpr, arr2: SqlExpr): SqlExpr;
 export declare function arrayUnique(arr: SqlExpr): SqlExpr;

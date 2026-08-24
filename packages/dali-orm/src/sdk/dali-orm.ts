@@ -1,11 +1,15 @@
-import { connect as createDriver } from './driver/orm-connection.js';
-import type { OrmSchema } from './orm-schema.js';
-import type { InferSelectResult, InferInsertData, InferUpdateData } from './infer-types.js';
-import type { TableDefinition } from './table.js';
-import { createModel } from '../query/model.js';
 import type { Model } from '../query/model.js';
-import { createSchemaBuilder } from './schema-builder.js';
+import { createModel } from '../query/model.js';
+import { connect as createDriver } from './driver/orm-connection.js';
+import type {
+  InferInsertData,
+  InferSelectResult,
+  InferUpdateData,
+} from './infer-types.js';
+import type { OrmSchema } from './orm-schema.js';
 import type { SchemaBuilder } from './schema-builder.js';
+import { createSchemaBuilder } from './schema-builder.js';
+import type { TableDefinition } from './table.js';
 
 /**
  * DaliORM configuration - extends SurrealORMConfig with optional schema
@@ -47,7 +51,10 @@ export class DaliORM {
   /** Schema definition if provided */
   readonly schemaDefinition: OrmSchema | undefined;
 
-  private constructor(driver: import('./driver/types.js').SurrealDriver, schema?: OrmSchema) {
+  private constructor(
+    driver: import('./driver/types.js').SurrealDriver,
+    schema?: OrmSchema,
+  ) {
     this.driver = driver;
     this.schemaDefinition = schema;
   }
@@ -78,7 +85,10 @@ export class DaliORM {
   /**
    * Execute a raw SQL query
    */
-  async query<T = unknown>(sql: string, vars?: Record<string, unknown>): Promise<T[]> {
+  async query<T = unknown>(
+    sql: string,
+    vars?: Record<string, unknown>,
+  ): Promise<T[]> {
     return this.driver.query<T>(sql, vars);
   }
 
@@ -109,7 +119,9 @@ export class DaliORM {
    * @param table - Table definition from defineTable()
    * @returns Typed array of records matching the table schema
    */
-  async selectFrom<T extends TableDefinition>(table: T): Promise<InferSelectResult<T>[]> {
+  async selectFrom<T extends TableDefinition>(
+    table: T,
+  ): Promise<InferSelectResult<T>[]> {
     return await this.driver.select<InferSelectResult<T>>(table.name);
   }
 
@@ -144,7 +156,9 @@ export class DaliORM {
    * @param table - Table definition from defineTable()
    * @returns Typed array of deleted records
    */
-  async deleteFrom<T extends TableDefinition>(table: T): Promise<InferSelectResult<T>[]> {
+  async deleteFrom<T extends TableDefinition>(
+    table: T,
+  ): Promise<InferSelectResult<T>[]> {
     return await this.driver.delete<InferSelectResult<T>>(table.name);
   }
 

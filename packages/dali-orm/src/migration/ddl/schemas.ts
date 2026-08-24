@@ -28,7 +28,11 @@ export const FieldDefinitionSchema = v.object({
   default: v.optional(v.string()),
   reference: v.optional(ReferenceSchema),
   readonly: v.optional(v.boolean(), false),
-  permissions: v.optional(FieldPermissionsSchema, { select: false, create: false, update: false }),
+  permissions: v.optional(FieldPermissionsSchema, {
+    select: false,
+    create: false,
+    update: false,
+  }),
   comment: v.optional(v.string()),
 });
 

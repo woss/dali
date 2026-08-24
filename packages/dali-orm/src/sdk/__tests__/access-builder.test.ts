@@ -22,7 +22,9 @@ describe('defineAccess builder', () => {
     const access = defineAccess('full_access')
       .type('RECORD')
       .table('users')
-      .signup('CREATE users SET email = $email, password = crypto::argon2::generate($password)')
+      .signup(
+        'CREATE users SET email = $email, password = crypto::argon2::generate($password)',
+      )
       .signin(
         'SELECT * FROM users WHERE email = $email AND crypto::argon2::compare(password, $password)',
       )
@@ -62,7 +64,9 @@ describe('defineAccess builder', () => {
     const sql = defineAccess('web_access')
       .type('RECORD')
       .table('users')
-      .signup('CREATE users SET email = $email, password = crypto::argon2::generate($password)')
+      .signup(
+        'CREATE users SET email = $email, password = crypto::argon2::generate($password)',
+      )
       .signin(
         'SELECT * FROM users WHERE email = $email AND crypto::argon2::compare(password, $password)',
       )

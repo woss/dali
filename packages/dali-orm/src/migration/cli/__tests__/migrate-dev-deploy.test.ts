@@ -10,8 +10,8 @@
  */
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fileURLToPath } from 'node:url';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { EmbeddedDriver } from '../../../sdk/driver/embedded-driver.js';
 
 // Mock connect before importing the modules under test
@@ -19,10 +19,10 @@ vi.mock('../../../sdk/driver/orm-connection.js', () => ({
   connect: vi.fn(),
 }));
 
-import { migrateDeploy, migrateDev } from '../migrate.js';
 import { connect } from '../../../sdk/driver/orm-connection.js';
-import { createMigrationFile } from './helpers.js';
 import type { Config } from '../../config.js';
+import { migrateDeploy, migrateDev } from '../migrate.js';
+import { createMigrationFile } from './helpers.js';
 
 // ============================================================================
 // Helpers
@@ -63,7 +63,10 @@ function mockConsole(): () => void {
 const createdDrivers: EmbeddedDriver[] = [];
 
 /** Create a real embedded driver for the given ns/db */
-async function createEmbeddedDriver(namespace: string, database: string): Promise<EmbeddedDriver> {
+async function createEmbeddedDriver(
+  namespace: string,
+  database: string,
+): Promise<EmbeddedDriver> {
   const driver = new EmbeddedDriver({
     driver: 'embedded',
     namespace,
@@ -169,18 +172,26 @@ describe('migrateDev', () => {
     await migrateDev({ config, name: 'empty_test' });
 
     const logCalls = vi.mocked(console.log).mock.calls;
-    const noSchemaLine = logCalls.find((c) => String(c[0]).includes('No schema tables'));
+    const noSchemaLine = logCalls.find((c) =>
+      String(c[0]).includes('No schema tables'),
+    );
     expect(noSchemaLine).toBeDefined();
   });
 
   it('generates migration from schema with no database config', async () => {
     // Schema file in a project-root temp dir so Vitest can resolve imports
-    const schemaFile = await createPlainSchemaFile(schemaDir, 'user.schema.ts', [
-      {
-        name: 'user',
-        columns: [{ name: 'name', tableName: 'user', config: { type: 'string' } }],
-      },
-    ]);
+    const schemaFile = await createPlainSchemaFile(
+      schemaDir,
+      'user.schema.ts',
+      [
+        {
+          name: 'user',
+          columns: [
+            { name: 'name', tableName: 'user', config: { type: 'string' } },
+          ],
+        },
+      ],
+    );
 
     const config = makeConfig({
       url: '',
@@ -196,7 +207,10 @@ describe('migrateDev', () => {
     });
 
     // Mock connect to return a valid driver for the target connection
-    const targetDriver = await createEmbeddedDriver('test_mig_dev_nodb', `db_nodb_${Date.now()}`);
+    const targetDriver = await createEmbeddedDriver(
+      'test_mig_dev_nodb',
+      `db_nodb_${Date.now()}`,
+    );
     vi.mocked(connect).mockResolvedValue(targetDriver);
 
     await migrateDev({ config, name: 'create_user' });
@@ -211,17 +225,25 @@ describe('migrateDev', () => {
       path.join(migrationsDir, createUserDir!, 'migration.surql'),
       'utf-8',
     );
-    expect(migrationContent).toContain('DEFINE TABLE IF NOT EXISTS user SCHEMAFULL');
+    expect(migrationContent).toContain(
+      'DEFINE TABLE IF NOT EXISTS user SCHEMAFULL',
+    );
   });
 
   it('generates migration and applies to target with embedded driver', async () => {
     // Schema file in a project-root temp dir so Vitest can resolve imports
-    const schemaFile = await createPlainSchemaFile(schemaDir, 'user.schema.ts', [
-      {
-        name: 'user',
-        columns: [{ name: 'name', tableName: 'user', config: { type: 'string' } }],
-      },
-    ]);
+    const schemaFile = await createPlainSchemaFile(
+      schemaDir,
+      'user.schema.ts',
+      [
+        {
+          name: 'user',
+          columns: [
+            { name: 'name', tableName: 'user', config: { type: 'string' } },
+          ],
+        },
+      ],
+    );
 
     const ns = `test_dev_gen_${Date.now()}`;
     const db = `db_gen_${Date.now()}`;
@@ -231,8 +253,10 @@ describe('migrateDev', () => {
     //   then safeDisconnect, then createConnection (target)
     // Each call must return a fresh driver since the first one gets disconnected
     vi.mocked(connect).mockImplementation(async (opts: any) => {
-      const nsFromOpts = opts?.nodeDriver?.namespace ?? opts?.embeddedDriver?.namespace ?? ns;
-      const dbFromOpts = opts?.nodeDriver?.database ?? opts?.embeddedDriver?.database ?? db;
+      const nsFromOpts =
+        opts?.nodeDriver?.namespace ?? opts?.embeddedDriver?.namespace ?? ns;
+      const dbFromOpts =
+        opts?.nodeDriver?.database ?? opts?.embeddedDriver?.database ?? db;
       return createEmbeddedDriver(nsFromOpts, dbFromOpts);
     });
 
@@ -267,7 +291,8 @@ describe('migrateDev', () => {
     // its own in-memory SurrealDB; data is not shared across instances)
     const logCalls = vi.mocked(console.log).mock.calls;
     const appliedLine = logCalls.find(
-      (c) => String(c[0]).includes('Applied') && String(c[0]).includes('migration'),
+      (c) =>
+        String(c[0]).includes('Applied') && String(c[0]).includes('migration'),
     );
     expect(appliedLine).toBeDefined();
   });
@@ -326,8 +351,10 @@ describe('migrateDeploy', () => {
 
     // Mock connect to return a FRESH embedded driver for each call
     vi.mocked(connect).mockImplementation(async (opts: any) => {
-      const ns = opts?.nodeDriver?.namespace ?? opts?.embeddedDriver?.namespace ?? '';
-      const db = opts?.nodeDriver?.database ?? opts?.embeddedDriver?.database ?? '';
+      const ns =
+        opts?.nodeDriver?.namespace ?? opts?.embeddedDriver?.namespace ?? '';
+      const db =
+        opts?.nodeDriver?.database ?? opts?.embeddedDriver?.database ?? '';
       return createEmbeddedDriver(ns, db);
     });
 

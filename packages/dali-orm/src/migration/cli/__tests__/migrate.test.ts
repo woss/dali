@@ -16,6 +16,8 @@ import { MigrationRunner } from '../../core/runner.js';
 
 // Ensure real orm-connection module (not leaked mock from other test files)
 vi.unmock('../../../sdk/driver/orm-connection.js');
+
+import type { Config } from '../../config.js';
 import {
   getMigrationProgressString,
   handleResumeWithProgress,
@@ -25,9 +27,12 @@ import {
   migrateSync,
   migrateUp,
 } from '../migrate.js';
-import { cleanupDir, createMigrationFile, createTempDir as createTmpDir } from './helpers.js';
 import { createConnection, safeDisconnect } from '../operations.js';
-import type { Config } from '../../config.js';
+import {
+  cleanupDir,
+  createMigrationFile,
+  createTempDir as createTmpDir,
+} from './helpers.js';
 
 // ============================================================================
 // Helpers
@@ -92,7 +97,9 @@ describe('migrateUp', () => {
       },
     });
     // No migration files created
-    await expect(migrateUp({ config, embeddedDriver: true })).resolves.not.toThrow();
+    await expect(
+      migrateUp({ config, embeddedDriver: true }),
+    ).resolves.not.toThrow();
   });
 });
 
@@ -128,7 +135,9 @@ describe('migrateResume', () => {
     await migrateResume({ config, embeddedDriver: true });
 
     const logCalls = vi.mocked(console.log).mock.calls;
-    const noPartialLine = logCalls.find((c) => String(c[0]).includes('No partial'));
+    const noPartialLine = logCalls.find((c) =>
+      String(c[0]).includes('No partial'),
+    );
     expect(noPartialLine).toBeDefined();
   });
 });
@@ -193,7 +202,9 @@ describe('migrateSync', () => {
 
       // Verify journal was synced
       const logCalls = vi.mocked(console.log).mock.calls;
-      const syncLine = logCalls.find((c) => String(c[0]).includes('Journal synced'));
+      const syncLine = logCalls.find((c) =>
+        String(c[0]).includes('Journal synced'),
+      );
       expect(syncLine).toBeDefined();
 
       // Verify journal file content
@@ -229,7 +240,9 @@ describe('migrateSync', () => {
     await migrateSync({ config, embeddedDriver: true });
 
     const logCalls = vi.mocked(console.log).mock.calls;
-    const syncLine = logCalls.find((c) => String(c[0]).includes('Journal synced'));
+    const syncLine = logCalls.find((c) =>
+      String(c[0]).includes('Journal synced'),
+    );
     expect(syncLine).toBeDefined();
 
     // Journal should exist but be empty
@@ -416,7 +429,9 @@ describe('handleResumeWithProgress', () => {
     await expect(handleResumeWithProgress(freshRunner)).resolves.not.toThrow();
 
     const logCalls = vi.mocked(console.log).mock.calls;
-    const resumeOutput = logCalls.find((c) => String(c[0]).includes('Resuming'));
+    const resumeOutput = logCalls.find((c) =>
+      String(c[0]).includes('Resuming'),
+    );
     expect(resumeOutput).toBeDefined();
   });
 });
@@ -460,7 +475,8 @@ describe('MigrationRunner integration', () => {
 
     // Verify the migrations table exists via INFO FOR DB
     const info = await driver.query('INFO FOR DB');
-    const tables = (info as unknown as { tables: Record<string, string> })?.tables ?? {};
+    const tables =
+      (info as unknown as { tables: Record<string, string> })?.tables ?? {};
     expect(tables.__test_tracking).toBeDefined();
   });
 
@@ -482,7 +498,9 @@ describe('MigrationRunner integration', () => {
     expect(result.applied[0]).toBe('create_user');
 
     // Verify user table exists
-    const tables = await driver.query<Array<{ name: string }>>('SELECT * FROM user;');
+    const tables = await driver.query<Array<{ name: string }>>(
+      'SELECT * FROM user;',
+    );
     expect(Array.isArray(tables)).toBe(true);
   });
 
@@ -570,7 +588,9 @@ describe('migrateDev', () => {
     await migrateDev({ config, name: 'test_migration' });
 
     const logCalls = vi.mocked(console.log).mock.calls;
-    const noTablesLine = logCalls.find((c) => String(c[0]).includes('No schema tables found'));
+    const noTablesLine = logCalls.find((c) =>
+      String(c[0]).includes('No schema tables found'),
+    );
     expect(noTablesLine).toBeDefined();
   });
 
@@ -615,7 +635,9 @@ describe('migrateDev', () => {
     }
 
     const logCalls = vi.mocked(console.log).mock.calls;
-    const noDbLine = logCalls.find((c) => String(c[0]).includes('No database configuration found'));
+    const noDbLine = logCalls.find((c) =>
+      String(c[0]).includes('No database configuration found'),
+    );
     expect(noDbLine).toBeDefined();
 
     // Verify migration file was created before the connection error

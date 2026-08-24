@@ -1,4 +1,8 @@
-import type { ColumnConfig, ColumnDefinition, SurrealColumnType } from './schema/column/types.js';
+import type {
+  ColumnConfig,
+  ColumnDefinition,
+  SurrealColumnType,
+} from './schema/column/types.js';
 
 export type { ColumnConfig, ColumnDefinition, SurrealColumnType };
 
@@ -53,7 +57,9 @@ export interface RelationTableConfig extends TableConfig {
 /**
  * Column builder interface - anything with a build() method
  */
-export interface ColumnBuilder<out TType extends SurrealColumnType = SurrealColumnType> {
+export interface ColumnBuilder<
+  out TType extends SurrealColumnType = SurrealColumnType,
+> {
   name: string;
   build(
     tableName?: string,
@@ -69,7 +75,9 @@ export type TableColumns = Record<string, ColumnBuilder>;
 /**
  * Defines a normal table with columns and optional config
  */
-export function defineTable<const TColumns extends Record<string, ColumnBuilder>>(
+export function defineTable<
+  const TColumns extends Record<string, ColumnBuilder>,
+>(
   name: string,
   columns: TColumns,
   config?: Omit<TableConfig, 'type'>,
@@ -77,7 +85,9 @@ export function defineTable<const TColumns extends Record<string, ColumnBuilder>
   _columns: TColumns;
   $id(id: string | number): string;
 } {
-  const columnDefs = Object.entries(columns).map(([key, builder]) => builder.build(name, key));
+  const columnDefs = Object.entries(columns).map(([key, builder]) =>
+    builder.build(name, key),
+  );
 
   // Build $columns lookup for fast access by name
   const columnsLookup: Record<string, ColumnDefinition> = {};
@@ -95,21 +105,31 @@ export function defineTable<const TColumns extends Record<string, ColumnBuilder>
       type: 'normal',
     },
     $id: (id: string | number) => `${name}:${id}`,
-  } as TableDefinition & { _columns: TColumns; $id: (id: string | number) => string };
+  } as TableDefinition & {
+    _columns: TColumns;
+    $id: (id: string | number) => string;
+  };
 }
 
 /**
  * Defines a relation table with columns and relation config
  */
-export function defineRelationTable<const TColumns extends Record<string, ColumnBuilder>>(
+export function defineRelationTable<
+  const TColumns extends Record<string, ColumnBuilder>,
+>(
   name: string,
   columns: TColumns,
-  config: { in: string | string[]; out: string | string[] } & Omit<TableConfig, 'type'>,
+  config: { in: string | string[]; out: string | string[] } & Omit<
+    TableConfig,
+    'type'
+  >,
 ): TableDefinition & {
   _columns: TColumns;
   $id(id: string | number): string;
 } {
-  const columnDefs = Object.entries(columns).map(([key, builder]) => builder.build(name, key));
+  const columnDefs = Object.entries(columns).map(([key, builder]) =>
+    builder.build(name, key),
+  );
 
   // Build $columns lookup for fast access by name
   const columnsLookup: Record<string, ColumnDefinition> = {};
@@ -127,5 +147,8 @@ export function defineRelationTable<const TColumns extends Record<string, Column
       type: 'relation',
     },
     $id: (id: string | number) => `${name}:${id}`,
-  } as TableDefinition & { _columns: TColumns; $id: (id: string | number) => string };
+  } as TableDefinition & {
+    _columns: TColumns;
+    $id: (id: string | number) => string;
+  };
 }

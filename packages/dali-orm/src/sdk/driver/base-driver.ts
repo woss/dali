@@ -7,6 +7,12 @@
  */
 
 import { type ExprLike, RecordId, type Surreal, Table } from 'surrealdb';
+import type { OrmSchema } from '../orm-schema.js';
+import {
+  coerceRecordIds,
+  parseTableWithId,
+  transformDatetimeValues,
+} from './driver-utils.js';
 import type {
   DriverConfig,
   EmbeddedConfig,
@@ -18,13 +24,14 @@ import type {
   SurrealDriver,
   Transaction,
 } from './types.js';
-import type { OrmSchema } from '../orm-schema.js';
-import { coerceRecordIds, parseTableWithId, transformDatetimeValues } from './driver-utils.js';
 
 export abstract class BaseDriver implements SurrealDriver {
   protected abstract db: Surreal;
   protected connected = false;
-  protected subscriptions = new Map<string, { created: number; liveSubscription?: unknown }>();
+  protected subscriptions = new Map<
+    string,
+    { created: number; liveSubscription?: unknown }
+  >();
   schema?: OrmSchema;
 
   protected warn(message: string): void {
@@ -43,7 +50,9 @@ export abstract class BaseDriver implements SurrealDriver {
   abstract getUrl(): string;
   abstract signin(credentials: unknown): Promise<string>;
   abstract signup(credentials: unknown): Promise<string>;
-  abstract authenticate(token: unknown): Promise<{ access: string; refresh?: string }>;
+  abstract authenticate(
+    token: unknown,
+  ): Promise<{ access: string; refresh?: string }>;
   abstract get config(): DriverConfig | EmbeddedConfig;
 
   // ==================== Connection Management ====================
@@ -55,7 +64,9 @@ export abstract class BaseDriver implements SurrealDriver {
   async disconnect(): Promise<void> {
     if (!this.connected) return; // Early Exit - already disconnected
 
-    await Promise.all(Array.from(this.subscriptions.keys()).map((id) => this.kill(id)));
+    await Promise.all(
+      Array.from(this.subscriptions.keys()).map((id) => this.kill(id)),
+    );
     await this.db.close();
     this.connected = false;
     this.subscriptions.clear(); // Explicit cleanup
@@ -63,7 +74,10 @@ export abstract class BaseDriver implements SurrealDriver {
 
   // ==================== Query ====================
 
-  async query<T = unknown>(sql: string, vars?: Record<string, unknown>): Promise<T[]> {
+  async query<T = unknown>(
+    sql: string,
+    vars?: Record<string, unknown>,
+  ): Promise<T[]> {
     if (!this.connected) throw new Error('Not connected to SurrealDB');
 
     try {
@@ -84,7 +98,8 @@ export abstract class BaseDriver implements SurrealDriver {
     if (!this.connected) throw new Error('Not connected to SurrealDB');
 
     const sanitizedTable = table.replace(/[^a-zA-Z0-9_:]/g, '');
-    if (sanitizedTable !== table) this.warn('Table name contains invalid characters, sanitized');
+    if (sanitizedTable !== table)
+      this.warn('Table name contains invalid characters, sanitized');
 
     const since = options?.since ?? 0;
     const limit = options?.limit ?? 10;
@@ -108,7 +123,9 @@ export abstract class BaseDriver implements SurrealDriver {
 
       let results: T[];
       if (recordId) {
-        const result = await this.db.select<T>(new RecordId(tableName, recordId));
+        const result = await this.db.select<T>(
+          new RecordId(tableName, recordId),
+        );
         results = result ? ([result] as T[]) : [];
       } else {
         results = (await this.db.select<T>(new Table(tableName))) as T[];
@@ -135,7 +152,11 @@ export abstract class BaseDriver implements SurrealDriver {
     try {
       const { tableName, recordId } = parseTableWithId(table);
       const transformedData = this.transformDatetimeValues(data);
-      const coercedData = coerceRecordIds(tableName, transformedData, this.schema);
+      const coercedData = coerceRecordIds(
+        tableName,
+        transformedData,
+        this.schema,
+      );
 
       let result: T | T[];
       if (recordId) {
@@ -143,7 +164,9 @@ export abstract class BaseDriver implements SurrealDriver {
           .create(new RecordId(tableName, recordId))
           .content(coercedData as never)) as T;
       } else {
-        result = (await this.db.create(new Table(tableName)).content(coercedData as never)) as T[];
+        result = (await this.db
+          .create(new Table(tableName))
+          .content(coercedData as never)) as T[];
       }
 
       return Array.isArray(result) ? result : [result];
@@ -167,10 +190,19 @@ export abstract class BaseDriver implements SurrealDriver {
     try {
       const { tableName } = parseTableWithId(table);
       const transformedData = this.transformDatetimeValues(data);
-      const coercedData = coerceRecordIds(tableName, transformedData, this.schema);
-      const dataArray = Array.isArray(coercedData) ? coercedData : [coercedData];
+      const coercedData = coerceRecordIds(
+        tableName,
+        transformedData,
+        this.schema,
+      );
+      const dataArray = Array.isArray(coercedData)
+        ? coercedData
+        : [coercedData];
 
-      const results = (await this.db.insert<T>(new Table(table), dataArray as never)) as T[];
+      const results = (await this.db.insert<T>(
+        new Table(table),
+        dataArray as never,
+      )) as T[];
 
       return results;
     } catch (error) {
@@ -193,7 +225,11 @@ export abstract class BaseDriver implements SurrealDriver {
     try {
       const { tableName, recordId } = parseTableWithId(table);
       const transformedData = this.transformDatetimeValues(data);
-      const coercedData = coerceRecordIds(tableName, transformedData, this.schema);
+      const coercedData = coerceRecordIds(
+        tableName,
+        transformedData,
+        this.schema,
+      );
 
       let result: T | T[];
       if (recordId) {
@@ -201,7 +237,9 @@ export abstract class BaseDriver implements SurrealDriver {
           .update(new RecordId(tableName, recordId))
           .merge(coercedData as never)) as T;
       } else {
-        result = (await this.db.update(new Table(tableName)).merge(coercedData as never)) as T[];
+        result = (await this.db
+          .update(new Table(tableName))
+          .merge(coercedData as never)) as T[];
       }
 
       const results = Array.isArray(result) ? result : [result];
@@ -252,10 +290,15 @@ export abstract class BaseDriver implements SurrealDriver {
 
     try {
       const { tableName, recordId } = parseTableWithId(table);
-      if (!recordId) throw new Error('Upsert requires a record ID (e.g., "user:john")');
+      if (!recordId)
+        throw new Error('Upsert requires a record ID (e.g., "user:john")');
 
       const transformedData = this.transformDatetimeValues(data);
-      const coercedData = coerceRecordIds(tableName, transformedData, this.schema);
+      const coercedData = coerceRecordIds(
+        tableName,
+        transformedData,
+        this.schema,
+      );
 
       const result = (await this.db
         .upsert(new RecordId(tableName, recordId))
@@ -268,14 +311,22 @@ export abstract class BaseDriver implements SurrealDriver {
     }
   }
 
-  async upsertWhere<T = unknown>(table: string, whereClause: string, data: unknown): Promise<T[]> {
+  async upsertWhere<T = unknown>(
+    table: string,
+    whereClause: string,
+    data: unknown,
+  ): Promise<T[]> {
     if (!this.connected) throw new Error('Not connected to SurrealDB');
 
     if (!table || typeof table !== 'string' || table.trim() === '') {
       throw new Error('Table name is required for upsertWhere');
     }
 
-    if (!whereClause || typeof whereClause !== 'string' || whereClause.trim() === '') {
+    if (
+      !whereClause ||
+      typeof whereClause !== 'string' ||
+      whereClause.trim() === ''
+    ) {
       throw new Error('WHERE clause is required for upsertWhere');
     }
 
@@ -286,7 +337,11 @@ export abstract class BaseDriver implements SurrealDriver {
     try {
       const { tableName } = parseTableWithId(table);
       const transformedData = this.transformDatetimeValues(data);
-      const coercedData = coerceRecordIds(tableName, transformedData, this.schema);
+      const coercedData = coerceRecordIds(
+        tableName,
+        transformedData,
+        this.schema,
+      );
 
       const result = (await this.db
         .upsert(new Table(table))
@@ -300,7 +355,12 @@ export abstract class BaseDriver implements SurrealDriver {
     }
   }
 
-  async relate<T = unknown>(from: string, edge: string, to: string, data?: unknown): Promise<T[]> {
+  async relate<T = unknown>(
+    from: string,
+    edge: string,
+    to: string,
+    data?: unknown,
+  ): Promise<T[]> {
     if (!this.connected) throw new Error('Not connected to SurrealDB');
 
     if (!from || typeof from !== 'string' || from.trim() === '') {
@@ -364,7 +424,10 @@ export abstract class BaseDriver implements SurrealDriver {
         await tx.cancel();
         committed = true;
       },
-      async query<U = unknown>(sql: string, vars?: Record<string, unknown>): Promise<U[]> {
+      async query<U = unknown>(
+        sql: string,
+        vars?: Record<string, unknown>,
+      ): Promise<U[]> {
         const result = await tx.query<[U[]]>(sql, vars).collect();
         return (result[0] ?? []) as U[];
       },
@@ -388,14 +451,21 @@ export abstract class BaseDriver implements SurrealDriver {
             .create(new RecordId(tableName, recordId))
             .content(transformedData as never)) as U;
         } else {
-          result = (await tx.create(new Table(tableName)).content(transformedData as never)) as U[];
+          result = (await tx
+            .create(new Table(tableName))
+            .content(transformedData as never)) as U[];
         }
         return Array.isArray(result) ? result : [result];
       },
       async insert<U>(thing: string, data: unknown): Promise<U[]> {
         const transformedData = driver.transformDatetimeValues(data);
-        const dataArray = Array.isArray(transformedData) ? transformedData : [transformedData];
-        const results = (await tx.insert(new Table(thing), dataArray as never)) as U[];
+        const dataArray = Array.isArray(transformedData)
+          ? transformedData
+          : [transformedData];
+        const results = (await tx.insert(
+          new Table(thing),
+          dataArray as never,
+        )) as U[];
         return results;
       },
       async update<U>(thing: string, data: unknown): Promise<U[]> {
@@ -407,7 +477,9 @@ export abstract class BaseDriver implements SurrealDriver {
             .update(new RecordId(tableName, recordId))
             .content(transformedData as never)) as U;
         } else {
-          result = (await tx.update(new Table(tableName)).content(transformedData as never)) as U[];
+          result = (await tx
+            .update(new Table(tableName))
+            .content(transformedData as never)) as U[];
         }
         const results = Array.isArray(result) ? result : [result];
         return results as U[];
@@ -422,12 +494,21 @@ export abstract class BaseDriver implements SurrealDriver {
         }
         return Array.isArray(result) ? result : [result];
       },
-      async relate<U>(from: string, edge: string, to: string, data?: unknown): Promise<U[]> {
+      async relate<U>(
+        from: string,
+        edge: string,
+        to: string,
+        data?: unknown,
+      ): Promise<U[]> {
         const fromParsed = parseTableWithId(from);
         const toParsed = parseTableWithId(to);
-        if (!fromParsed.recordId) throw new Error('From record ID is required for relate');
-        if (!toParsed.recordId) throw new Error('To record ID is required for relate');
-        const transformedData = data ? driver.transformDatetimeValues(data) : undefined;
+        if (!fromParsed.recordId)
+          throw new Error('From record ID is required for relate');
+        if (!toParsed.recordId)
+          throw new Error('To record ID is required for relate');
+        const transformedData = data
+          ? driver.transformDatetimeValues(data)
+          : undefined;
         const result = (await tx.relate(
           new RecordId(fromParsed.tableName, fromParsed.recordId),
           new Table(edge),
@@ -467,7 +548,9 @@ export abstract class BaseDriver implements SurrealDriver {
   async auth(): Promise<Record<string, unknown> | null> {
     if (!this.connected) throw new Error('Not connected to SurrealDB');
 
-    const result = await this.db.query<[Record<string, unknown> | null]>('RETURN $auth').collect();
+    const result = await this.db
+      .query<[Record<string, unknown> | null]>('RETURN $auth')
+      .collect();
     const authData = result[0];
 
     if (!authData) {
@@ -479,7 +562,10 @@ export abstract class BaseDriver implements SurrealDriver {
 
   // ==================== Live Queries ====================
 
-  async live<T>(table: string, callback: (data: LiveData<T>) => void): Promise<string> {
+  async live<T>(
+    table: string,
+    callback: (data: LiveData<T>) => void,
+  ): Promise<string> {
     if (!this.connected) throw new Error('Not connected to SurrealDB');
 
     if (!table || typeof table !== 'string' || table.trim() === '') {
@@ -487,7 +573,8 @@ export abstract class BaseDriver implements SurrealDriver {
     }
 
     const sanitizedTable = table.replace(/[^a-zA-Z0-9_:]/g, '');
-    if (sanitizedTable !== table) this.warn('Table name contains invalid characters, sanitized');
+    if (sanitizedTable !== table)
+      this.warn('Table name contains invalid characters, sanitized');
 
     const subscriptionId = `live_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
 
@@ -495,7 +582,10 @@ export abstract class BaseDriver implements SurrealDriver {
       this.db
         .live(new Table(sanitizedTable))
         .then((liveSubscription) => {
-          this.subscriptions.set(subscriptionId, { created: Date.now(), liveSubscription });
+          this.subscriptions.set(subscriptionId, {
+            created: Date.now(),
+            liveSubscription,
+          });
           resolve(subscriptionId);
 
           void (async () => {
@@ -552,7 +642,10 @@ export abstract class BaseDriver implements SurrealDriver {
     const subscription = await promise;
     const subscriptionId = `live_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
 
-    this.subscriptions.set(subscriptionId, { created: Date.now(), liveSubscription: subscription });
+    this.subscriptions.set(subscriptionId, {
+      created: Date.now(),
+      liveSubscription: subscription,
+    });
 
     const subs = this.subscriptions; // capture for closure
 
@@ -577,16 +670,24 @@ export abstract class BaseDriver implements SurrealDriver {
       },
       subscribe(callback: (data: LiveMessageData<T>) => void): () => void {
         return subscription.subscribe((message) => {
-          callback({ action: message.action as LiveAction, result: message.value as T });
+          callback({
+            action: message.action as LiveAction,
+            result: message.value as T,
+          });
         });
       },
       async *[Symbol.asyncIterator](): AsyncIterator<LiveMessageData<T>> {
         try {
           for await (const message of subscription) {
-            yield { action: message.action as LiveAction, result: message.value as T };
+            yield {
+              action: message.action as LiveAction,
+              result: message.value as T,
+            };
           }
         } catch (error) {
-          onErrorCb?.(error instanceof Error ? error : new Error(String(error)));
+          onErrorCb?.(
+            error instanceof Error ? error : new Error(String(error)),
+          );
         }
       },
     };

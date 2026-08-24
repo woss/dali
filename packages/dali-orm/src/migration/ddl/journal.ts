@@ -104,7 +104,10 @@ export class MigrationJournalManager {
       try {
         parsed = JSON.parse(content);
       } catch {
-        log('Corrupted journal file at %s, returning empty journal', this.journalPath);
+        log(
+          'Corrupted journal file at %s, returning empty journal',
+          this.journalPath,
+        );
         return this.createEmpty();
       }
       const data = parsed as {
@@ -117,7 +120,9 @@ export class MigrationJournalManager {
         version: data.version ?? 1,
         dialect: data.dialect ?? 'surrealdb',
         id: data.id ?? generateId(),
-        entries: Array.isArray(data.entries) ? (data.entries as unknown as JournalEntry[]) : [],
+        entries: Array.isArray(data.entries)
+          ? (data.entries as unknown as JournalEntry[])
+          : [],
       };
 
       // Normalize entries at boundary (Parse Don't Validate)
@@ -158,7 +163,11 @@ export class MigrationJournalManager {
     const content = JSON.stringify(journal, null, 2);
     await fs.writeFile(this.journalPath, content, 'utf-8');
 
-    log('Wrote journal with %d entries to %s', journal.entries.length, this.journalPath);
+    log(
+      'Wrote journal with %d entries to %s',
+      journal.entries.length,
+      this.journalPath,
+    );
   }
 
   /**
@@ -190,7 +199,9 @@ export class MigrationJournalManager {
     const journal = await this.read();
 
     const nextIdx =
-      journal.entries.length > 0 ? Math.max(...journal.entries.map((e) => e.idx)) + 1 : 1;
+      journal.entries.length > 0
+        ? Math.max(...journal.entries.map((e) => e.idx)) + 1
+        : 1;
 
     const entry: JournalEntry = {
       idx: nextIdx,
@@ -203,7 +214,12 @@ export class MigrationJournalManager {
     journal.entries.push(entry);
 
     await this.write(journal);
-    log('Added journal entry: idx=%d, tag=%s, hash=%s', nextIdx, tag, migrationHash);
+    log(
+      'Added journal entry: idx=%d, tag=%s, hash=%s',
+      nextIdx,
+      tag,
+      migrationHash,
+    );
 
     return journal;
   }
@@ -225,7 +241,9 @@ export class MigrationJournalManager {
     const journal = await this.read();
     // A migration is "applied" if any entry exists with at least one true breakpoint
     // (all-false entries are stale duplicates and should be ignored)
-    return journal.entries.some((e) => e.tag === tag && e.breakpoints.some((b) => b === true));
+    return journal.entries.some(
+      (e) => e.tag === tag && e.breakpoints.some((b) => b === true),
+    );
   }
 
   /**
@@ -238,7 +256,9 @@ export class MigrationJournalManager {
   }> {
     const journal = await this.read();
     const lastApplied =
-      journal.entries.length > 0 ? journal.entries[journal.entries.length - 1] : null;
+      journal.entries.length > 0
+        ? journal.entries[journal.entries.length - 1]
+        : null;
 
     return {
       total: journal.entries.length,
@@ -250,7 +270,10 @@ export class MigrationJournalManager {
   /**
    * Update breakpoints for a migration entry
    */
-  async updateBreakpoints(tag: string, breakpoints: boolean[]): Promise<JournalEntry | null> {
+  async updateBreakpoints(
+    tag: string,
+    breakpoints: boolean[],
+  ): Promise<JournalEntry | null> {
     const journal = await this.read();
     const entry = journal.entries.find((e) => e.tag === tag);
 
@@ -331,7 +354,10 @@ export class MigrationJournalManager {
  * Generate unique ID for journal
  */
 function generateId(): string {
-  return createHash('sha256').update(`${Date.now()}-${Math.random()}`).digest('hex').slice(0, 12);
+  return createHash('sha256')
+    .update(`${Date.now()}-${Math.random()}`)
+    .digest('hex')
+    .slice(0, 12);
 }
 
 /**

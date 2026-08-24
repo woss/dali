@@ -15,14 +15,18 @@ describe('parseFunctionSQL', () => {
     const sql =
       'DEFINE FUNCTION fn_if($x: int) { IF $x > 0 THEN { RETURN $x; } ELSE { RETURN 0; } END }';
     const result = parseFunctionSQL('fn_if', sql);
-    expect(result.body).toBe('IF $x > 0 THEN { RETURN $x; } ELSE { RETURN 0; } END');
+    expect(result.body).toBe(
+      'IF $x > 0 THEN { RETURN $x; } ELSE { RETURN 0; } END',
+    );
   });
 
   it('extracts deeply nested braces (FOR inside IF)', () => {
     const sql =
       'DEFINE FUNCTION fn_deep($a: int) { IF $a > 0 THEN { FOR $i IN 1..$a { RETURN $i; } } END }';
     const result = parseFunctionSQL('fn_deep', sql);
-    expect(result.body).toBe('IF $a > 0 THEN { FOR $i IN 1..$a { RETURN $i; } } END');
+    expect(result.body).toBe(
+      'IF $a > 0 THEN { FOR $i IN 1..$a { RETURN $i; } } END',
+    );
   });
 
   it('handles empty body', () => {
@@ -37,7 +41,9 @@ describe('parseFunctionSQL', () => {
     const result = parseFunctionSQL('fn_if', sql);
     expect(result.name).toBe('fn_if');
     expect(result.args).toEqual(['$x: int']);
-    expect(result.body).toBe('IF $x > 0 THEN { RETURN $x; } ELSE { RETURN 0; } END');
+    expect(result.body).toBe(
+      'IF $x > 0 THEN { RETURN $x; } ELSE { RETURN 0; } END',
+    );
     expect(result.comment).toBe('test');
     expect(result.permissions).toBe('FULL');
   });

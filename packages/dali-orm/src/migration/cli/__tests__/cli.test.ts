@@ -18,10 +18,16 @@ vi.mock('../../config.js', () => ({
 }));
 
 vi.mock('../../cli/operations.js', () => ({
-  createConnection: vi.fn().mockResolvedValue({ query: vi.fn(), disconnect: vi.fn() }),
-  createConnectionWithTimeout: vi.fn().mockResolvedValue({ query: vi.fn(), disconnect: vi.fn() }),
+  createConnection: vi
+    .fn()
+    .mockResolvedValue({ query: vi.fn(), disconnect: vi.fn() }),
+  createConnectionWithTimeout: vi
+    .fn()
+    .mockResolvedValue({ query: vi.fn(), disconnect: vi.fn() }),
   safeDisconnect: vi.fn().mockResolvedValue(undefined),
-  formatError: vi.fn((e: unknown) => (e instanceof Error ? e.message : String(e))),
+  formatError: vi.fn((e: unknown) =>
+    e instanceof Error ? e.message : String(e),
+  ),
 }));
 
 vi.mock('../../cli/diff.js', () => ({
@@ -60,19 +66,19 @@ vi.mock('../../cli/pull.js', () => ({
 
 // ── Imports (after mocks) ───────────────────────────────────────────────────
 
-import { loadConfig } from '../../config.js';
-import { createConnection, safeDisconnect } from '../../cli/operations.js';
 import { diffSchema } from '../../cli/diff.js';
 import { generateMigration, loadSchemaFiles } from '../../cli/generate.js';
 import {
-  migrateUp,
   migrateDeploy,
   migrateDev,
-  migrateSync,
   migrateResume,
+  migrateSync,
+  migrateUp,
 } from '../../cli/migrate.js';
+import { createConnection, safeDisconnect } from '../../cli/operations.js';
 import { pullSchema } from '../../cli/pull.js';
-import { parseGlobalOptions, slugify, main } from '../../cli.js';
+import { main, parseGlobalOptions, slugify } from '../../cli.js';
+import { loadConfig } from '../../config.js';
 
 // ============================================================================
 // slugify
@@ -255,7 +261,9 @@ describe('main()', () => {
   let consoleErrSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(() => {
-    exitSpy = vi.spyOn(process, 'exit').mockImplementation(() => undefined as never);
+    exitSpy = vi
+      .spyOn(process, 'exit')
+      .mockImplementation(() => undefined as never);
     consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
     consoleErrSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
   });
@@ -311,7 +319,9 @@ describe('main()', () => {
 
   it('handles init command', async () => {
     await main(['init']);
-    expect(consoleLogSpy).toHaveBeenCalledWith('Initializing DaliORM project...');
+    expect(consoleLogSpy).toHaveBeenCalledWith(
+      'Initializing DaliORM project...',
+    );
   });
 
   // ── Migrate ─────────────────────────────────────────────────────────────
@@ -338,12 +348,16 @@ describe('main()', () => {
 
   it('dispatches migrate dev with name', async () => {
     await main(['migrate', 'dev', 'add_users']);
-    expect(migrateDev).toHaveBeenCalledWith(expect.objectContaining({ name: 'add_users' }));
+    expect(migrateDev).toHaveBeenCalledWith(
+      expect.objectContaining({ name: 'add_users' }),
+    );
   });
 
   it('exits when migrate dev has no name', async () => {
     await main(['migrate', 'dev']);
-    expect(consoleErrSpy).toHaveBeenCalledWith('Usage: dali-orm migrate dev <name> [options]');
+    expect(consoleErrSpy).toHaveBeenCalledWith(
+      'Usage: dali-orm migrate dev <name> [options]',
+    );
     expect(exitSpy).toHaveBeenCalledWith(1);
   });
 
@@ -378,7 +392,9 @@ describe('main()', () => {
 
   it('passes table arg to pull', async () => {
     await main(['pull', 'users']);
-    expect(pullSchema).toHaveBeenCalledWith(expect.objectContaining({ table: 'users' }));
+    expect(pullSchema).toHaveBeenCalledWith(
+      expect.objectContaining({ table: 'users' }),
+    );
   });
 
   // ── Diff ────────────────────────────────────────────────────────────────
@@ -392,14 +408,18 @@ describe('main()', () => {
 
   it('dispatches query command', async () => {
     const mockQuery = vi.fn().mockResolvedValue([{ result: 'ok' }]);
-    vi.mocked(createConnection).mockResolvedValue({ query: mockQuery } as never);
+    vi.mocked(createConnection).mockResolvedValue({
+      query: mockQuery,
+    } as never);
     await main(['query', 'SELECT * FROM users']);
     expect(mockQuery).toHaveBeenCalledWith('SELECT * FROM users');
   });
 
   it('exits when query has no string', async () => {
     await main(['query']);
-    expect(consoleErrSpy).toHaveBeenCalledWith('Usage: dali-orm query "<SURREALQL>" [options]');
+    expect(consoleErrSpy).toHaveBeenCalledWith(
+      'Usage: dali-orm query "<SURREALQL>" [options]',
+    );
     expect(exitSpy).toHaveBeenCalledWith(1);
   });
 

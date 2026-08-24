@@ -16,23 +16,23 @@ import { type FunctionConfig } from '../schema.js';
  */
 export type FunctionBuilder = ReturnType<typeof defineFunction>;
 export declare function defineFunction(name: string): {
-    readonly name: string;
-    /** Set function arguments */
-    args(...args: string[]): /*elided*/ any;
-    /** Set the function body (SurrealQL expression) */
-    body(body: string): /*elided*/ any;
-    /** Optional comment for the function */
-    comment(text: string): /*elided*/ any;
-    /** Set permissions for the function */
-    permissions(perms: string): /*elided*/ any;
-    /**
-     * Return the FunctionConfig object.
-     * Validates that required fields are set.
-     */
-    build(): FunctionConfig;
-    /**
-     * Generate the DEFINE FUNCTION SQL string from stored configuration.
-     */
-    toSQL(): string;
+  readonly name: string;
+  /** Set function arguments */
+  args(...args: string[]): /*elided*/ any;
+  /** Set the function body (SurrealQL expression) */
+  body(body: string): /*elided*/ any;
+  /** Optional comment for the function */
+  comment(text: string): /*elided*/ any;
+  /** Set permissions for the function */
+  permissions(perms: string): /*elided*/ any;
+  /**
+   * Return the FunctionConfig object.
+   * Validates that required fields are set.
+   */
+  build(): FunctionConfig;
+  /**
+   * Generate the DEFINE FUNCTION SQL string from stored configuration.
+   */
+  toSQL(): string;
 };
 //# sourceMappingURL=function-builder.d.ts.map

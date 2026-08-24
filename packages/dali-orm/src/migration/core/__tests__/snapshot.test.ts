@@ -7,40 +7,41 @@ import { SnapshotManager } from '../snapshot.js';
 // ---------------------------------------------------------------------------
 // Mock setup — vi.hoisted required because vi.mock is hoisted to top
 // ---------------------------------------------------------------------------
-const { mockFiles, mockReadFile, mockWriteFile, mockMkdir, mockReaddir } = vi.hoisted(() => {
-  const files = new Map<string, string>();
+const { mockFiles, mockReadFile, mockWriteFile, mockMkdir, mockReaddir } =
+  vi.hoisted(() => {
+    const files = new Map<string, string>();
 
-  const readFile = vi.fn(async (path: string) => {
-    const content = files.get(path);
-    if (content === undefined) {
-      const err = new Error(`ENOENT: ${path}`) as NodeJS.ErrnoException;
-      err.code = 'ENOENT';
-      throw err;
-    }
-    return content;
+    const readFile = vi.fn(async (path: string) => {
+      const content = files.get(path);
+      if (content === undefined) {
+        const err = new Error(`ENOENT: ${path}`) as NodeJS.ErrnoException;
+        err.code = 'ENOENT';
+        throw err;
+      }
+      return content;
+    });
+
+    const writeFile = vi.fn(async (path: string, content: string) => {
+      files.set(path, content);
+    });
+
+    const mkdir = vi.fn(async () => {});
+
+    const readdir = vi.fn(async (dir: string) => {
+      const prefix = dir.endsWith('/') ? dir : `${dir}/`;
+      return Array.from(files.keys())
+        .filter((p) => p.startsWith(prefix))
+        .map((p) => p.slice(prefix.length));
+    });
+
+    return {
+      mockFiles: files,
+      mockReadFile: readFile,
+      mockWriteFile: writeFile,
+      mockMkdir: mkdir,
+      mockReaddir: readdir,
+    };
   });
-
-  const writeFile = vi.fn(async (path: string, content: string) => {
-    files.set(path, content);
-  });
-
-  const mkdir = vi.fn(async () => {});
-
-  const readdir = vi.fn(async (dir: string) => {
-    const prefix = dir.endsWith('/') ? dir : `${dir}/`;
-    return Array.from(files.keys())
-      .filter((p) => p.startsWith(prefix))
-      .map((p) => p.slice(prefix.length));
-  });
-
-  return {
-    mockFiles: files,
-    mockReadFile: readFile,
-    mockWriteFile: writeFile,
-    mockMkdir: mkdir,
-    mockReaddir: readdir,
-  };
-});
 
 vi.mock('node:fs/promises', () => ({
   readFile: mockReadFile,
@@ -79,7 +80,10 @@ function createSampleTable(name = 'user'): TableDefinition {
   };
 }
 
-function createSampleSnapshot(version = '001', name = 'initial'): SchemaSnapshot {
+function createSampleSnapshot(
+  version = '001',
+  name = 'initial',
+): SchemaSnapshot {
   return {
     version,
     name,
@@ -123,7 +127,9 @@ describe('getSnapshotPath', () => {
 
   it('returns correct path for version string', () => {
     const manager = createManager();
-    expect(manager.getSnapshotPath('abc-def')).toBe('/tmp/snapshots/abc-def.json');
+    expect(manager.getSnapshotPath('abc-def')).toBe(
+      '/tmp/snapshots/abc-def.json',
+    );
   });
 });
 
@@ -157,7 +163,9 @@ describe('loadSnapshot', () => {
     const manager = createManager();
     mockReadFile.mockRejectedValueOnce(new Error('Permission denied'));
 
-    await expect(manager.loadSnapshot('001')).rejects.toThrow('Permission denied');
+    await expect(manager.loadSnapshot('001')).rejects.toThrow(
+      'Permission denied',
+    );
   });
 
   it('loads a snapshot by full path', async () => {
@@ -183,7 +191,9 @@ describe('saveSnapshot', () => {
     const path = await manager.saveSnapshot(snapshot);
 
     expect(path).toBe('/tmp/snapshots/003.json');
-    expect(mockMkdir).toHaveBeenCalledWith('/tmp/snapshots', { recursive: true });
+    expect(mockMkdir).toHaveBeenCalledWith('/tmp/snapshots', {
+      recursive: true,
+    });
     expect(mockWriteFile).toHaveBeenCalledWith(
       '/tmp/snapshots/003.json',
       expect.any(String),
@@ -303,7 +313,10 @@ describe('createSnapshot', () => {
           name: 'my_access',
           type: 'RECORD',
           level: 'DATABASE',
-          record: { signup: 'CREATE user SET email = $email', signin: 'SELECT * FROM user' },
+          record: {
+            signup: 'CREATE user SET email = $email',
+            signin: 'SELECT * FROM user',
+          },
           duration: { session: '12h' },
         },
       },
@@ -490,7 +503,12 @@ describe('create + restore roundtrip', () => {
       },
     ];
 
-    const snapshotWithAccess = manager.createSnapshot(tables, '030', 'with_access', access);
+    const snapshotWithAccess = manager.createSnapshot(
+      tables,
+      '030',
+      'with_access',
+      access,
+    );
     const restoredAccess = manager.restoreAccess(snapshotWithAccess);
 
     expect(restoredAccess).toHaveLength(1);
@@ -512,7 +530,12 @@ describe('create + restore roundtrip', () => {
         },
       },
     ];
-    const snapshot = manager.createSnapshot(tables, '010', 'str_duration', access);
+    const snapshot = manager.createSnapshot(
+      tables,
+      '010',
+      'str_duration',
+      access,
+    );
     expect(snapshot.access).toHaveLength(1);
     expect(snapshot.access[0].duration).toBe('12h');
   });

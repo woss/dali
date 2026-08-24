@@ -173,7 +173,10 @@ export function raw(sql: string): RawSurql {
  */
 export function isRaw(v: unknown): v is RawSurql {
   return (
-    typeof v === 'object' && v !== null && '__surqlRaw' in v && (v as RawSurql).__surqlRaw === true
+    typeof v === 'object' &&
+    v !== null &&
+    '__surqlRaw' in v &&
+    (v as RawSurql).__surqlRaw === true
   );
 }
 
@@ -222,7 +225,11 @@ export function serializeValue(v: unknown): string {
   if (typeof v === 'string') {
     return quoteString(v);
   }
-  if (typeof v === 'number' || typeof v === 'boolean' || typeof v === 'bigint') {
+  if (
+    typeof v === 'number' ||
+    typeof v === 'boolean' ||
+    typeof v === 'bigint'
+  ) {
     return String(v);
   }
   if (v === null) {
@@ -297,7 +304,10 @@ export function formatDefault(v: unknown): string {
  * const q     = surql`name = ${'Alice'}`   // → name = 'Alice'
  * ```
  */
-export function surql(strings: TemplateStringsArray, ...values: unknown[]): RawSurql {
+export function surql(
+  strings: TemplateStringsArray,
+  ...values: unknown[]
+): RawSurql {
   let result = '';
   for (let i = 0; i < strings.length; i++) {
     result += strings[i];

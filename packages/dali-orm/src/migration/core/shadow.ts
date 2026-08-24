@@ -4,11 +4,12 @@
  * Pre-validates migrations on a shadow DB before applying to target.
  * Shadow is destroyed after each validation run.
  */
+
+import { escapeIdent } from '../../core/surql.ts';
 import { connect } from '../../sdk/driver/orm-connection.js';
 import type { SurrealDriver } from '../../sdk/driver/types.js';
 import type { Config } from '../config.js';
 import { MigrationRunner } from './runner.js';
-import { escapeIdent } from '../../core/surql.ts';
 
 /**
  * Shadow database configuration
@@ -34,7 +35,10 @@ function guardShadowNotTarget(
   shadow: ShadowConfig,
   target: { namespace: string; database: string },
 ): void {
-  if (shadow.namespace === target.namespace && shadow.database === target.database) {
+  if (
+    shadow.namespace === target.namespace &&
+    shadow.database === target.database
+  ) {
     throw new Error(
       `Shadow (${shadow.namespace}/${shadow.database}) cannot match target. Use different ns/db.`,
     );
@@ -69,11 +73,16 @@ export async function connectToShadow(
  * Destroy the shadow database after validation.
  * Best-effort — non-fatal if cleanup fails.
  */
-export async function destroyShadow(driver: SurrealDriver, shadow: ShadowConfig): Promise<void> {
+export async function destroyShadow(
+  driver: SurrealDriver,
+  shadow: ShadowConfig,
+): Promise<void> {
   try {
     // Switch to shadow ns (needed for REMOVE DATABASE)
     await driver.use(shadow.namespace, shadow.database);
-    await driver.query(`REMOVE DATABASE IF EXISTS ${escapeIdent(shadow.database)}`);
+    await driver.query(
+      `REMOVE DATABASE IF EXISTS ${escapeIdent(shadow.database)}`,
+    );
   } catch {
     // Non-fatal — cleanup is best-effort
   }

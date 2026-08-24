@@ -15,8 +15,8 @@ vi.mock('../../../sdk/driver/orm-connection.js', () => ({
   connect: vi.fn(),
 }));
 
-import { diffSchema } from '../diff.js';
 import type { Config } from '../../config.js';
+import { diffSchema } from '../diff.js';
 
 // ============================================================================
 // Helpers
@@ -86,7 +86,9 @@ describe('diffSchema', () => {
     await diffSchema({ config, tables: [] });
 
     const logCalls = vi.mocked(console.log).mock.calls;
-    const noTablesLine = logCalls.find((c) => String(c[0]).includes('No schema tables found'));
+    const noTablesLine = logCalls.find((c) =>
+      String(c[0]).includes('No schema tables found'),
+    );
     expect(noTablesLine).toBeDefined();
   });
 
@@ -101,7 +103,11 @@ describe('diffSchema', () => {
         name: 'diff_new',
         columns: [
           { name: 'title', tableName: 'diff_new', config: { type: 'string' } },
-          { name: 'content', tableName: 'diff_new', config: { type: 'string' } },
+          {
+            name: 'content',
+            tableName: 'diff_new',
+            config: { type: 'string' },
+          },
         ],
         config: { schema: 'full', type: 'normal' },
       },
@@ -133,7 +139,13 @@ describe('diffSchema', () => {
     const tables: TableDefinition[] = [
       {
         name: 'diff_matched',
-        columns: [{ name: 'name', tableName: 'diff_matched', config: { type: 'string' } }],
+        columns: [
+          {
+            name: 'name',
+            tableName: 'diff_matched',
+            config: { type: 'string' },
+          },
+        ],
         config: { schema: 'full', type: 'normal' },
       },
     ];
@@ -142,7 +154,9 @@ describe('diffSchema', () => {
     await diffSchema({ config, tables });
 
     const logCalls = vi.mocked(console.log).mock.calls;
-    const upToDateLine = logCalls.find((c) => String(c[0]).includes('Schema is up to date'));
+    const upToDateLine = logCalls.find((c) =>
+      String(c[0]).includes('Schema is up to date'),
+    );
     expect(upToDateLine).toBeDefined();
   });
 
@@ -154,14 +168,18 @@ describe('diffSchema', () => {
     const tables: TableDefinition[] = [
       {
         name: 'test',
-        columns: [{ name: 'id', tableName: 'test', config: { type: 'string' } }],
+        columns: [
+          { name: 'id', tableName: 'test', config: { type: 'string' } },
+        ],
         config: { schema: 'full', type: 'normal' },
       },
     ];
 
     const config = makeConfig();
     // Should propagate the error since diffSchema doesn't catch connect errors
-    await expect(diffSchema({ config, tables })).rejects.toThrow('Connection refused');
+    await expect(diffSchema({ config, tables })).rejects.toThrow(
+      'Connection refused',
+    );
   });
 
   it('shows added indexes', async () => {
@@ -173,7 +191,9 @@ describe('diffSchema', () => {
     const tables: TableDefinition[] = [
       {
         name: 'diff_idx',
-        columns: [{ name: 'email', tableName: 'diff_idx', config: { type: 'string' } }],
+        columns: [
+          { name: 'email', tableName: 'diff_idx', config: { type: 'string' } },
+        ],
         config: {
           schema: 'full',
           type: 'normal',
@@ -200,7 +220,13 @@ describe('diffSchema', () => {
     const tables: TableDefinition[] = [
       {
         name: 'diff_field',
-        columns: [{ name: 'count', tableName: 'diff_field', config: { type: 'string' } }],
+        columns: [
+          {
+            name: 'count',
+            tableName: 'diff_field',
+            config: { type: 'string' },
+          },
+        ],
         config: { schema: 'full', type: 'normal' },
       },
     ];
@@ -223,7 +249,9 @@ describe('diffSchema', () => {
     const tables: TableDefinition[] = [
       {
         name: 'diff_keep',
-        columns: [{ name: 'label', tableName: 'diff_keep', config: { type: 'string' } }],
+        columns: [
+          { name: 'label', tableName: 'diff_keep', config: { type: 'string' } },
+        ],
         config: { schema: 'full', type: 'normal' },
       },
     ];
@@ -242,7 +270,13 @@ describe('diffSchema', () => {
     const tables: TableDefinition[] = [
       {
         name: 'diff_total_test',
-        columns: [{ name: 'name', tableName: 'diff_total_test', config: { type: 'string' } }],
+        columns: [
+          {
+            name: 'name',
+            tableName: 'diff_total_test',
+            config: { type: 'string' },
+          },
+        ],
         config: { schema: 'full', type: 'normal' },
       },
     ];
@@ -264,7 +298,13 @@ describe('diffSchema', () => {
     const tables: TableDefinition[] = [
       {
         name: 'diff_warn',
-        columns: [{ name: 'new_field', tableName: 'diff_warn', config: { type: 'string' } }],
+        columns: [
+          {
+            name: 'new_field',
+            tableName: 'diff_warn',
+            config: { type: 'string' },
+          },
+        ],
         config: { schema: 'full', type: 'normal' },
       },
     ];
@@ -283,13 +323,21 @@ describe('diffSchema', () => {
     // Create table with index in DB
     await driver.query('DEFINE TABLE diff_rm_idx SCHEMAFULL');
     await driver.query('DEFINE FIELD email ON diff_rm_idx TYPE string');
-    await driver.query('DEFINE INDEX idx_email ON diff_rm_idx COLUMNS email UNIQUE');
+    await driver.query(
+      'DEFINE INDEX idx_email ON diff_rm_idx COLUMNS email UNIQUE',
+    );
 
     // Schema without indexes
     const tables: TableDefinition[] = [
       {
         name: 'diff_rm_idx',
-        columns: [{ name: 'email', tableName: 'diff_rm_idx', config: { type: 'string' } }],
+        columns: [
+          {
+            name: 'email',
+            tableName: 'diff_rm_idx',
+            config: { type: 'string' },
+          },
+        ],
         config: { schema: 'full', type: 'normal' },
       },
     ];
@@ -305,14 +353,20 @@ describe('diffSchema', () => {
   it('detects field default value changes', async () => {
     // Create table with default value
     await driver.query('DEFINE TABLE diff_def SCHEMAFULL');
-    await driver.query('DEFINE FIELD status ON diff_def TYPE string DEFAULT "inactive"');
+    await driver.query(
+      'DEFINE FIELD status ON diff_def TYPE string DEFAULT "inactive"',
+    );
 
     // Schema defines different default
     const tables: TableDefinition[] = [
       {
         name: 'diff_def',
         columns: [
-          { name: 'status', tableName: 'diff_def', config: { type: 'string', default: 'active' } },
+          {
+            name: 'status',
+            tableName: 'diff_def',
+            config: { type: 'string', default: 'active' },
+          },
         ],
         config: { schema: 'full', type: 'normal' },
       },
@@ -337,7 +391,9 @@ describe('diffSchema', () => {
     const tables: TableDefinition[] = [
       {
         name: 'diff_type',
-        columns: [{ name: 'count', tableName: 'diff_type', config: { type: 'number' } }],
+        columns: [
+          { name: 'count', tableName: 'diff_type', config: { type: 'number' } },
+        ],
         config: { schema: 'full', type: 'normal' },
       },
     ];
@@ -359,7 +415,13 @@ describe('diffSchema', () => {
     const tables: TableDefinition[] = [
       {
         name: 'diff_multi_added',
-        columns: [{ name: 'label', tableName: 'diff_multi_added', config: { type: 'string' } }],
+        columns: [
+          {
+            name: 'label',
+            tableName: 'diff_multi_added',
+            config: { type: 'string' },
+          },
+        ],
         config: { schema: 'full', type: 'normal' },
       },
     ];
@@ -385,7 +447,11 @@ describe('diffSchema', () => {
       {
         name: 'diff_ro',
         columns: [
-          { name: 'ro_field', tableName: 'diff_ro', config: { type: 'string', readonly: true } },
+          {
+            name: 'ro_field',
+            tableName: 'diff_ro',
+            config: { type: 'string', readonly: true },
+          },
         ],
         config: { schema: 'full', type: 'normal' },
       },
@@ -402,13 +468,17 @@ describe('diffSchema', () => {
 
   it('handles relation tables with in/out configuration', async () => {
     // Create relation table in DB (TYPE RELATION auto-creates in/out fields)
-    await driver.query('DEFINE TABLE diff_rel SCHEMAFULL TYPE RELATION IN user OUT post');
+    await driver.query(
+      'DEFINE TABLE diff_rel SCHEMAFULL TYPE RELATION IN user OUT post',
+    );
 
     // Schema defines relation table with in/out and a custom field
     const tables: TableDefinition[] = [
       {
         name: 'diff_rel',
-        columns: [{ name: 'weight', tableName: 'diff_rel', config: { type: 'int' } }],
+        columns: [
+          { name: 'weight', tableName: 'diff_rel', config: { type: 'int' } },
+        ],
         config: { schema: 'full', type: 'relation', in: 'user', out: 'post' },
       },
     ];
@@ -432,7 +502,11 @@ describe('diffSchema', () => {
       {
         name: 'diff_unique',
         columns: [
-          { name: 'email', tableName: 'diff_unique', config: { type: 'string', unique: true } },
+          {
+            name: 'email',
+            tableName: 'diff_unique',
+            config: { type: 'string', unique: true },
+          },
         ],
         config: { schema: 'full', type: 'normal' },
       },
@@ -458,7 +532,13 @@ describe('diffSchema', () => {
     const tables: TableDefinition[] = [
       {
         name: 'diff_rmfield',
-        columns: [{ name: 'keep', tableName: 'diff_rmfield', config: { type: 'string' } }],
+        columns: [
+          {
+            name: 'keep',
+            tableName: 'diff_rmfield',
+            config: { type: 'string' },
+          },
+        ],
         config: { schema: 'full', type: 'normal' },
       },
     ];

@@ -1,7 +1,11 @@
 import type { SurrealDriver } from '../../sdk/driver/types.js';
 import type { TableDefinition } from '../../sdk/table.js';
 import type { Config } from '../config.js';
-import { createEmptyDdl, type SurrealColumn, type SurrealDbDDL } from '../ddl/ddl.js';
+import {
+  createEmptyDdl,
+  type SurrealColumn,
+  type SurrealDbDDL,
+} from '../ddl/ddl.js';
 import { ddlDiff } from '../ddl/diff.js';
 import { introspectDatabase } from '../ddl/introspect.js';
 import { normalizeDefault } from '../utils/format.js';
@@ -86,7 +90,9 @@ function tablesToDdl(tables: TableDefinition[]): SurrealDbDDL {
               }
             : (col.config.permissions ?? {}),
       })),
-      indexes: (table.config.indexes || []).map((idx) => convertIndex(idx, table.name)),
+      indexes: (table.config.indexes || []).map((idx) =>
+        convertIndex(idx, table.name),
+      ),
       in: table.config.in,
       out: table.config.out,
       permissions: table.config.permissions,
@@ -105,7 +111,11 @@ function tablesToDdl(tables: TableDefinition[]): SurrealDbDDL {
     }
 
     // Also populate ddl.relations for relation tables so diffRelations compares correctly
-    if (table.config.type === 'relation' && table.config.in && table.config.out) {
+    if (
+      table.config.type === 'relation' &&
+      table.config.in &&
+      table.config.out
+    ) {
       ddl.relations.push({
         name: table.name,
         in: table.config.in,
@@ -138,7 +148,10 @@ function tablesToDdl(tables: TableDefinition[]): SurrealDbDDL {
 /**
  * Show schema diff between database and schema files
  */
-export async function diffSchema(options: DiffOptions, driver?: SurrealDriver): Promise<void> {
+export async function diffSchema(
+  options: DiffOptions,
+  driver?: SurrealDriver,
+): Promise<void> {
   const { config, tables, verbose } = options;
 
   let ownsDriver = false;
@@ -177,7 +190,9 @@ export async function diffSchema(options: DiffOptions, driver?: SurrealDriver): 
     if (addedTables.length > 0) {
       console.log(`Added tables (${addedTables.length}):`);
       for (const table of addedTables) {
-        const colNames = table.columns.map((c) => `${c.name}: ${formatColumnType(c)}`).join(', ');
+        const colNames = table.columns
+          .map((c) => `${c.name}: ${formatColumnType(c)}`)
+          .join(', ');
         console.log(`  + ${table.name}: ${colNames}`);
       }
       console.log();
@@ -235,11 +250,21 @@ export async function diffSchema(options: DiffOptions, driver?: SurrealDriver): 
 
       // Normalize defaults for display (same logic as tablesToDdl)
       const normBefore =
-        before?.default !== undefined ? normalizeDefault(before.default) : undefined;
-      const normAfter = after?.default !== undefined ? normalizeDefault(after.default) : undefined;
+        before?.default !== undefined
+          ? normalizeDefault(before.default)
+          : undefined;
+      const normAfter =
+        after?.default !== undefined
+          ? normalizeDefault(after.default)
+          : undefined;
 
       // Type change: "string→int"
-      if (change.type && before?.type && after?.type && before.type !== after.type) {
+      if (
+        change.type &&
+        before?.type &&
+        after?.type &&
+        before.type !== after.type
+      ) {
         parts.push(`${before.type}→${after.type}`);
       } else if (change.type) {
         parts.push(`+type ${change.type}`);
@@ -252,7 +277,9 @@ export async function diffSchema(options: DiffOptions, driver?: SurrealDriver): 
         } else if (normBefore !== undefined && normAfter === undefined) {
           parts.push(`-default`);
         } else if (normBefore !== undefined && normAfter !== undefined) {
-          parts.push(`default ${JSON.stringify(normBefore)}→${JSON.stringify(normAfter)}`);
+          parts.push(
+            `default ${JSON.stringify(normBefore)}→${JSON.stringify(normAfter)}`,
+          );
         }
       }
 
@@ -303,7 +330,9 @@ export async function diffSchema(options: DiffOptions, driver?: SurrealDriver): 
     /**
      * Build field change details from grouped statements
      */
-    function buildFieldChanges(grouped: Record<string, unknown[]>): TableFieldChanges {
+    function buildFieldChanges(
+      grouped: Record<string, unknown[]>,
+    ): TableFieldChanges {
       const changes: TableFieldChanges = new Map();
 
       // New fields - get full column details
@@ -381,9 +410,13 @@ export async function diffSchema(options: DiffOptions, driver?: SurrealDriver): 
         // Filter out changes where before === after after normalization
         const { change, before, after } = s;
         const normBeforeDefault =
-          before?.default !== undefined ? normalizeDefault(before.default) : undefined;
+          before?.default !== undefined
+            ? normalizeDefault(before.default)
+            : undefined;
         const normAfterDefault =
-          after?.default !== undefined ? normalizeDefault(after.default) : undefined;
+          after?.default !== undefined
+            ? normalizeDefault(after.default)
+            : undefined;
 
         // Check if actual type changed (before vs after, not whether change object has type)
         const actualTypeChange = before?.type !== after?.type;
@@ -396,7 +429,8 @@ export async function diffSchema(options: DiffOptions, driver?: SurrealDriver): 
         // Check if actual optional changed (before vs after)
         const actualOptionalChange = before?.optional !== after?.optional;
         const noOptionalChange = !actualOptionalChange;
-        const noAssertChange = !change.assert || before?.assert === after?.assert;
+        const noAssertChange =
+          !change.assert || before?.assert === after?.assert;
 
         if (
           noTypeChange &&
@@ -452,9 +486,11 @@ export async function diffSchema(options: DiffOptions, driver?: SurrealDriver): 
     // Count field-level changes for total
     let fieldChangeCount = 0;
     for (const fields of fieldChanges.values()) {
-      fieldChangeCount += fields.added.length + fields.removed.length + fields.changed.length;
+      fieldChangeCount +=
+        fields.added.length + fields.removed.length + fields.changed.length;
     }
-    const totalChanges = addedTables.length + removedTables.length + fieldChangeCount;
+    const totalChanges =
+      addedTables.length + removedTables.length + fieldChangeCount;
     console.log(`Total: ${totalChanges}`);
     console.log(`(Use 'push' to apply changes)`);
 

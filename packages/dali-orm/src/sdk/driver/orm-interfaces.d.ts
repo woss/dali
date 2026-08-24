@@ -11,17 +11,17 @@ export declare function isHttpProtocol(url: string | undefined): boolean;
  * Configuration for creating a SurrealORM instance
  */
 export interface SurrealORMConfig {
-    /** Node driver configuration (remote connection) */
-    nodeDriver?: import('./types.js').DriverConfig;
-    /** Embedded driver configuration (in-process SurrealDB) */
-    embeddedDriver?: import('./types.js').EmbeddedConfig;
-    /** Configuration file loading options */
-    config?: boolean | string | import('./config/types.js').OrmConfig;
-    /** Codec options for value encoding/decoding */
-    codecOptions?: CodecOptions;
-    /** Reconnect options for automatic reconnection */
-    reconnect?: boolean | ReconnectOptions;
-    /** Schema definition for table/column metadata */
-    schema?: import('../orm-schema.js').OrmSchema;
+  /** Node driver configuration (remote connection) */
+  nodeDriver?: import('./types.js').DriverConfig;
+  /** Embedded driver configuration (in-process SurrealDB) */
+  embeddedDriver?: import('./types.js').EmbeddedConfig;
+  /** Configuration file loading options */
+  config?: boolean | string | import('./config/types.js').OrmConfig;
+  /** Codec options for value encoding/decoding */
+  codecOptions?: CodecOptions;
+  /** Reconnect options for automatic reconnection */
+  reconnect?: boolean | ReconnectOptions;
+  /** Schema definition for table/column metadata */
+  schema?: import('../orm-schema.js').OrmSchema;
 }
 //# sourceMappingURL=orm-interfaces.d.ts.map

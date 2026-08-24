@@ -72,7 +72,10 @@ function withFunctions(funcs: SurrealFunction[]): SurrealDbDDL {
 }
 
 /** Minimal column factory */
-function col(name: string, overrides: Partial<SurrealColumn> = {}): SurrealColumn {
+function col(
+  name: string,
+  overrides: Partial<SurrealColumn> = {},
+): SurrealColumn {
   return {
     name,
     kind: 'string',
@@ -124,16 +127,28 @@ describe('ddlDiff — tables', () => {
   it('detects a new table', async () => {
     const r = await ddlDiff(empty(), withTables([table('user')]));
     expect(r.statements).toHaveLength(1);
-    expect(r.statements[0]).toMatchObject({ type: 'create_table', name: 'user' });
+    expect(r.statements[0]).toMatchObject({
+      type: 'create_table',
+      name: 'user',
+    });
   });
 
   it('detects multiple new tables', async () => {
-    const r = await ddlDiff(empty(), withTables([table('user'), table('post')]));
-    expect(r.statements.filter((s) => s.type === 'create_table')).toHaveLength(2);
+    const r = await ddlDiff(
+      empty(),
+      withTables([table('user'), table('post')]),
+    );
+    expect(r.statements.filter((s) => s.type === 'create_table')).toHaveLength(
+      2,
+    );
   });
 
   it('detects a removed table in migrate mode', async () => {
-    const r = await ddlDiff(withTables([table('deprecated')]), empty(), 'migrate');
+    const r = await ddlDiff(
+      withTables([table('deprecated')]),
+      empty(),
+      'migrate',
+    );
     const drops = r.statements.filter((s) => s.type === 'drop_table');
     expect(drops).toHaveLength(1);
     if (drops[0].type === 'drop_table') {
@@ -164,7 +179,9 @@ describe('ddlDiff — tables', () => {
       withTables([table('user', { schema: 'less' })]),
       withTables([table('user', { schema: 'full' })]),
     );
-    const hasSchemaWarn = r.warnings.some((w) => w.includes('schema mode changed'));
+    const hasSchemaWarn = r.warnings.some((w) =>
+      w.includes('schema mode changed'),
+    );
     expect(hasSchemaWarn).toBe(true);
   });
 
@@ -203,7 +220,9 @@ describe('ddlDiff — columns', () => {
   });
 
   it('skips schemaless columns (no kind info)', async () => {
-    const both = withTables([table('user', { columns: [col('email', { kind: '' as any })] })]);
+    const both = withTables([
+      table('user', { columns: [col('email', { kind: '' as any })] }),
+    ]);
     const r = await ddlDiff(both, both);
     expect(r.statements).toHaveLength(0);
   });
@@ -278,8 +297,12 @@ describe('ddlDiff — columns', () => {
 
   it('detects column optional change', async () => {
     const r = await ddlDiff(
-      withTables([table('user', { columns: [col('name', { optional: false })] })]),
-      withTables([table('user', { columns: [col('name', { optional: true })] })]),
+      withTables([
+        table('user', { columns: [col('name', { optional: false })] }),
+      ]),
+      withTables([
+        table('user', { columns: [col('name', { optional: true })] }),
+      ]),
     );
     const alters = r.statements.filter((s) => s.type === 'alter_column');
     expect(alters.length).toBeGreaterThanOrEqual(1);
@@ -287,8 +310,12 @@ describe('ddlDiff — columns', () => {
 
   it('detects column readonly change', async () => {
     const r = await ddlDiff(
-      withTables([table('user', { columns: [col('name', { readonly: false })] })]),
-      withTables([table('user', { columns: [col('name', { readonly: true })] })]),
+      withTables([
+        table('user', { columns: [col('name', { readonly: false })] }),
+      ]),
+      withTables([
+        table('user', { columns: [col('name', { readonly: true })] }),
+      ]),
     );
     const alters = r.statements.filter((s) => s.type === 'alter_column');
     expect(alters.length).toBeGreaterThanOrEqual(1);
@@ -296,8 +323,12 @@ describe('ddlDiff — columns', () => {
 
   it('detects column default change', async () => {
     const r = await ddlDiff(
-      withTables([table('user', { columns: [col('role', { default: 'viewer' })] })]),
-      withTables([table('user', { columns: [col('role', { default: 'admin' })] })]),
+      withTables([
+        table('user', { columns: [col('role', { default: 'viewer' })] }),
+      ]),
+      withTables([
+        table('user', { columns: [col('role', { default: 'admin' })] }),
+      ]),
     );
     const alters = r.statements.filter((s) => s.type === 'alter_column');
     expect(alters.length).toBeGreaterThanOrEqual(1);
@@ -305,8 +336,12 @@ describe('ddlDiff — columns', () => {
 
   it('does NOT alter when normalized defaults match', async () => {
     const r = await ddlDiff(
-      withTables([table('user', { columns: [col('active', { default: 'true' })] })]),
-      withTables([table('user', { columns: [col('active', { default: 'true' })] })]),
+      withTables([
+        table('user', { columns: [col('active', { default: 'true' })] }),
+      ]),
+      withTables([
+        table('user', { columns: [col('active', { default: 'true' })] }),
+      ]),
     );
     const alters = r.statements.filter((s) => s.type === 'alter_column');
     // May produce alters for other reasons, but NOT for default
@@ -319,10 +354,14 @@ describe('ddlDiff — columns', () => {
   it('detects column recordTable change', async () => {
     const r = await ddlDiff(
       withTables([
-        table('item', { columns: [col('owner', { kind: 'record', recordTable: 'user' })] }),
+        table('item', {
+          columns: [col('owner', { kind: 'record', recordTable: 'user' })],
+        }),
       ]),
       withTables([
-        table('item', { columns: [col('owner', { kind: 'record', recordTable: 'org' })] }),
+        table('item', {
+          columns: [col('owner', { kind: 'record', recordTable: 'org' })],
+        }),
       ]),
     );
     const alters = r.statements.filter((s) => s.type === 'alter_column');
@@ -331,28 +370,40 @@ describe('ddlDiff — columns', () => {
 
   it('detects column permissions change', async () => {
     const r = await ddlDiff(
-      withTables([table('user', { columns: [col('email', { permissions: {} })] })]),
+      withTables([
+        table('user', { columns: [col('email', { permissions: {} })] }),
+      ]),
       withTables([
         table('user', {
           columns: [col('email', { permissions: { select: 'FULL' } })],
         }),
       ]),
     );
-    const perms = r.statements.filter((s) => s.type === 'alter_field_permissions');
+    const perms = r.statements.filter(
+      (s) => s.type === 'alter_field_permissions',
+    );
     expect(perms).toHaveLength(1);
   });
 
   it('detects column permissions change with create and update', async () => {
     // Hit serializePermissions create + update branches
     const r = await ddlDiff(
-      withTables([table('user', { columns: [col('email', { permissions: {} })] })]),
+      withTables([
+        table('user', { columns: [col('email', { permissions: {} })] }),
+      ]),
       withTables([
         table('user', {
-          columns: [col('email', { permissions: { select: true, create: false, update: false } })],
+          columns: [
+            col('email', {
+              permissions: { select: true, create: false, update: false },
+            }),
+          ],
         }),
       ]),
     );
-    const perms = r.statements.filter((s) => s.type === 'alter_field_permissions');
+    const perms = r.statements.filter(
+      (s) => s.type === 'alter_field_permissions',
+    );
     expect(perms).toHaveLength(1);
     if (perms[0].type === 'alter_field_permissions') {
       expect(perms[0].permissions).toContain('FOR select FULL');
@@ -364,7 +415,9 @@ describe('ddlDiff — columns', () => {
   it('emits type-change data-loss warning in push mode', async () => {
     const r = await ddlDiff(
       withTables([table('user', { columns: [col('age', { kind: 'int' })] })]),
-      withTables([table('user', { columns: [col('age', { kind: 'string' })] })]),
+      withTables([
+        table('user', { columns: [col('age', { kind: 'string' })] }),
+      ]),
       'push',
     );
     const hasWarn = r.warnings.some((w) => w.includes('Changing column type'));
@@ -382,14 +435,18 @@ describe('ddlDiff — table permissions', () => {
       withTables([table('user', { permissions: { select: 'NONE' } })]),
       withTables([table('user', { permissions: { select: 'FULL' } })]),
     );
-    const permStatements = r.statements.filter((s) => s.type === 'alter_table_permissions');
+    const permStatements = r.statements.filter(
+      (s) => s.type === 'alter_table_permissions',
+    );
     expect(permStatements).toHaveLength(1);
   });
 
   it('does not emit permission statement when both are undefined', async () => {
     const ddl = withTables([table('user')]);
     const r = await ddlDiff(ddl, ddl);
-    const permStatements = r.statements.filter((s) => s.type === 'alter_table_permissions');
+    const permStatements = r.statements.filter(
+      (s) => s.type === 'alter_table_permissions',
+    );
     expect(permStatements).toHaveLength(0);
   });
 });
@@ -402,7 +459,9 @@ describe('ddlDiff — indexes', () => {
   it('detects a new index', async () => {
     const r = await ddlDiff(
       empty(),
-      withIndexes([{ name: 'idx_email', table: 'user', cols: ['email'], index: 'unique' }]),
+      withIndexes([
+        { name: 'idx_email', table: 'user', cols: ['email'], index: 'unique' },
+      ]),
     );
     const creates = r.statements.filter((s) => s.type === 'create_index');
     expect(creates).toHaveLength(1);
@@ -413,7 +472,9 @@ describe('ddlDiff — indexes', () => {
 
   it('detects a removed index', async () => {
     const r = await ddlDiff(
-      withIndexes([{ name: 'idx_old', table: 'user', cols: ['old'], index: 'unique' }]),
+      withIndexes([
+        { name: 'idx_old', table: 'user', cols: ['old'], index: 'unique' },
+      ]),
       empty(),
     );
     const drops = r.statements.filter((s) => s.type === 'drop_index');
@@ -425,8 +486,17 @@ describe('ddlDiff — indexes', () => {
 
   it('detects a changed index (drop + create)', async () => {
     const r = await ddlDiff(
-      withIndexes([{ name: 'idx_email', table: 'user', cols: ['email'], index: 'unique' }]),
-      withIndexes([{ name: 'idx_email', table: 'user', cols: ['email'], index: 'fulltext' }]),
+      withIndexes([
+        { name: 'idx_email', table: 'user', cols: ['email'], index: 'unique' },
+      ]),
+      withIndexes([
+        {
+          name: 'idx_email',
+          table: 'user',
+          cols: ['email'],
+          index: 'fulltext',
+        },
+      ]),
     );
     const drops = r.statements.filter((s) => s.type === 'drop_index');
     const creates = r.statements.filter((s) => s.type === 'create_index');
@@ -449,8 +519,12 @@ describe('ddlDiff — indexes', () => {
 
   it('uses table:name composite key to disambiguate', async () => {
     const r = await ddlDiff(
-      withIndexes([{ name: 'idx_name', table: 'user', cols: ['name'], index: 'unique' }]),
-      withIndexes([{ name: 'idx_name', table: 'post', cols: ['title'], index: 'unique' }]),
+      withIndexes([
+        { name: 'idx_name', table: 'user', cols: ['name'], index: 'unique' },
+      ]),
+      withIndexes([
+        { name: 'idx_name', table: 'post', cols: ['title'], index: 'unique' },
+      ]),
     );
     const creates = r.statements.filter((s) => s.type === 'create_index');
     const drops = r.statements.filter((s) => s.type === 'drop_index');
@@ -479,8 +553,12 @@ describe('ddlDiff — relations', () => {
 
   it('skips relation if target also defines the table via create_table', async () => {
     const target = empty();
-    target.tables = [table('follows', { type: 'relation', in: 'user', out: 'user' })];
-    target.relations = [{ name: 'follows', in: 'user', out: 'user', fields: [] }];
+    target.tables = [
+      table('follows', { type: 'relation', in: 'user', out: 'user' }),
+    ];
+    target.relations = [
+      { name: 'follows', in: 'user', out: 'user', fields: [] },
+    ];
     const r = await ddlDiff(empty(), target);
     const rels = r.statements.filter((s) => s.type === 'create_relation');
     expect(rels).toHaveLength(0);
@@ -505,7 +583,10 @@ describe('ddlDiff — relations', () => {
 
 describe('ddlDiff — access', () => {
   it('detects new access definition', async () => {
-    const r = await ddlDiff(empty(), withAccess([{ name: 'web', type: 'RECORD' }]));
+    const r = await ddlDiff(
+      empty(),
+      withAccess([{ name: 'web', type: 'RECORD' }]),
+    );
     const creates = r.statements.filter((s) => s.type === 'create_access');
     expect(creates).toHaveLength(1);
     if (creates[0].type === 'create_access') {
@@ -526,7 +607,10 @@ describe('ddlDiff — access', () => {
   });
 
   it('does NOT remove access (safety-first)', async () => {
-    const r = await ddlDiff(withAccess([{ name: 'web', type: 'RECORD' }]), empty());
+    const r = await ddlDiff(
+      withAccess([{ name: 'web', type: 'RECORD' }]),
+      empty(),
+    );
     const drops = r.statements.filter((s) => s.type === 'drop_access');
     expect(drops).toHaveLength(0);
   });
@@ -547,7 +631,12 @@ describe('ddlDiff — events', () => {
     const r = await ddlDiff(
       empty(),
       withEvents([
-        { name: 'on_create', what: 'user', when: '$before', then: ['UPDATE log SET x = 1'] },
+        {
+          name: 'on_create',
+          what: 'user',
+          when: '$before',
+          then: ['UPDATE log SET x = 1'],
+        },
       ]),
     );
     const creates = r.statements.filter((s) => s.type === 'create_event');
@@ -578,7 +667,9 @@ describe('ddlDiff — events', () => {
   });
 
   it('is idempotent for identical events', async () => {
-    const ddl = withEvents([{ name: 'e', what: 'user', when: '$before', then: ['a'] }]);
+    const ddl = withEvents([
+      { name: 'e', what: 'user', when: '$before', then: ['a'] },
+    ]);
     const r = await ddlDiff(ddl, ddl);
     expect(r.statements).toHaveLength(0);
   });
@@ -614,8 +705,12 @@ describe('ddlDiff — functions', () => {
 
   it('detects change by args difference', async () => {
     const r = await ddlDiff(
-      withFunctions([{ name: 'fn::greet', args: ['$name'], body: 'RETURN $name' }]),
-      withFunctions([{ name: 'fn::greet', args: ['$first', '$last'], body: 'RETURN $name' }]),
+      withFunctions([
+        { name: 'fn::greet', args: ['$name'], body: 'RETURN $name' },
+      ]),
+      withFunctions([
+        { name: 'fn::greet', args: ['$first', '$last'], body: 'RETURN $name' },
+      ]),
     );
     const drops = r.statements.filter((s) => s.type === 'drop_function');
     expect(drops).toHaveLength(1);
@@ -623,8 +718,22 @@ describe('ddlDiff — functions', () => {
 
   it('detects change by comment difference', async () => {
     const r = await ddlDiff(
-      withFunctions([{ name: 'fn::greet', args: ['$name'], body: 'RETURN $name', comment: 'old' }]),
-      withFunctions([{ name: 'fn::greet', args: ['$name'], body: 'RETURN $name', comment: 'new' }]),
+      withFunctions([
+        {
+          name: 'fn::greet',
+          args: ['$name'],
+          body: 'RETURN $name',
+          comment: 'old',
+        },
+      ]),
+      withFunctions([
+        {
+          name: 'fn::greet',
+          args: ['$name'],
+          body: 'RETURN $name',
+          comment: 'new',
+        },
+      ]),
     );
     const creates = r.statements.filter((s) => s.type === 'create_function');
     expect(creates).toHaveLength(1);
@@ -693,7 +802,11 @@ describe('ddlDiff — namespaces', () => {
     const d2 = empty();
     d2.namespaces = ['production'];
     const r = await ddlDiff(d1, d2);
-    expect(r.sqlStatements.some((sql) => sql.includes('DEFINE NAMESPACE production'))).toBe(true);
+    expect(
+      r.sqlStatements.some((sql) =>
+        sql.includes('DEFINE NAMESPACE production'),
+      ),
+    ).toBe(true);
   });
 });
 
@@ -705,7 +818,10 @@ describe('statement ordering', () => {
   it('orders create_table before add_column before drop_table', async () => {
     // Produce statements in reverse expected order
     const ddl1 = withTables([table('old')]);
-    const ddl2 = withTables([table('new'), table('old', { columns: [col('x')] })]);
+    const ddl2 = withTables([
+      table('new'),
+      table('old', { columns: [col('x')] }),
+    ]);
     const r = await ddlDiff(ddl1, ddl2);
 
     const types = r.statements.map((s) => s.type);
@@ -827,7 +943,14 @@ describe('statementToSql', () => {
         name: 'user',
         schema: 'full',
         columns: [col('email')],
-        indexes: [{ name: 'idx_email', table: 'user', cols: ['email'], index: 'unique' }],
+        indexes: [
+          {
+            name: 'idx_email',
+            table: 'user',
+            cols: ['email'],
+            index: 'unique',
+          },
+        ],
       });
       expect(sql).not.toContain('DEFINE INDEX');
       expect(sql).toContain('DEFINE TABLE');
@@ -867,9 +990,9 @@ describe('statementToSql', () => {
 
   describe('rename_table', () => {
     it('generates ALTER TABLE RENAME TO', () => {
-      expect(statementToSql({ type: 'rename_table', from: 'old', to: 'new' })).toBe(
-        'ALTER TABLE old RENAME TO new',
-      );
+      expect(
+        statementToSql({ type: 'rename_table', from: 'old', to: 'new' }),
+      ).toBe('ALTER TABLE old RENAME TO new');
     });
   });
 
@@ -887,9 +1010,9 @@ describe('statementToSql', () => {
 
   describe('remove_column', () => {
     it('generates REMOVE FIELD', () => {
-      expect(statementToSql({ type: 'remove_column', table: 'user', column: 'old' })).toBe(
-        'REMOVE FIELD old ON TABLE user',
-      );
+      expect(
+        statementToSql({ type: 'remove_column', table: 'user', column: 'old' }),
+      ).toBe('REMOVE FIELD old ON TABLE user');
     });
   });
 
@@ -977,15 +1100,22 @@ describe('statementToSql', () => {
     it('generates DEFINE INDEX for create_index', () => {
       const sql = statementToSql({
         type: 'create_index',
-        index: { name: 'idx_email', table: 'user', cols: ['email'], index: 'unique' },
+        index: {
+          name: 'idx_email',
+          table: 'user',
+          cols: ['email'],
+          index: 'unique',
+        },
       });
-      expect(sql).toBe('DEFINE INDEX idx_email ON TABLE user COLUMNS email UNIQUE');
+      expect(sql).toBe(
+        'DEFINE INDEX idx_email ON TABLE user COLUMNS email UNIQUE',
+      );
     });
 
     it('generates REMOVE INDEX for drop_index', () => {
-      expect(statementToSql({ type: 'drop_index', name: 'idx_old', table: 'user' })).toBe(
-        'REMOVE INDEX idx_old ON TABLE user',
-      );
+      expect(
+        statementToSql({ type: 'drop_index', name: 'idx_old', table: 'user' }),
+      ).toBe('REMOVE INDEX idx_old ON TABLE user');
     });
   });
 
@@ -1008,7 +1138,9 @@ describe('statementToSql', () => {
         field: 'email',
         permissions: 'FOR select FULL',
       });
-      expect(sql).toBe('ALTER FIELD email ON TABLE user PERMISSIONS FOR select FULL');
+      expect(sql).toBe(
+        'ALTER FIELD email ON TABLE user PERMISSIONS FOR select FULL',
+      );
     });
   });
 
@@ -1045,16 +1177,27 @@ describe('statementToSql', () => {
     it('generates DEFINE EVENT for create_event', () => {
       const sql = statementToSql({
         type: 'create_event',
-        event: { name: 'on_create', what: 'user', when: '$before', then: ['UPDATE log SET x = 1'] },
+        event: {
+          name: 'on_create',
+          what: 'user',
+          when: '$before',
+          then: ['UPDATE log SET x = 1'],
+        },
       });
-      expect(sql).toContain('DEFINE EVENT IF NOT EXISTS on_create ON TABLE user');
+      expect(sql).toContain(
+        'DEFINE EVENT IF NOT EXISTS on_create ON TABLE user',
+      );
       expect(sql).toContain('WHEN ($before)');
     });
 
     it('generates REMOVE EVENT for drop_event', () => {
-      expect(statementToSql({ type: 'drop_event', name: 'on_create', table: 'user' })).toBe(
-        'REMOVE EVENT IF EXISTS on_create ON TABLE user',
-      );
+      expect(
+        statementToSql({
+          type: 'drop_event',
+          name: 'on_create',
+          table: 'user',
+        }),
+      ).toBe('REMOVE EVENT IF EXISTS on_create ON TABLE user');
     });
   });
 
@@ -1077,14 +1220,17 @@ describe('statementToSql', () => {
 
   describe('namespace statements', () => {
     it('generates DEFINE NAMESPACE for create_namespace', () => {
-      const sql = statementToSql({ type: 'create_namespace', name: 'production' });
+      const sql = statementToSql({
+        type: 'create_namespace',
+        name: 'production',
+      });
       expect(sql).toBe('DEFINE NAMESPACE production');
     });
 
     it('generates REMOVE NAMESPACE for drop_namespace', () => {
-      expect(statementToSql({ type: 'drop_namespace', name: 'production' })).toBe(
-        'REMOVE NAMESPACE production',
-      );
+      expect(
+        statementToSql({ type: 'drop_namespace', name: 'production' }),
+      ).toBe('REMOVE NAMESPACE production');
     });
   });
 
@@ -1174,7 +1320,10 @@ describe('edge cases', () => {
 
   it('generates full SQL strings for a mixed diff', async () => {
     const ddl1 = withTables([table('keep'), table('drop')]);
-    const ddl2 = withTables([table('add'), table('keep', { columns: [col('new_col')] })]);
+    const ddl2 = withTables([
+      table('add'),
+      table('keep', { columns: [col('new_col')] }),
+    ]);
 
     const r = await ddlDiff(ddl1, ddl2);
     expect(r.sqlStatements.length).toBeGreaterThan(0);
@@ -1206,9 +1355,18 @@ describe('diffDatabases', () => {
 
     const r = await ddlDiff(ddl1, ddl2);
     expect(r.statements).toHaveLength(2);
-    expect(r.statements.map((s) => s.type)).toEqual(['create_database', 'create_database']);
-    expect(r.statements[0]).toEqual({ type: 'create_database', name: 'testdb' });
-    expect(r.statements[1]).toEqual({ type: 'create_database', name: 'production' });
+    expect(r.statements.map((s) => s.type)).toEqual([
+      'create_database',
+      'create_database',
+    ]);
+    expect(r.statements[0]).toEqual({
+      type: 'create_database',
+      name: 'testdb',
+    });
+    expect(r.statements[1]).toEqual({
+      type: 'create_database',
+      name: 'production',
+    });
   });
 
   it('detects no changes when databases match', async () => {
@@ -1249,9 +1407,13 @@ describe('statementToSql - database', () => {
   });
 
   it('generates DEFINE DATABASE with COMMENT', () => {
-    expect(statementToSql({ type: 'create_database', name: 'testdb', comment: 'Test' })).toBe(
-      'DEFINE DATABASE testdb COMMENT "Test"',
-    );
+    expect(
+      statementToSql({
+        type: 'create_database',
+        name: 'testdb',
+        comment: 'Test',
+      }),
+    ).toBe('DEFINE DATABASE testdb COMMENT "Test"');
   });
 
   it('generates REMOVE DATABASE for drop_database', () => {
@@ -1290,7 +1452,12 @@ describe('diffSequences', () => {
   });
 
   it('detects no changes for identical sequences', async () => {
-    const seq: SurrealSequence = { name: 'my_seq', start: 1, increment: 1, cycle: true };
+    const seq: SurrealSequence = {
+      name: 'my_seq',
+      start: 1,
+      increment: 1,
+      cycle: true,
+    };
     const ddl1 = withSequences([seq]);
     const ddl2 = withSequences([{ ...seq }]);
 
@@ -1325,8 +1492,8 @@ describe('statementToSql - sequence', () => {
   });
 
   it('generates REMOVE SEQUENCE for drop_sequence', () => {
-    expect(statementToSql({ type: 'drop_sequence', def: { name: 'my_seq' } })).toBe(
-      'REMOVE SEQUENCE my_seq',
-    );
+    expect(
+      statementToSql({ type: 'drop_sequence', def: { name: 'my_seq' } }),
+    ).toBe('REMOVE SEQUENCE my_seq');
   });
 });

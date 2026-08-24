@@ -65,7 +65,8 @@ export function defineFunction(name: string) {
      * Validates that required fields are set.
      */
     build(): FunctionConfig {
-      if (!config.body) throw new Error('Function body is required (use .body())');
+      if (!config.body)
+        throw new Error('Function body is required (use .body())');
       return { name, ...config } as FunctionConfig;
     },
 

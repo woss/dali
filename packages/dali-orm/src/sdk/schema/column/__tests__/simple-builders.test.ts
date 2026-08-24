@@ -1,21 +1,21 @@
 import { describe, expect, it } from 'vitest';
-import {
-  string,
-  int,
-  float,
-  bool,
-  datetime,
-  duration,
-  decimal,
-  array,
-  object,
-  uuid,
-  set,
-  bytes,
-  literal,
-} from '../simple-builders.ts';
-import { record } from '../record.js';
 import { SurrealQLGenerator } from '../../../../migration/core/generator.js';
+import { record } from '../record.js';
+import {
+  array,
+  bool,
+  bytes,
+  datetime,
+  decimal,
+  duration,
+  float,
+  int,
+  literal,
+  object,
+  set,
+  string,
+  uuid,
+} from '../simple-builders.ts';
 
 describe('simple-builders', () => {
   describe('wrapper functions', () => {
@@ -111,7 +111,18 @@ describe('simple-builders', () => {
     });
 
     it('all wrapper types are distinct', () => {
-      const types = [string, int, float, bool, datetime, duration, decimal, array, object, uuid];
+      const types = [
+        string,
+        int,
+        float,
+        bool,
+        datetime,
+        duration,
+        decimal,
+        array,
+        object,
+        uuid,
+      ];
       const names = ['s', 'i', 'f', 'b', 'd', 'du', 'de', 'a', 'o', 'u'];
       const built = names.map((n, i) => types[i](n).build());
       const typeStrings = built.map((d) => d.config.type);
@@ -205,7 +216,10 @@ describe('simple-builders', () => {
 
     it('defaultRaw stores raw expression, separate from default', () => {
       const b = string('hash');
-      const def = b.default('fallback').defaultRaw('crypto::blake3(content)').build();
+      const def = b
+        .default('fallback')
+        .defaultRaw('crypto::blake3(content)')
+        .build();
       expect(def.config.defaultRaw).toBe('crypto::blake3(content)');
       expect(def.config.default).toBe('fallback');
     });
@@ -292,7 +306,10 @@ describe('simple-builders', () => {
 
     it('default and defaultRaw are independent config fields', () => {
       const b = string('hash');
-      const def = b.default('fallback').defaultRaw('crypto::sha256(content)').build();
+      const def = b
+        .default('fallback')
+        .defaultRaw('crypto::sha256(content)')
+        .build();
       expect(def.config.defaultRaw).toBe('crypto::sha256(content)');
       expect(def.config.default).toBe('fallback');
     });
@@ -300,7 +317,10 @@ describe('simple-builders', () => {
     it('default overrides defaultRaw if called last', () => {
       const b = string('hash');
       // defaultRaw sets defaultRaw field, default sets default field — they're independent
-      const def = b.defaultRaw('crypto::sha256(content)').default('fallback').build();
+      const def = b
+        .defaultRaw('crypto::sha256(content)')
+        .default('fallback')
+        .build();
       expect(def.config.defaultRaw).toBe('crypto::sha256(content)');
       expect(def.config.default).toBe('fallback');
     });

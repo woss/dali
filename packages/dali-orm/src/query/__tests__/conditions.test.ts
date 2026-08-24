@@ -157,7 +157,9 @@ describe('isNotNull', () => {
   });
 
   it('works with dotted field paths', () => {
-    expect(isNotNull('user.profile.name').sql).toBe('user.profile.name != NONE');
+    expect(isNotNull('user.profile.name').sql).toBe(
+      'user.profile.name != NONE',
+    );
   });
 });
 
@@ -363,11 +365,15 @@ describe('isSerializedCondition', () => {
   });
 
   it('returns false when params is not an object', () => {
-    expect(isSerializedCondition({ sql: 'name = $p', params: 'not-object' })).toBe(false);
+    expect(
+      isSerializedCondition({ sql: 'name = $p', params: 'not-object' }),
+    ).toBe(false);
   });
 
   it('returns false for object with null params', () => {
-    expect(isSerializedCondition({ sql: 'name = $p', params: null })).toBe(false);
+    expect(isSerializedCondition({ sql: 'name = $p', params: null })).toBe(
+      false,
+    );
   });
 });
 

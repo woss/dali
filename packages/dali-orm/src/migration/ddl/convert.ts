@@ -8,8 +8,15 @@
  * Parse, don't validate: Functions transform at boundary, return trusted types.
  */
 
-import type { ColumnConfig, ColumnDefinition } from '../../sdk/schema/column/types.js';
-import type { IndexDefinition, TableConfig, TableDefinition } from '../../sdk/table.js';
+import type {
+  ColumnConfig,
+  ColumnDefinition,
+} from '../../sdk/schema/column/types.js';
+import type {
+  IndexDefinition,
+  TableConfig,
+  TableDefinition,
+} from '../../sdk/table.js';
 import type {
   SurrealAccess,
   SurrealColumn,
@@ -31,7 +38,10 @@ import type {
  * @param tableName - Table name (required for SurrealColumn.table)
  * @returns SurrealColumn ready for DDL operations
  */
-export function toSurrealColumn(def: ColumnDefinition, tableName: string): SurrealColumn {
+export function toSurrealColumn(
+  def: ColumnDefinition,
+  tableName: string,
+): SurrealColumn {
   if (!def) throw new Error('ColumnDefinition required');
   if (!tableName) throw new Error('tableName required for SurrealColumn');
 

@@ -13,15 +13,15 @@ import { describe, expect, it } from 'vitest';
 import type { DaliORM } from '../../sdk/dali-orm.js';
 import { string } from '../../sdk/schema/column/index.js';
 import { defineRelationTable, defineTable } from '../../sdk/table.js';
-import { Model, createModel } from '../model.js';
-import { SelectBuilder } from '../select.js';
-import { InsertBuilder } from '../insert.js';
-import { UpdateBuilder } from '../update.js';
-import { DeleteBuilder } from '../delete.js';
-import type { RelateBuilder } from '../relate.js';
 import type { CreateBuilder } from '../create.js';
-import type { UpsertBuilder } from '../upsert.js';
+import { DeleteBuilder } from '../delete.js';
+import { InsertBuilder } from '../insert.js';
 import type { LiveQueryBuilder } from '../live.js';
+import { createModel, Model } from '../model.js';
+import type { RelateBuilder } from '../relate.js';
+import { SelectBuilder } from '../select.js';
+import { UpdateBuilder } from '../update.js';
+import type { UpsertBuilder } from '../upsert.js';
 
 // ============================================================================
 // Mock ORM (satisfies builder constructor guard: truthy)

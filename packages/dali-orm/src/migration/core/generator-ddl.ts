@@ -7,8 +7,7 @@
  * Each function validates inputs, returns a SurrealQL string.
  */
 import { escapeIdent } from '../../core/surql.js';
-import { getSurrealQLType } from '../ddl/types.js';
-import { formatDefaultValue } from '../utils/format.js';
+import type { AnalyzerDefinition, TableConfig } from '../../sdk/table.js';
 import type {
   SurrealAccess,
   SurrealEvent,
@@ -16,7 +15,8 @@ import type {
   SurrealSequence,
   SurrealView,
 } from '../ddl/ddl.js';
-import type { AnalyzerDefinition, TableConfig } from '../../sdk/table.js';
+import { getSurrealQLType } from '../ddl/types.js';
+import { formatDefaultValue } from '../utils/format.js';
 
 /**
  * Generate REMOVE ACCESS statement
@@ -57,7 +57,10 @@ export function generateNamespaceDefinition(
  *
  * SurrealQL: REMOVE NAMESPACE [IF EXISTS] <name>
  */
-export function generateRemoveNamespace(name: string, ifExists?: boolean): string {
+export function generateRemoveNamespace(
+  name: string,
+  ifExists?: boolean,
+): string {
   if (!name) {
     throw new Error('Namespace name is required for REMOVE NAMESPACE');
   }
@@ -93,7 +96,10 @@ export function generateDatabaseDefinition(
  *
  * SurrealQL: REMOVE DATABASE [IF EXISTS] <name>
  */
-export function generateRemoveDatabase(name: string, ifExists?: boolean): string {
+export function generateRemoveDatabase(
+  name: string,
+  ifExists?: boolean,
+): string {
   if (!name) {
     throw new Error('Database name is required for REMOVE DATABASE');
   }
@@ -131,7 +137,9 @@ export function generateAccessDefinition(access: {
   }
 
   const level = access.level ?? 'DATABASE';
-  const parts: string[] = [`DEFINE ACCESS ${access.name} ON ${level} TYPE ${access.type}`];
+  const parts: string[] = [
+    `DEFINE ACCESS ${access.name} ON ${level} TYPE ${access.type}`,
+  ];
 
   if (access.signup) {
     parts.push(`SIGNUP (${access.signup})`);
@@ -238,7 +246,10 @@ export function generateEventDefinition(event: {
 /**
  * Generate REMOVE EVENT statement
  */
-export function generateRemoveEvent(eventName: string, tableName: string): string {
+export function generateRemoveEvent(
+  eventName: string,
+  tableName: string,
+): string {
   if (!eventName) {
     throw new Error('Event name is required for REMOVE EVENT');
   }
@@ -336,7 +347,9 @@ export function generateViewDefinition(view: {
     throw new Error('View query is required for DEFINE VIEW');
   }
 
-  const parts: string[] = [`DEFINE VIEW IF NOT EXISTS ${view.name} AS ${view.query}`];
+  const parts: string[] = [
+    `DEFINE VIEW IF NOT EXISTS ${view.name} AS ${view.query}`,
+  ];
 
   if (view.comment) {
     parts.push(`COMMENT "${view.comment}"`);
@@ -376,7 +389,9 @@ export function generateSequenceDefinition(seq: SurrealSequence): string {
     throw new Error('Sequence name is required for DEFINE SEQUENCE');
   }
 
-  const parts: string[] = [`DEFINE SEQUENCE IF NOT EXISTS ${escapeIdent(seq.name)}`];
+  const parts: string[] = [
+    `DEFINE SEQUENCE IF NOT EXISTS ${escapeIdent(seq.name)}`,
+  ];
 
   if (seq.start !== undefined) {
     parts.push(`START ${seq.start}`);
@@ -414,7 +429,10 @@ export function generateSequenceDefinition(seq: SurrealSequence): string {
  *
  * SurrealQL: REMOVE SEQUENCE [IF EXISTS] <name>
  */
-export function generateRemoveSequence(seqName: string, ifExists?: boolean): string {
+export function generateRemoveSequence(
+  seqName: string,
+  ifExists?: boolean,
+): string {
   if (!seqName) {
     throw new Error('Sequence name is required for REMOVE SEQUENCE');
   }
@@ -520,7 +538,9 @@ export function generateAlterFieldDefault(
  * SurrealDB 3.0 syntax:
  *   DEFINE ANALYZER [IF NOT EXISTS] @name [TOKENIZERS @t1 [,@tN]] [FILTERS @f1 [,@fN]]
  */
-export function generateAnalyzerDefinition(analyzer: AnalyzerDefinition): string {
+export function generateAnalyzerDefinition(
+  analyzer: AnalyzerDefinition,
+): string {
   if (!analyzer.name) {
     throw new Error('Analyzer name is required for DEFINE ANALYZER');
   }
@@ -544,7 +564,9 @@ export function generateAnalyzerDefinition(analyzer: AnalyzerDefinition): string
       ? analyzer.filters.join(', ')
       : analyzer.filters;
     if (filters === '') {
-      throw new Error('Filters list is empty for DEFINE ANALYZER — provide at least one filter');
+      throw new Error(
+        'Filters list is empty for DEFINE ANALYZER — provide at least one filter',
+      );
     }
     parts.push(`FILTERS ${filters}`);
   }

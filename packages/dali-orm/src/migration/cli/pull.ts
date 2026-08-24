@@ -1,17 +1,24 @@
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
+import { escapeString } from '../../core/surql.ts';
 import { connect } from '../../sdk/driver/orm-connection.js';
 import type { EmbeddedConfig, SurrealDriver } from '../../sdk/driver/types.js';
-import type { ColumnConfig, SurrealColumnType } from '../../sdk/schema/column/types.js';
+import type {
+  ColumnConfig,
+  SurrealColumnType,
+} from '../../sdk/schema/column/types.js';
 import type { AccessConfig } from '../../sdk/schema.js';
 import type { AnalyzerDefinition, TableDefinition } from '../../sdk/table.js';
 import type { Config } from '../config.js';
 import { SurrealQLGenerator } from '../core/generator.js';
 import { MigrationRunner } from '../core/runner.js';
 import { introspectDatabase } from '../ddl/introspect.js';
-import { generateFullMigration, generateMigrationFile, loadSchemaFiles } from './generate.js';
+import {
+  generateFullMigration,
+  generateMigrationFile,
+  loadSchemaFiles,
+} from './generate.js';
 import { safeDisconnect } from './operations.js';
-import { escapeString } from '../../core/surql.ts';
 
 export interface PullOptions {
   config: Config;
@@ -22,7 +29,10 @@ export interface PullOptions {
   embeddedConfig?: EmbeddedConfig;
 }
 
-export async function pullSchema(options: PullOptions, driver?: SurrealDriver): Promise<void> {
+export async function pullSchema(
+  options: PullOptions,
+  driver?: SurrealDriver,
+): Promise<void> {
   const { config, outputDir, table, embeddedDriver, embeddedConfig } = options;
 
   const resolvedOutputDir = outputDir ?? config.schema?.dir ?? './schema';
@@ -93,7 +103,10 @@ export async function pullSchema(options: PullOptions, driver?: SurrealDriver): 
   }
 }
 
-function deriveOutputFilename(pattern: string | undefined, table?: string): string {
+function deriveOutputFilename(
+  pattern: string | undefined,
+  table?: string,
+): string {
   if (table) {
     return `${table}.schema.ts`;
   }
@@ -243,23 +256,41 @@ function generateTypeScriptSchema(
   },
   tableName?: string,
 ): string {
-  const needsDateTime = ddl.tables.some((t) => t.columns.some((c) => c.kind === 'datetime'));
-  const needsNumber = ddl.tables.some((t) =>
-    t.columns.some((c) => c.kind === 'int' || c.kind === 'float' || c.kind === 'decimal'),
+  const needsDateTime = ddl.tables.some((t) =>
+    t.columns.some((c) => c.kind === 'datetime'),
   );
-  const needsBool = ddl.tables.some((t) => t.columns.some((c) => c.kind === 'bool'));
-  const needsRecord = ddl.tables.some((t) => t.columns.some((c) => c.recordTable));
-  const needsArray = ddl.tables.some((t) => t.columns.some((c) => c.kind === 'array'));
+  const needsNumber = ddl.tables.some((t) =>
+    t.columns.some(
+      (c) => c.kind === 'int' || c.kind === 'float' || c.kind === 'decimal',
+    ),
+  );
+  const needsBool = ddl.tables.some((t) =>
+    t.columns.some((c) => c.kind === 'bool'),
+  );
+  const needsRecord = ddl.tables.some((t) =>
+    t.columns.some((c) => c.recordTable),
+  );
+  const needsArray = ddl.tables.some((t) =>
+    t.columns.some((c) => c.kind === 'array'),
+  );
 
   const imports = [
     `import { defineTable } from '@woss/dali-orm/sdk/table';`,
     needsDateTime
       ? `import { datetime } from '@woss/dali-orm/sdk/schema/column/simple-builders';`
       : '',
-    needsNumber ? `import { int } from '@woss/dali-orm/sdk/schema/column/simple-builders';` : '',
-    needsBool ? `import { bool } from '@woss/dali-orm/sdk/schema/column/simple-builders';` : '',
-    needsArray ? `import { array } from '@woss/dali-orm/sdk/schema/column/simple-builders';` : '',
-    needsRecord ? `import { record } from '@woss/dali-orm/sdk/schema/column/record';` : '',
+    needsNumber
+      ? `import { int } from '@woss/dali-orm/sdk/schema/column/simple-builders';`
+      : '',
+    needsBool
+      ? `import { bool } from '@woss/dali-orm/sdk/schema/column/simple-builders';`
+      : '',
+    needsArray
+      ? `import { array } from '@woss/dali-orm/sdk/schema/column/simple-builders';`
+      : '',
+    needsRecord
+      ? `import { record } from '@woss/dali-orm/sdk/schema/column/record';`
+      : '',
     `import { string } from '@woss/dali-orm/sdk/schema/column/simple-builders';`,
   ]
     .filter(Boolean)
@@ -276,7 +307,9 @@ function generateTypeScriptSchema(
   const schemaExports: string[] = [];
 
   for (const table of ddl.tables) {
-    lines.push(`export const ${table.name}Schema = defineTable('${table.name}', {`);
+    lines.push(
+      `export const ${table.name}Schema = defineTable('${table.name}', {`,
+    );
     schemaExports.push(`${table.name}: ${table.name}Schema`);
 
     for (const column of table.columns) {
@@ -331,7 +364,9 @@ export function generateColumnDefinition(column: {
   };
 
   const builderFn = typeMap[column.kind ?? ''] ?? 'string';
-  const propName = /[^a-zA-Z0-9_$]/.test(column.name) ? `'${column.name}'` : column.name;
+  const propName = /[^a-zA-Z0-9_$]/.test(column.name)
+    ? `'${column.name}'`
+    : column.name;
 
   if (column.kind === 'record' && column.recordTable) {
     let def = `${propName}: record('${column.recordTable}')`;

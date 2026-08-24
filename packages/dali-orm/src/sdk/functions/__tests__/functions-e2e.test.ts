@@ -6,8 +6,8 @@
 
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { select } from '../../../query/select.js';
-import { EmbeddedDriver } from '../../driver/embedded-driver.js';
 import type { DaliORM } from '../../dali-orm.js';
+import { EmbeddedDriver } from '../../driver/embedded-driver.js';
 import { array, bool, float, int, string } from '../../schema/column/index.js';
 import { defineTable } from '../../table.js';
 import {
@@ -226,7 +226,10 @@ describe('End-to-end function tests', () => {
     });
 
     it('mathRandom returns a number', async () => {
-      const result = await select(orm, users).fields(as_(mathRandom(), 'r')).limit(1).execute();
+      const result = await select(orm, users)
+        .fields(as_(mathRandom(), 'r'))
+        .limit(1)
+        .execute();
 
       const record = result[0] as Record<string, unknown>;
       expect(record.r).toBeDefined();
@@ -272,25 +275,33 @@ describe('End-to-end function tests', () => {
         .where((w) => w.eq('name', 'Alice'))
         .execute();
 
-      expect((result[0] as Record<string, unknown>).joined).toBe('Alice - alice@test.com');
+      expect((result[0] as Record<string, unknown>).joined).toBe(
+        'Alice - alice@test.com',
+      );
     });
 
     it('stringContains filters records in WHERE', async () => {
-      const result = await select(orm, users).where("string::contains(email, 'alice')").execute();
+      const result = await select(orm, users)
+        .where("string::contains(email, 'alice')")
+        .execute();
 
       expect(result).toHaveLength(1);
       expect((result[0] as Record<string, unknown>).name).toBe('Alice');
     });
 
     it('stringStartsWith filters records in WHERE', async () => {
-      const result = await select(orm, users).where("string::starts_with(name, 'A')").execute();
+      const result = await select(orm, users)
+        .where("string::starts_with(name, 'A')")
+        .execute();
 
       expect(result).toHaveLength(1);
       expect((result[0] as Record<string, unknown>).name).toBe('Alice');
     });
 
     it('stringEndsWith filters records in WHERE', async () => {
-      const result = await select(orm, users).where("string::ends_with(name, 'e')").execute();
+      const result = await select(orm, users)
+        .where("string::ends_with(name, 'e')")
+        .execute();
 
       // Alice and Charlie both end with 'e'
       expect(result).toHaveLength(2);
@@ -305,7 +316,9 @@ describe('End-to-end function tests', () => {
         "SELECT array::join(tags, ', ') AS joined FROM user WHERE name = 'Alice'",
       );
 
-      expect(String((result[0] as Record<string, unknown>).joined)).toBe('dev, admin');
+      expect(String((result[0] as Record<string, unknown>).joined)).toBe(
+        'dev, admin',
+      );
     });
 
     it('stringTrim removes whitespace', async () => {
@@ -341,11 +354,18 @@ describe('End-to-end function tests', () => {
 
     it('stringReplace substitutes text', async () => {
       const result = await select(orm, users)
-        .fields(as_(stringReplace($("'hello world'"), $("'world'"), $("'there'")), 'replaced'))
+        .fields(
+          as_(
+            stringReplace($("'hello world'"), $("'world'"), $("'there'")),
+            'replaced',
+          ),
+        )
         .limit(1)
         .execute();
 
-      expect((result[0] as Record<string, unknown>).replaced).toBe('hello there');
+      expect((result[0] as Record<string, unknown>).replaced).toBe(
+        'hello there',
+      );
     });
 
     it('stringSlice extracts substring', async () => {
@@ -390,7 +410,12 @@ describe('End-to-end function tests', () => {
 
     it('stringIsUuid validates uuid', async () => {
       const result = await select(orm, users)
-        .fields(as_(stringIsUuid($("'550e8400-e29b-41d4-a716-446655440000'")), 'is_uuid'))
+        .fields(
+          as_(
+            stringIsUuid($("'550e8400-e29b-41d4-a716-446655440000'")),
+            'is_uuid',
+          ),
+        )
         .limit(1)
         .execute();
 
@@ -413,7 +438,10 @@ describe('End-to-end function tests', () => {
 
   describe('time functions', () => {
     it('timeNow returns current datetime', async () => {
-      const result = await select(orm, users).fields(as_(timeNow(), 'now')).limit(1).execute();
+      const result = await select(orm, users)
+        .fields(as_(timeNow(), 'now'))
+        .limit(1)
+        .execute();
 
       const val = (result[0] as Record<string, unknown>).now;
       expect(val).toBeDefined();
@@ -510,7 +538,9 @@ describe('End-to-end function tests', () => {
         .limit(1)
         .execute();
 
-      expect((result[0] as Record<string, unknown>).hash).toBe('5d41402abc4b2a76b9719d911017c592');
+      expect((result[0] as Record<string, unknown>).hash).toBe(
+        '5d41402abc4b2a76b9719d911017c592',
+      );
     });
 
     it('cryptoSha256 produces correct SHA-256 hash', async () => {

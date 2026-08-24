@@ -7,49 +7,71 @@
  * @module dali-orm/migration/api
  */
 import type { EmbeddedConfig, SurrealDriver } from '../sdk/driver/types.js';
-import type { AccessConfig, EventConfig, FunctionConfig } from '../sdk/schema.js';
+import type {
+  AccessConfig,
+  EventConfig,
+  FunctionConfig,
+} from '../sdk/schema.js';
 import type { AnalyzerDefinition, TableDefinition } from '../sdk/table.js';
 import { type MigrationResult, type MigrationStatus } from './core/runner.js';
 import type { DdlDiffResult } from './ddl/ddl.js';
-export { type GenerateOptions, generateFullMigration, generateLiveMigration, generateMigration, generateMigrationFile, generateSnapshotMigration, getLiveSchema, loadSchemaFiles, loadSchemaFromFile, type SchemaFilesResult, } from './cli/generate.js';
-export { createRunner, type MigrationResult, MigrationRunner, type MigrationStatus, type RunnerConfig, } from './core/runner.js';
+
+export {
+  type GenerateOptions,
+  generateFullMigration,
+  generateLiveMigration,
+  generateMigration,
+  generateMigrationFile,
+  generateSnapshotMigration,
+  getLiveSchema,
+  loadSchemaFiles,
+  loadSchemaFromFile,
+  type SchemaFilesResult,
+} from './cli/generate.js';
+export {
+  createRunner,
+  type MigrationResult,
+  MigrationRunner,
+  type MigrationStatus,
+  type RunnerConfig,
+} from './core/runner.js';
 /**
  * Options for generating and applying a migration
  */
 export interface GenerateAndApplyOptions {
-    /** Migration name (required) */
-    name: string;
-    /** Output directory for migration file (default: ./migrations) */
-    outputDir?: string;
-    /** Generate full migration instead of incremental (default: false) */
-    fullMigration?: boolean;
-    /** Snapshot directory for incremental comparison */
-    snapshotDir?: string;
-    /** Access definitions to include in migration */
-    access?: AccessConfig[];
-    /** Event definitions to include in migration */
-    events?: EventConfig[];
-    /** Function definitions to include in migration */
-    functions?: FunctionConfig[];
-    /** Analyzer definitions to include in migration */
-    analyzers?: AnalyzerDefinition[];
+  /** Migration name (required) */
+  name: string;
+  /** Output directory for migration file (default: ./migrations) */
+  outputDir?: string;
+  /** Generate full migration instead of incremental (default: false) */
+  fullMigration?: boolean;
+  /** Snapshot directory for incremental comparison */
+  snapshotDir?: string;
+  /** Access definitions to include in migration */
+  access?: AccessConfig[];
+  /** Event definitions to include in migration */
+  events?: EventConfig[];
+  /** Function definitions to include in migration */
+  functions?: FunctionConfig[];
+  /** Analyzer definitions to include in migration */
+  analyzers?: AnalyzerDefinition[];
 }
 /**
  * Options for pulling schema and generating init migration
  */
 export interface PullAndMigrateOptions {
-    /** Output directory for schema files (default: ./schema) */
-    outputDir?: string;
-    /** Specific table to pull (pulls all if undefined) */
-    table?: string;
-    /** Migration name (default: init_from_pull) */
-    migrationName?: string;
-    /** Access definitions to include in migration */
-    access?: AccessConfig[];
-    /** Event definitions to include in migration */
-    events?: EventConfig[];
-    /** Function definitions to include in migration */
-    functions?: FunctionConfig[];
+  /** Output directory for schema files (default: ./schema) */
+  outputDir?: string;
+  /** Specific table to pull (pulls all if undefined) */
+  table?: string;
+  /** Migration name (default: init_from_pull) */
+  migrationName?: string;
+  /** Access definitions to include in migration */
+  access?: AccessConfig[];
+  /** Event definitions to include in migration */
+  events?: EventConfig[];
+  /** Function definitions to include in migration */
+  functions?: FunctionConfig[];
 }
 /**
  * Extended pull options that accept embedded driver config
@@ -60,8 +82,8 @@ export interface PullAndMigrateOptions {
  * Options for pushing schema from table definitions
  */
 export interface PushSchemaOptions {
-    /** If true, only diff without applying changes (default: false) */
-    dryRun?: boolean;
+  /** If true, only diff without applying changes (default: false) */
+  dryRun?: boolean;
 }
 /**
  * Push schema changes to a database using the introspection + diff pipeline.
@@ -80,11 +102,15 @@ export interface PushSchemaOptions {
  * console.log(`Applied ${result.sqlStatements.length} statements`);
  * ```
  */
-export declare function pushSchemaFromTableDefs(driver: SurrealDriver, tables: TableDefinition[], options?: PushSchemaOptions & {
+export declare function pushSchemaFromTableDefs(
+  driver: SurrealDriver,
+  tables: TableDefinition[],
+  options?: PushSchemaOptions & {
     access?: AccessConfig[];
     events?: EventConfig[];
     functions?: FunctionConfig[];
-}): Promise<DdlDiffResult>;
+  },
+): Promise<DdlDiffResult>;
 /**
  * Set the config directory for testing purposes.
  *
@@ -94,12 +120,12 @@ export declare function pushSchemaFromTableDefs(driver: SurrealDriver, tables: T
  */
 export declare function _setTestConfigDir(dir: string | undefined): void;
 export interface ApiPullOptions {
-    /** Specific table to pull (pulls all if undefined) */
-    table?: string;
-    /** Output directory for schema files */
-    outputDir?: string;
-    /** Embedded driver configuration (mode, path) */
-    embeddedConfig?: EmbeddedConfig;
+  /** Specific table to pull (pulls all if undefined) */
+  table?: string;
+  /** Output directory for schema files */
+  outputDir?: string;
+  /** Embedded driver configuration (mode, path) */
+  embeddedConfig?: EmbeddedConfig;
 }
 /**
  * Apply pending migrations to a database using an existing driver.
@@ -118,7 +144,9 @@ export interface ApiPullOptions {
  * console.log(`Applied: ${result.applied.join(', ')}`);
  * ```
  */
-export declare function migrateToDatabase(driver: SurrealDriver): Promise<MigrationResult>;
+export declare function migrateToDatabase(
+  driver: SurrealDriver,
+): Promise<MigrationResult>;
 /**
  * Get migration status - applied and pending migrations.
  *
@@ -132,7 +160,9 @@ export declare function migrateToDatabase(driver: SurrealDriver): Promise<Migrat
  * console.log(`Pending: ${status.pending.length}, Current: ${status.current}`);
  * ```
  */
-export declare function getMigrationStatus(driver: SurrealDriver): Promise<MigrationStatus>;
+export declare function getMigrationStatus(
+  driver: SurrealDriver,
+): Promise<MigrationStatus>;
 /**
  * Generate a migration from table definitions and apply it immediately.
  *
@@ -151,9 +181,13 @@ export declare function getMigrationStatus(driver: SurrealDriver): Promise<Migra
  * });
  * ```
  */
-export declare function generateAndApplyMigration(driver: SurrealDriver, tables: TableDefinition[], options: GenerateAndApplyOptions): Promise<{
-    outputPath: string;
-    result: MigrationResult;
+export declare function generateAndApplyMigration(
+  driver: SurrealDriver,
+  tables: TableDefinition[],
+  options: GenerateAndApplyOptions,
+): Promise<{
+  outputPath: string;
+  result: MigrationResult;
 }>;
 /**
  * Pull schema from database, generate TypeScript schema file, and apply init migration.
@@ -173,8 +207,11 @@ export declare function generateAndApplyMigration(driver: SurrealDriver, tables:
  * });
  * ```
  */
-export declare function pullAndMigrate(driver: SurrealDriver, options?: PullAndMigrateOptions): Promise<{
-    schemaPath: string;
-    result: MigrationResult;
+export declare function pullAndMigrate(
+  driver: SurrealDriver,
+  options?: PullAndMigrateOptions,
+): Promise<{
+  schemaPath: string;
+  result: MigrationResult;
 }>;
 //# sourceMappingURL=api.d.ts.map

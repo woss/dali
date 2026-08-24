@@ -7,13 +7,15 @@
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const { mockRecordIdCtor, mockTableCtor, mockDateTimeCtor, state } = vi.hoisted(() => {
-  const mockRecordIdCtor = vi.fn();
-  const mockTableCtor = vi.fn();
-  const mockDateTimeCtor = vi.fn();
-  const state = { shouldDateTimeThrow: false };
-  return { mockRecordIdCtor, mockTableCtor, mockDateTimeCtor, state };
-});
+const { mockRecordIdCtor, mockTableCtor, mockDateTimeCtor, state } = vi.hoisted(
+  () => {
+    const mockRecordIdCtor = vi.fn();
+    const mockTableCtor = vi.fn();
+    const mockDateTimeCtor = vi.fn();
+    const state = { shouldDateTimeThrow: false };
+    return { mockRecordIdCtor, mockTableCtor, mockDateTimeCtor, state };
+  },
+);
 
 vi.mock('surrealdb', () => {
   class RecordId {
@@ -57,18 +59,22 @@ vi.mock('surrealdb', () => {
   return { RecordId, Table, DateTime };
 });
 
-import { RecordId, DateTime } from 'surrealdb';
-import { TestDriver, createMockDb, builderThenable } from './driver-test-utils.js';
-import type { MockDb } from './driver-test-utils.js';
+import { DateTime, RecordId } from 'surrealdb';
 import {
-  parseTableWithId,
-  transformDatetimeValues,
   coerceRecordIds,
-  tryCoerceRecordId,
-  recordIdFromString,
   isPlainObject,
+  parseTableWithId,
+  recordIdFromString,
+  transformDatetimeValues,
+  tryCoerceRecordId,
   tryCreateDateTime,
 } from '../driver-utils.js';
+import type { MockDb } from './driver-test-utils.js';
+import {
+  builderThenable,
+  createMockDb,
+  TestDriver,
+} from './driver-test-utils.js';
 
 describe('BaseDriver', () => {
   let mockDb: MockDb;
@@ -78,7 +84,9 @@ describe('BaseDriver', () => {
     vi.clearAllMocks();
     state.shouldDateTimeThrow = false;
     mockDb = createMockDb();
-    driver = new TestDriver(mockDb as unknown as Record<string, import('vitest').Mock>);
+    driver = new TestDriver(
+      mockDb as unknown as Record<string, import('vitest').Mock>,
+    );
   });
 
   // ============================================================================
@@ -122,7 +130,9 @@ describe('BaseDriver', () => {
         created_at: '2024-01-15T10:00:00Z',
       });
 
-      const contentArg = (builder.content.mock.calls[0] as unknown[])[0] as Record<string, unknown>;
+      const contentArg = (
+        builder.content.mock.calls[0] as unknown[]
+      )[0] as Record<string, unknown>;
       expect(contentArg.name).toBe('Alice');
       expect(contentArg.created_at).toBeInstanceOf(DateTime);
     });
@@ -140,7 +150,9 @@ describe('BaseDriver', () => {
         name: 'Alice',
       });
 
-      const contentArg = (builder.content.mock.calls[0] as unknown[])[0] as Record<string, unknown>;
+      const contentArg = (
+        builder.content.mock.calls[0] as unknown[]
+      )[0] as Record<string, unknown>;
       expect(contentArg.birthDate).toBeInstanceOf(DateTime);
       expect(contentArg.startTime).toBeInstanceOf(DateTime);
       expect(contentArg.updated_at).toBeInstanceOf(DateTime);
@@ -155,7 +167,9 @@ describe('BaseDriver', () => {
 
       await driver.create('user', { name: 'Alice', age: 30, active: true });
 
-      const contentArg = (builder.content.mock.calls[0] as unknown[])[0] as Record<string, unknown>;
+      const contentArg = (
+        builder.content.mock.calls[0] as unknown[]
+      )[0] as Record<string, unknown>;
       expect(contentArg.name).toBe('Alice');
       expect(contentArg.age).toBe(30);
       expect(contentArg.active).toBe(true);
@@ -168,7 +182,9 @@ describe('BaseDriver', () => {
 
       await driver.create('user', { created_at: null, updated_at: undefined });
 
-      const contentArg = (builder.content.mock.calls[0] as unknown[])[0] as Record<string, unknown>;
+      const contentArg = (
+        builder.content.mock.calls[0] as unknown[]
+      )[0] as Record<string, unknown>;
       expect(contentArg.created_at).toBeNull();
       expect(contentArg.updated_at).toBeUndefined();
     });
@@ -180,7 +196,9 @@ describe('BaseDriver', () => {
 
       await driver.create('user', { dates: ['2024-01-01', '2024-06-15'] });
 
-      const contentArg = (builder.content.mock.calls[0] as unknown[])[0] as Record<string, unknown>;
+      const contentArg = (
+        builder.content.mock.calls[0] as unknown[]
+      )[0] as Record<string, unknown>;
       // Array fields with "date" in name should NOT be transformed to DateTime
       expect(Array.isArray(contentArg.dates)).toBe(true);
       expect(contentArg.dates).toEqual(['2024-01-01', '2024-06-15']);
@@ -196,9 +214,9 @@ describe('BaseDriver', () => {
         { created_at: '2024-06-15', name: 'Bob' },
       ]);
 
-      const contentArg = (builder.content.mock.calls[0] as unknown[])[0] as Array<
-        Record<string, unknown>
-      >;
+      const contentArg = (
+        builder.content.mock.calls[0] as unknown[]
+      )[0] as Array<Record<string, unknown>>;
       expect(Array.isArray(contentArg)).toBe(true);
       expect((contentArg[0] as any).created_at).toBeInstanceOf(DateTime);
       expect((contentArg[1] as any).created_at).toBeInstanceOf(DateTime);
@@ -212,7 +230,9 @@ describe('BaseDriver', () => {
       const recordId = new RecordId('other', '123');
       await driver.create('user', { ref: recordId, name: 'Alice' });
 
-      const contentArg = (builder.content.mock.calls[0] as unknown[])[0] as Record<string, unknown>;
+      const contentArg = (
+        builder.content.mock.calls[0] as unknown[]
+      )[0] as Record<string, unknown>;
       // RecordId (class instance) should be preserved as-is
       expect(contentArg.ref).toBe(recordId);
     });
@@ -226,7 +246,10 @@ describe('BaseDriver', () => {
 
       await driver.create('user', { created_at: '2024-01-01' });
 
-      const arg = (builder.content.mock.calls[0] as unknown[])[0] as Record<string, unknown>;
+      const arg = (builder.content.mock.calls[0] as unknown[])[0] as Record<
+        string,
+        unknown
+      >;
       expect(arg.created_at).toBeInstanceOf(DateTime);
     });
 
@@ -237,7 +260,10 @@ describe('BaseDriver', () => {
 
       await driver.create('user', { created_at: 1704067200000 });
 
-      const arg = (builder.content.mock.calls[0] as unknown[])[0] as Record<string, unknown>;
+      const arg = (builder.content.mock.calls[0] as unknown[])[0] as Record<
+        string,
+        unknown
+      >;
       expect(arg.created_at).toBeInstanceOf(DateTime);
     });
 
@@ -253,7 +279,10 @@ describe('BaseDriver', () => {
       // Pass a non-string, non-number value — it will be returned as-is by tryCreateDateTime
       await driver.create('user', { created_at: true });
 
-      const arg = (builder.content.mock.calls[0] as unknown[])[0] as Record<string, unknown>;
+      const arg = (builder.content.mock.calls[0] as unknown[])[0] as Record<
+        string,
+        unknown
+      >;
       // Boolean should pass through unchanged since tryCreateDateTime
       // returns non-string/non-number values directly
       expect(arg.created_at).toBe(true);
@@ -268,7 +297,10 @@ describe('BaseDriver', () => {
       await driver.create('user', { created_at: '2024-01-01' });
       state.shouldDateTimeThrow = false;
 
-      const arg = (builder.content.mock.calls[0] as unknown[])[0] as Record<string, unknown>;
+      const arg = (builder.content.mock.calls[0] as unknown[])[0] as Record<
+        string,
+        unknown
+      >;
       // When DateTime constructor throws, tryCreateDateTime catches and returns
       // the original value as-is
       expect(arg.created_at).toBe('2024-01-01');
@@ -311,7 +343,10 @@ describe('BaseDriver', () => {
 
       await driver.create('relation', { owner: existingId, name: 'test' });
 
-      const arg = (builder.content.mock.calls[0] as unknown[])[0] as Record<string, unknown>;
+      const arg = (builder.content.mock.calls[0] as unknown[])[0] as Record<
+        string,
+        unknown
+      >;
       expect(arg.owner).toBe(existingId);
     });
 
@@ -320,9 +355,15 @@ describe('BaseDriver', () => {
       const builder = builderThenable([{ id: '1' }]);
       mockDb.create.mockReturnValue(builder);
 
-      await driver.create('relation', { in: { tb: 'user', id: '5' }, name: 'test' });
+      await driver.create('relation', {
+        in: { tb: 'user', id: '5' },
+        name: 'test',
+      });
 
-      const arg = (builder.content.mock.calls[0] as unknown[])[0] as Record<string, unknown>;
+      const arg = (builder.content.mock.calls[0] as unknown[])[0] as Record<
+        string,
+        unknown
+      >;
       expect(arg.in).toBeInstanceOf(RecordId);
     });
 
@@ -333,7 +374,10 @@ describe('BaseDriver', () => {
 
       await driver.create('relation', { owner: 'user:5', name: 'test' });
 
-      const arg = (builder.content.mock.calls[0] as unknown[])[0] as Record<string, unknown>;
+      const arg = (builder.content.mock.calls[0] as unknown[])[0] as Record<
+        string,
+        unknown
+      >;
       expect(arg.owner).toBeInstanceOf(RecordId);
     });
 
@@ -344,7 +388,10 @@ describe('BaseDriver', () => {
 
       await driver.create('user', { name: 'Alice', email: 'alice@test.com' });
 
-      const arg = (builder.content.mock.calls[0] as unknown[])[0] as Record<string, unknown>;
+      const arg = (builder.content.mock.calls[0] as unknown[])[0] as Record<
+        string,
+        unknown
+      >;
       expect(arg.name).toBe('Alice');
       expect(arg.email).toBe('alice@test.com');
     });
@@ -359,7 +406,9 @@ describe('BaseDriver', () => {
         { owner: 'user:2', name: 'rel2' },
       ]);
 
-      const arg = (builder.content.mock.calls[0] as unknown[])[0] as Array<Record<string, unknown>>;
+      const arg = (builder.content.mock.calls[0] as unknown[])[0] as Array<
+        Record<string, unknown>
+      >;
       expect((arg[0] as any).owner).toBeInstanceOf(RecordId);
       expect((arg[1] as any).owner).toBeInstanceOf(RecordId);
     });
@@ -369,9 +418,15 @@ describe('BaseDriver', () => {
       const builder = builderThenable([{ id: '1' }]);
       mockDb.create.mockReturnValue(builder);
 
-      await driver.create('relation', { owner: { id: 'user:5' }, name: 'test' });
+      await driver.create('relation', {
+        owner: { id: 'user:5' },
+        name: 'test',
+      });
 
-      const arg = (builder.content.mock.calls[0] as unknown[])[0] as Record<string, unknown>;
+      const arg = (builder.content.mock.calls[0] as unknown[])[0] as Record<
+        string,
+        unknown
+      >;
       expect(arg.owner).toBeInstanceOf(RecordId);
     });
 
@@ -380,9 +435,15 @@ describe('BaseDriver', () => {
       const builder = builderThenable([{ id: '1' }]);
       mockDb.create.mockReturnValue(builder);
 
-      await driver.create('relation', { owner: { id: { id: 'user:5' } }, name: 'test' });
+      await driver.create('relation', {
+        owner: { id: { id: 'user:5' } },
+        name: 'test',
+      });
 
-      const arg = (builder.content.mock.calls[0] as unknown[])[0] as Record<string, unknown>;
+      const arg = (builder.content.mock.calls[0] as unknown[])[0] as Record<
+        string,
+        unknown
+      >;
       expect(arg.owner).toBeInstanceOf(RecordId);
     });
 
@@ -393,7 +454,10 @@ describe('BaseDriver', () => {
 
       await driver.create('relation', { owner: null, out: undefined });
 
-      const arg = (builder.content.mock.calls[0] as unknown[])[0] as Record<string, unknown>;
+      const arg = (builder.content.mock.calls[0] as unknown[])[0] as Record<
+        string,
+        unknown
+      >;
       expect(arg.owner).toBeNull();
       expect(arg.out).toBeUndefined();
     });
@@ -406,7 +470,10 @@ describe('BaseDriver', () => {
       // "simple-string" has no colon, so recordIdFromString returns it as-is
       await driver.create('relation', { owner: 'simple-string', name: 'test' });
 
-      const arg = (builder.content.mock.calls[0] as unknown[])[0] as Record<string, unknown>;
+      const arg = (builder.content.mock.calls[0] as unknown[])[0] as Record<
+        string,
+        unknown
+      >;
       expect(arg.owner).toBe('simple-string');
     });
 
@@ -417,7 +484,10 @@ describe('BaseDriver', () => {
 
       await driver.create('relation', { owner: 42, name: 'test' });
 
-      const arg = (builder.content.mock.calls[0] as unknown[])[0] as Record<string, unknown>;
+      const arg = (builder.content.mock.calls[0] as unknown[])[0] as Record<
+        string,
+        unknown
+      >;
       expect(arg.owner).toBe(42);
     });
 
@@ -431,9 +501,15 @@ describe('BaseDriver', () => {
         constructor: { name: 'StringRecordId' },
         toString: () => 'user:42',
       };
-      await driver.create('relation', { owner: stringRecordIdLike, name: 'test' });
+      await driver.create('relation', {
+        owner: stringRecordIdLike,
+        name: 'test',
+      });
 
-      const arg = (builder.content.mock.calls[0] as unknown[])[0] as Record<string, unknown>;
+      const arg = (builder.content.mock.calls[0] as unknown[])[0] as Record<
+        string,
+        unknown
+      >;
       // Should be converted to RecordId via recordIdFromString
       expect(arg.owner).toBeInstanceOf(RecordId);
     });
@@ -445,7 +521,10 @@ describe('BaseDriver', () => {
 
       await driver.create('relation', { owner: '', name: 'test' });
 
-      const arg = (builder.content.mock.calls[0] as unknown[])[0] as Record<string, unknown>;
+      const arg = (builder.content.mock.calls[0] as unknown[])[0] as Record<
+        string,
+        unknown
+      >;
       expect(arg.owner).toBe('');
     });
 

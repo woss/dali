@@ -31,22 +31,54 @@
  *
  * @packageDocumentation
  */
+
+export {
+  ConnectionError,
+  DaliOrmError,
+  MigrationError,
+  QueryError,
+  SchemaError,
+} from './core/errors.js';
+export type { RawSurql } from './core/surql.js';
+export {
+  escapeIdent,
+  escapeString,
+  formatDefault,
+  isRaw,
+  quoteString,
+  raw,
+  serializePermissionsFragment,
+  serializeValue,
+  surql,
+} from './core/surql.js';
 export type { EventDefinition } from './migration/ddl/schemas.js';
 export type { DaliORMConfig } from './sdk/dali-orm.js';
 export { DaliORM } from './sdk/dali-orm.js';
-export type { SchemaBuilder } from './sdk/schema-builder.js';
-export { createSchemaBuilder } from './sdk/schema-builder.js';
 export { connect } from './sdk/driver/orm-connection.js';
-export type { LiveAction, LiveMessageData, LiveQueryOptions, LiveSubscriptionHandle, SurrealDriver, } from './sdk/driver/types.js';
+export type {
+  LiveAction,
+  LiveMessageData,
+  LiveQueryOptions,
+  LiveSubscriptionHandle,
+  SurrealDriver,
+} from './sdk/driver/types.js';
 export type { OrmSchemaConfig } from './sdk/orm-schema.js';
 export { createOrmSchema, OrmSchema } from './sdk/orm-schema.js';
 export type { ColumnDefinition } from './sdk/schema/column/types.js';
 export type { FunctionBuilder } from './sdk/schema/function-builder.js';
 export { defineFunction } from './sdk/schema/function-builder.js';
-export type { AccessConfig, AccessType, EventConfig, FunctionConfig } from './sdk/schema.js';
+export type {
+  AccessConfig,
+  AccessType,
+  EventConfig,
+  FunctionConfig,
+} from './sdk/schema.js';
 export { defineAccess, defineEvent } from './sdk/schema.js';
-export type { AnalyzerDefinition, IndexDefinition, TableDefinition } from './sdk/table.js';
-export { escapeIdent, escapeString, formatDefault, isRaw, quoteString, raw, serializePermissionsFragment, serializeValue, surql, } from './core/surql.js';
-export type { RawSurql } from './core/surql.js';
-export { ConnectionError, DaliOrmError, MigrationError, QueryError, SchemaError, } from './core/errors.js';
+export type { SchemaBuilder } from './sdk/schema-builder.js';
+export { createSchemaBuilder } from './sdk/schema-builder.js';
+export type {
+  AnalyzerDefinition,
+  IndexDefinition,
+  TableDefinition,
+} from './sdk/table.js';
 //# sourceMappingURL=index.d.ts.map

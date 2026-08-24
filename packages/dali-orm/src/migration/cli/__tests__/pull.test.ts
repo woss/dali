@@ -16,10 +16,10 @@ vi.mock('../../../sdk/driver/orm-connection.js', () => ({
   connect: vi.fn(),
 }));
 
+import type { SurrealColumnType } from '../../../sdk/schema/column/types.js';
+import type { Config } from '../../config.js';
 import { generateColumnDefinition, pullSchema } from '../pull.js';
 import { createTempDir } from './helpers.js';
-import type { Config } from '../../config.js';
-import type { SurrealColumnType } from '../../../sdk/schema/column/types.js';
 
 // ============================================================================
 // Helpers
@@ -94,7 +94,10 @@ describe('generateColumnDefinition', () => {
   });
 
   it('generates boolean column', () => {
-    const def = generateColumnDefinition({ name: 'flag', kind: 'boolean' as SurrealColumnType });
+    const def = generateColumnDefinition({
+      name: 'flag',
+      kind: 'boolean' as SurrealColumnType,
+    });
     expect(def).toBe("flag: bool('flag')");
   });
 
@@ -104,17 +107,26 @@ describe('generateColumnDefinition', () => {
   });
 
   it('generates date as datetime column', () => {
-    const def = generateColumnDefinition({ name: 'birth', kind: 'date' as SurrealColumnType });
+    const def = generateColumnDefinition({
+      name: 'birth',
+      kind: 'date' as SurrealColumnType,
+    });
     expect(def).toBe("birth: datetime('birth')");
   });
 
   it('generates time as datetime column', () => {
-    const def = generateColumnDefinition({ name: 'ts', kind: 'time' as SurrealColumnType });
+    const def = generateColumnDefinition({
+      name: 'ts',
+      kind: 'time' as SurrealColumnType,
+    });
     expect(def).toBe("ts: datetime('ts')");
   });
 
   it('generates timestamp as datetime column', () => {
-    const def = generateColumnDefinition({ name: 'ts', kind: 'timestamp' as SurrealColumnType });
+    const def = generateColumnDefinition({
+      name: 'ts',
+      kind: 'timestamp' as SurrealColumnType,
+    });
     expect(def).toBe("ts: datetime('ts')");
   });
 
@@ -134,7 +146,10 @@ describe('generateColumnDefinition', () => {
   });
 
   it('generates geometry column', () => {
-    const def = generateColumnDefinition({ name: 'location', kind: 'geometry' });
+    const def = generateColumnDefinition({
+      name: 'location',
+      kind: 'geometry',
+    });
     expect(def).toBe("location: geometry('location')");
   });
 
@@ -144,27 +159,47 @@ describe('generateColumnDefinition', () => {
   });
 
   it('generates record column with recordTable', () => {
-    const def = generateColumnDefinition({ name: 'author', kind: 'record', recordTable: 'user' });
+    const def = generateColumnDefinition({
+      name: 'author',
+      kind: 'record',
+      recordTable: 'user',
+    });
     expect(def).toBe("author: record('user')");
   });
 
   it('adds .optional() modifier', () => {
-    const def = generateColumnDefinition({ name: 'nickname', kind: 'string', optional: true });
+    const def = generateColumnDefinition({
+      name: 'nickname',
+      kind: 'string',
+      optional: true,
+    });
     expect(def).toBe("nickname: string('nickname').optional()");
   });
 
   it('adds .flexible() modifier', () => {
-    const def = generateColumnDefinition({ name: 'meta', kind: 'object', flexible: true });
+    const def = generateColumnDefinition({
+      name: 'meta',
+      kind: 'object',
+      flexible: true,
+    });
     expect(def).toBe("meta: object('meta').flexible()");
   });
 
   it('adds .readonly() modifier', () => {
-    const def = generateColumnDefinition({ name: 'id', kind: 'string', readonly: true });
+    const def = generateColumnDefinition({
+      name: 'id',
+      kind: 'string',
+      readonly: true,
+    });
     expect(def).toBe("id: string('id').readonly()");
   });
 
   it('adds .default() modifier', () => {
-    const def = generateColumnDefinition({ name: 'status', kind: 'string', default: "'active'" });
+    const def = generateColumnDefinition({
+      name: 'status',
+      kind: 'string',
+      default: "'active'",
+    });
     expect(def).toBe("status: string('status').default('active')");
   });
 
@@ -202,7 +237,10 @@ describe('generateColumnDefinition', () => {
 
   it('uses string builder for unknown type', () => {
     // @ts-expect-error — testing fallback for unrecognized type
-    const def = generateColumnDefinition({ name: 'custom', kind: 'custom_type' });
+    const def = generateColumnDefinition({
+      name: 'custom',
+      kind: 'custom_type',
+    });
     expect(def).toBe("custom: string('custom')");
   });
 
@@ -273,7 +311,9 @@ describe('generateTypeScriptSchema (via pullSchema)', () => {
 
     // Should report "No tables found"
     const logCalls = vi.mocked(console.log).mock.calls;
-    const noTablesLine = logCalls.find((c) => String(c[0]).includes('No tables found'));
+    const noTablesLine = logCalls.find((c) =>
+      String(c[0]).includes('No tables found'),
+    );
     expect(noTablesLine).toBeDefined();
   });
 
@@ -462,7 +502,10 @@ describe('generateTypeScriptSchema (via pullSchema)', () => {
     });
 
     // Pass driver directly — should not create new connection
-    await pullSchema({ config, outputDir: tmpDir, embeddedDriver: true }, driver);
+    await pullSchema(
+      { config, outputDir: tmpDir, embeddedDriver: true },
+      driver,
+    );
 
     const files = await fs.readdir(tmpDir);
     const schemaFile = files.find((f) => f.endsWith('.ts'));

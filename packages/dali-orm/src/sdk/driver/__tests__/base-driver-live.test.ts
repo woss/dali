@@ -41,18 +41,18 @@ vi.mock('surrealdb', () => {
 });
 
 import { Table } from 'surrealdb';
+import type { LiveAction, LiveData } from '../types.js';
+import type { MockDb } from './driver-test-utils.js';
 import {
-  TestDriver,
+  builderThenable,
   createMockDb,
-  state,
   createMockSubscription,
   createThrowingSubscription,
-  builderThenable,
-  thenableResolve,
+  state,
+  TestDriver,
   thenableReject,
+  thenableResolve,
 } from './driver-test-utils.js';
-import type { MockDb } from './driver-test-utils.js';
-import type { LiveAction, LiveData } from '../types.js';
 
 describe('BaseDriver', () => {
   let mockDb: MockDb;
@@ -62,7 +62,9 @@ describe('BaseDriver', () => {
     vi.clearAllMocks();
     state.shouldDateTimeThrow = false;
     mockDb = createMockDb();
-    driver = new TestDriver(mockDb as unknown as Record<string, import('vitest').Mock>);
+    driver = new TestDriver(
+      mockDb as unknown as Record<string, import('vitest').Mock>,
+    );
   });
 
   // ============================================================================
@@ -73,12 +75,16 @@ describe('BaseDriver', () => {
     describe('live()', () => {
       it('throws if not connected', async () => {
         driver.connected = false;
-        await expect(driver.live('user', vi.fn())).rejects.toThrow('Not connected to SurrealDB');
+        await expect(driver.live('user', vi.fn())).rejects.toThrow(
+          'Not connected to SurrealDB',
+        );
       });
 
       it('throws on empty table name', async () => {
         driver.connected = true;
-        await expect(driver.live('', vi.fn())).rejects.toThrow('Table name is required');
+        await expect(driver.live('', vi.fn())).rejects.toThrow(
+          'Table name is required',
+        );
       });
 
       it('warns on table name sanitization', async () => {
@@ -89,13 +95,17 @@ describe('BaseDriver', () => {
 
         await driver.live('user table!', vi.fn());
 
-        expect(warnSpy).toHaveBeenCalledWith('Table name contains invalid characters, sanitized');
+        expect(warnSpy).toHaveBeenCalledWith(
+          'Table name contains invalid characters, sanitized',
+        );
         warnSpy.mockRestore();
       });
 
       it('subscribes and receives live updates via callback', async () => {
         driver.connected = true;
-        const updates = [{ action: 'CREATE', value: { id: '1', name: 'Alice' } }];
+        const updates = [
+          { action: 'CREATE', value: { id: '1', name: 'Alice' } },
+        ];
         const subscription = createMockSubscription(updates);
         mockDb.live.mockReturnValue(thenableResolve(subscription));
         const callback = vi.fn();
@@ -120,7 +130,9 @@ describe('BaseDriver', () => {
         driver.connected = true;
         mockDb.live.mockReturnValue(thenableReject(new Error('SDK failure')));
 
-        await expect(driver.live('user', vi.fn())).rejects.toThrow('SDK failure');
+        await expect(driver.live('user', vi.fn())).rejects.toThrow(
+          'SDK failure',
+        );
       });
 
       it('gracefully handles async iterator errors', async () => {
@@ -138,7 +150,9 @@ describe('BaseDriver', () => {
     describe('liveWithOptions()', () => {
       it('throws if not connected', async () => {
         driver.connected = false;
-        await expect(driver.liveWithOptions('user')).rejects.toThrow('Not connected to SurrealDB');
+        await expect(driver.liveWithOptions('user')).rejects.toThrow(
+          'Not connected to SurrealDB',
+        );
       });
 
       it('throws on empty table name', async () => {
@@ -164,7 +178,9 @@ describe('BaseDriver', () => {
 
         await driver.liveWithOptions('user table!');
 
-        expect(warnSpy).toHaveBeenCalledWith('Table name contains invalid characters, sanitized');
+        expect(warnSpy).toHaveBeenCalledWith(
+          'Table name contains invalid characters, sanitized',
+        );
         warnSpy.mockRestore();
       });
 

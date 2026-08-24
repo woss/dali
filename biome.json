@@ -1,30 +1,37 @@
 {
-    "$schema": "https://biomejs.dev/schemas/2.0.0/schema.json",
-    "files": {
-        "ignore": [
-            ".opencode/plugins/**",
-            "packages/dali-memory/.opencode/**",
-            "**/dist/**",
-            "examples/**",
-            "**/meta/_journal.json",
-            "packages/dali-memory/dali-memory.schema.json",
-            "surreal-docs/**",
-            "coverage/**"
-        ]
-    },
+  "$schema": "https://biomejs.dev/schemas/2.5.10/schema.json",
+  "files": {
+    "includes": ["packages/dali-orm/**", "!packages/dali-orm/dist"]
+  },
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineWidth": 80
+  },
+  "javascript": {
     "formatter": {
-        "enabled": true,
-        "indentStyle": "space",
-        "indentWidth": 2,
-        "lineWidth": 80,
-        "quoteStyle": "single"
-    },
-    "linter": {
-        "enabled": true,
-        "rules": {
-            "suspicious": {
-                "noThenable": "off"
-            }
-        }
+      "quoteStyle": "single"
     }
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "suspicious": {
+        "noThenProperty": "off"
+      }
+    }
+  },
+  "overrides": [
+    {
+      "includes": ["**/*.d.ts"],
+      "linter": {
+        "rules": {
+          "suspicious": {
+            "noExplicitAny": "off"
+          }
+        }
+      }
+    }
+  ]
 }

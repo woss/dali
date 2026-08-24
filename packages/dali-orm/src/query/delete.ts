@@ -6,16 +6,23 @@
  * or with WHERE/LIMIT conditions.
  */
 
-import type { SurrealDriver } from '../sdk/driver/types.js';
 import type { DaliORM } from '../sdk/dali-orm.js';
+import type { SurrealDriver } from '../sdk/driver/types.js';
 import type { TableDefinition } from '../sdk/table.js';
-import type { SerializedCondition } from './conditions.js';
-import type { InferSelectResult } from './types.js';
-import { WhereBuilder, type ConditionNode } from './where-builder.js';
-import { andTrees, serializedConditionToNode, serializeCondition } from './serializer.js';
 import { resolveRecordId } from '../utils/record-id.js';
+import type { SerializedCondition } from './conditions.js';
+import {
+  andTrees,
+  serializeCondition,
+  serializedConditionToNode,
+} from './serializer.js';
+import type { InferSelectResult } from './types.js';
+import { type ConditionNode, WhereBuilder } from './where-builder.js';
 
-export class DeleteBuilder<TDef extends TableDefinition, TResult = InferSelectResult<TDef>> {
+export class DeleteBuilder<
+  TDef extends TableDefinition,
+  TResult = InferSelectResult<TDef>,
+> {
   private readonly driver: SurrealDriver;
   private readonly tableDef: TDef;
   private recordId?: string;
@@ -24,7 +31,8 @@ export class DeleteBuilder<TDef extends TableDefinition, TResult = InferSelectRe
 
   constructor(orm: DaliORM, tableDef: TDef) {
     if (!orm) throw new Error('DaliORM instance is required');
-    if (!tableDef?.name) throw new Error('Table definition with name is required');
+    if (!tableDef?.name)
+      throw new Error('Table definition with name is required');
 
     this.driver = orm.getDriver();
     this.tableDef = tableDef;
@@ -32,7 +40,8 @@ export class DeleteBuilder<TDef extends TableDefinition, TResult = InferSelectRe
 
   /** Target specific record by ID */
   id(recordId: string): this {
-    if (!recordId || typeof recordId !== 'string') throw new Error('Record ID is required');
+    if (!recordId || typeof recordId !== 'string')
+      throw new Error('Record ID is required');
     this.recordId = recordId;
     return this;
   }
@@ -46,7 +55,12 @@ export class DeleteBuilder<TDef extends TableDefinition, TResult = InferSelectRe
   where(fn: (w: WhereBuilder) => WhereBuilder): this;
   where(condition: SerializedCondition): this;
   where(rawClause: string): this;
-  where(fnOrCondition: ((w: WhereBuilder) => WhereBuilder) | SerializedCondition | string): this {
+  where(
+    fnOrCondition:
+      | ((w: WhereBuilder) => WhereBuilder)
+      | SerializedCondition
+      | string,
+  ): this {
     if (typeof fnOrCondition === 'function') {
       const builder = fnOrCondition(new WhereBuilder());
       const node = builder.build();

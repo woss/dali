@@ -1,6 +1,6 @@
 import { SurrealQLGenerator } from '../migration/core/generator.js';
-import type { TableConfig, IndexDefinition, TableDefinition } from './table.js';
 import type { ColumnConfig, ColumnDefinition } from './schema/column/types.js';
+import type { IndexDefinition, TableConfig, TableDefinition } from './table.js';
 
 /**
  * SchemaBuilder interface — fluent runtime DDL API.
@@ -46,7 +46,9 @@ interface DdlOperation {
  * @param queryFn - The function used to execute SQL (typically `orm.query`)
  * @returns A new SchemaBuilder instance
  */
-export function createSchemaBuilder(queryFn: (sql: string) => Promise<unknown>): SchemaBuilder {
+export function createSchemaBuilder(
+  queryFn: (sql: string) => Promise<unknown>,
+): SchemaBuilder {
   const generator = new SurrealQLGenerator();
   const operations: DdlOperation[] = [];
 
@@ -69,7 +71,11 @@ export function createSchemaBuilder(queryFn: (sql: string) => Promise<unknown>):
       return enqueue({ type: 'define-table', tableDef });
     },
 
-    defineField(table: string, name: string, config: ColumnConfig): SchemaBuilder {
+    defineField(
+      table: string,
+      name: string,
+      config: ColumnConfig,
+    ): SchemaBuilder {
       const fieldDef: ColumnDefinition = {
         name,
         config,
@@ -127,7 +133,9 @@ export function createSchemaBuilder(queryFn: (sql: string) => Promise<unknown>):
           const sql = generator.generateFieldDefinition(op.fieldDef);
           if (sql) statements.push(sql);
         } else if (op.type === 'define-index' && op.indexDef && op.indexTable) {
-          statements.push(generator.generateIndexDefinition(op.indexDef, op.indexTable));
+          statements.push(
+            generator.generateIndexDefinition(op.indexDef, op.indexTable),
+          );
         }
       }
 

@@ -41,15 +41,15 @@ vi.mock('surrealdb', () => {
 });
 
 import { RecordId, Table } from 'surrealdb';
-import {
-  TestDriver,
-  createMockDb,
-  state,
-  builderThenable,
-  thenableResolve,
-  queryMock,
-} from './driver-test-utils.js';
 import type { MockDb } from './driver-test-utils.js';
+import {
+  builderThenable,
+  createMockDb,
+  queryMock,
+  state,
+  TestDriver,
+  thenableResolve,
+} from './driver-test-utils.js';
 
 describe('BaseDriver', () => {
   let mockDb: MockDb;
@@ -59,7 +59,9 @@ describe('BaseDriver', () => {
     vi.clearAllMocks();
     state.shouldDateTimeThrow = false;
     mockDb = createMockDb();
-    driver = new TestDriver(mockDb as unknown as Record<string, import('vitest').Mock>);
+    driver = new TestDriver(
+      mockDb as unknown as Record<string, import('vitest').Mock>,
+    );
   });
 
   // ============================================================================
@@ -221,7 +223,9 @@ describe('BaseDriver', () => {
       });
 
       it('tx.relate', async () => {
-        mockDb.mockTx.relate.mockReturnValue(thenableResolve({ id: 'edge:abc' }));
+        mockDb.mockTx.relate.mockReturnValue(
+          thenableResolve({ id: 'edge:abc' }),
+        );
 
         await driver.transaction(async (tx) => {
           const r = await tx.relate('user:1', 'follows', 'user:2');
@@ -246,9 +250,13 @@ describe('BaseDriver', () => {
       });
 
       it('tx.relate with data (covers line 404 truthy branch)', async () => {
-        mockDb.mockTx.relate.mockReturnValue(thenableResolve({ id: 'edge:abc' }));
+        mockDb.mockTx.relate.mockReturnValue(
+          thenableResolve({ id: 'edge:abc' }),
+        );
         await driver.transaction(async (tx) => {
-          const r = await tx.relate('user:1', 'follows', 'user:2', { since: '2024' });
+          const r = await tx.relate('user:1', 'follows', 'user:2', {
+            since: '2024',
+          });
           expect(r).toEqual([{ id: 'edge:abc' }]);
         });
       });

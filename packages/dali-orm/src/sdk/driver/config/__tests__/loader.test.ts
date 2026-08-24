@@ -10,10 +10,10 @@
  * are tested indirectly through the public API.
  */
 
-import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { existsSync, readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // ============================================================================
 // Module-level mocks (hoisted to top by vitest)
@@ -95,7 +95,9 @@ describe('loadConfig', () => {
     expect(result.path).toContain('.dali-orm.json');
     expect(result.config.namespace).toBe('test_ns');
     expect(result.config.database).toBe('test_db');
-    expect((result.config as unknown as Record<string, unknown>).validated).toBe(true);
+    expect(
+      (result.config as unknown as Record<string, unknown>).validated,
+    ).toBe(true);
     expect(vi.mocked(validateConfig)).toHaveBeenCalledTimes(1);
     expect(vi.mocked(parseConfig)).toHaveBeenCalledTimes(1);
   });
@@ -117,7 +119,9 @@ describe('loadConfig', () => {
   it('throws when file does not exist (format.exists false)', async () => {
     vi.mocked(existsSync).mockReturnValue(false);
 
-    await expect(loadConfig({ path: '/app/missing.json' })).rejects.toThrow('does not exist');
+    await expect(loadConfig({ path: '/app/missing.json' })).rejects.toThrow(
+      'does not exist',
+    );
   });
 
   it('throws on validation error', async () => {
@@ -180,9 +184,9 @@ describe('loadConfig', () => {
   it('throws when TypeScript file import fails', async () => {
     vi.mocked(existsSync).mockReturnValue(true);
 
-    await expect(loadConfig({ path: '/nonexistent/config.ts' })).rejects.toThrow(
-      'Failed to load TypeScript config',
-    );
+    await expect(
+      loadConfig({ path: '/nonexistent/config.ts' }),
+    ).rejects.toThrow('Failed to load TypeScript config');
   });
 });
 
@@ -197,7 +201,9 @@ describe('loadConfigSync', () => {
     expect(result.config).toBeDefined();
     expect(result.cached).toBe(false);
     expect(result.config.namespace).toBe('test_ns');
-    expect((result.config as unknown as Record<string, unknown>).validated).toBe(true);
+    expect(
+      (result.config as unknown as Record<string, unknown>).validated,
+    ).toBe(true);
   });
 
   it('throws when no config file found in any search location', () => {
@@ -209,7 +215,9 @@ describe('loadConfigSync', () => {
   it('throws when file does not exist', () => {
     vi.mocked(existsSync).mockReturnValue(false);
 
-    expect(() => loadConfigSync({ path: '/app/missing.json' })).toThrow('does not exist');
+    expect(() => loadConfigSync({ path: '/app/missing.json' })).toThrow(
+      'does not exist',
+    );
   });
 
   it('throws on validation error', () => {
@@ -406,7 +414,9 @@ describe('file content errors', () => {
       .mockReturnValueOnce(true) // detectFormat
       .mockReturnValue(false); // loadFileContent
 
-    expect(() => loadConfigSync({ path: '/app/.dali-orm.json' })).toThrow('Config file not found');
+    expect(() => loadConfigSync({ path: '/app/.dali-orm.json' })).toThrow(
+      'Config file not found',
+    );
   });
 
   it('throws descriptive error for invalid JSON content', () => {

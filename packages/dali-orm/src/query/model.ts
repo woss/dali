@@ -1,17 +1,17 @@
 import type { DaliORM } from '../sdk/dali-orm.js';
 import type { TableDefinition } from '../sdk/table.js';
-import { SelectBuilder } from './select.js';
-import { InsertBuilder } from './insert.js';
-import { UpdateBuilder } from './update.js';
-import { DeleteBuilder } from './delete.js';
-import { relate } from './relate.js';
-import type { RelateBuilder } from './relate.js';
-import { CreateBuilder } from './create.js';
-import { UpsertBuilder } from './upsert.js';
-import { LiveQueryBuilder } from './live.js';
 import type { CreateBuilder as CreateBuilderType } from './create.js';
-import type { UpsertBuilder as UpsertBuilderType } from './upsert.js';
+import { CreateBuilder } from './create.js';
+import { DeleteBuilder } from './delete.js';
+import { InsertBuilder } from './insert.js';
 import type { LiveQueryBuilder as LiveQueryBuilderType } from './live.js';
+import { LiveQueryBuilder } from './live.js';
+import type { RelateBuilder } from './relate.js';
+import { relate } from './relate.js';
+import { SelectBuilder } from './select.js';
+import { UpdateBuilder } from './update.js';
+import type { UpsertBuilder as UpsertBuilderType } from './upsert.js';
+import { UpsertBuilder } from './upsert.js';
 
 /**
  * Model class that captures a DaliORM instance + TableDefinition

@@ -1,12 +1,15 @@
-import type { TableDefinition } from '../../sdk/table.js';
 import type { ColumnDefinition } from '../../sdk/schema/column/types.js';
-import type { AccessConfig, EventConfig, FunctionConfig } from '../../sdk/schema.js';
-import type { AnalyzerDefinition } from '../../sdk/table.js';
+import type {
+  AccessConfig,
+  EventConfig,
+  FunctionConfig,
+} from '../../sdk/schema.js';
+import type { AnalyzerDefinition, TableDefinition } from '../../sdk/table.js';
 import type {
   SerializedAccess,
+  SerializedAnalyzer,
   SerializedEvent,
   SerializedFunction,
-  SerializedAnalyzer,
 } from '../core/snapshot.js';
 
 /**
@@ -36,24 +39,44 @@ export function getNonTableChanges(
 
   const lastAccessNames = new Set(last.access.map((a) => a.name));
   const currentAccessNames = new Set((current.access ?? []).map((a) => a.name));
-  added += current.access?.filter((a) => a.name && !lastAccessNames.has(a.name)).length ?? 0;
+  added +=
+    current.access?.filter((a) => a.name && !lastAccessNames.has(a.name))
+      .length ?? 0;
   removed += last.access.filter((a) => !currentAccessNames.has(a.name)).length;
 
   const lastEventKeys = new Set(last.events.map((e) => `${e.what}:${e.name}`));
-  const currentEventKeys = new Set((current.events ?? []).map((e) => `${e.on}:${e.name}`));
+  const currentEventKeys = new Set(
+    (current.events ?? []).map((e) => `${e.on}:${e.name}`),
+  );
   added +=
-    current.events?.filter((e) => e.name && !lastEventKeys.has(`${e.on}:${e.name}`)).length ?? 0;
-  removed += last.events.filter((e) => !currentEventKeys.has(`${e.what}:${e.name}`)).length;
+    current.events?.filter(
+      (e) => e.name && !lastEventKeys.has(`${e.on}:${e.name}`),
+    ).length ?? 0;
+  removed += last.events.filter(
+    (e) => !currentEventKeys.has(`${e.what}:${e.name}`),
+  ).length;
 
   const lastFunctionNames = new Set(last.functions.map((f) => f.name));
-  const currentFunctionNames = new Set((current.functions ?? []).map((f) => f.name));
-  added += current.functions?.filter((f) => f.name && !lastFunctionNames.has(f.name)).length ?? 0;
-  removed += last.functions.filter((f) => !currentFunctionNames.has(f.name)).length;
+  const currentFunctionNames = new Set(
+    (current.functions ?? []).map((f) => f.name),
+  );
+  added +=
+    current.functions?.filter((f) => f.name && !lastFunctionNames.has(f.name))
+      .length ?? 0;
+  removed += last.functions.filter(
+    (f) => !currentFunctionNames.has(f.name),
+  ).length;
 
   const lastAnalyzerNames = new Set(last.analyzers.map((a) => a.name));
-  const currentAnalyzerNames = new Set((current.analyzers ?? []).map((a) => a.name));
-  added += current.analyzers?.filter((a) => a.name && !lastAnalyzerNames.has(a.name)).length ?? 0;
-  removed += last.analyzers.filter((a) => !currentAnalyzerNames.has(a.name)).length;
+  const currentAnalyzerNames = new Set(
+    (current.analyzers ?? []).map((a) => a.name),
+  );
+  added +=
+    current.analyzers?.filter((a) => a.name && !lastAnalyzerNames.has(a.name))
+      .length ?? 0;
+  removed += last.analyzers.filter(
+    (a) => !currentAnalyzerNames.has(a.name),
+  ).length;
 
   return { added, removed };
 }
@@ -70,7 +93,10 @@ export function printDiffSummary(
       fields: Array<{ table: string; field: string }>;
       indexes: Array<{ table: string; name: string }>;
     };
-    changed: { tables: Array<{ name: string }>; fields: Array<{ table: string; field: string }> };
+    changed: {
+      tables: Array<{ name: string }>;
+      fields: Array<{ table: string; field: string }>;
+    };
   },
   _currentAccess?: any[],
   _lastAccess?: { name: string }[],
@@ -115,13 +141,19 @@ export function printDiffSummary(
     console.log(`- Tables: ${diff.removed.tables.join(', ')}`);
   }
   if (diff.removed.fields.length > 0) {
-    console.log(`- Fields: ${diff.removed.fields.map((f) => `${f.table}.${f.field}`).join(', ')}`);
+    console.log(
+      `- Fields: ${diff.removed.fields.map((f) => `${f.table}.${f.field}`).join(', ')}`,
+    );
   }
   if (diff.removed.indexes.length > 0) {
-    console.log(`- Indexes: ${diff.removed.indexes.map((i) => `${i.table}.${i.name}`).join(', ')}`);
+    console.log(
+      `- Indexes: ${diff.removed.indexes.map((i) => `${i.table}.${i.name}`).join(', ')}`,
+    );
   }
   if (diff.changed.tables.length > 0) {
-    console.log(`~ Changed tables: ${diff.changed.tables.map((t) => t.name).join(', ')}`);
+    console.log(
+      `~ Changed tables: ${diff.changed.tables.map((t) => t.name).join(', ')}`,
+    );
   }
   if (diff.changed.fields.length > 0) {
     console.log(
@@ -132,7 +164,9 @@ export function printDiffSummary(
     console.log(`+ Analyzers/Access/Events/Functions: ${nonTableAdded} new`);
   }
   if (nonTableRemoved > 0) {
-    console.log(`- Analyzers/Access/Events/Functions: ${nonTableRemoved} removed`);
+    console.log(
+      `- Analyzers/Access/Events/Functions: ${nonTableRemoved} removed`,
+    );
   }
 }
 
@@ -160,13 +194,19 @@ export function detectSection(stmt: string): string {
   if (upper.startsWith('DEFINE VIEW') || upper.startsWith('REMOVE VIEW')) {
     return 'Views';
   }
-  if (upper.startsWith('DEFINE FUNCTION') || upper.startsWith('REMOVE FUNCTION')) {
+  if (
+    upper.startsWith('DEFINE FUNCTION') ||
+    upper.startsWith('REMOVE FUNCTION')
+  ) {
     return 'Functions';
   }
   if (upper.startsWith('DEFINE EVENT') || upper.startsWith('REMOVE EVENT')) {
     return 'Events';
   }
-  if (upper.startsWith('DEFINE ANALYZER') || upper.startsWith('REMOVE ANALYZER')) {
+  if (
+    upper.startsWith('DEFINE ANALYZER') ||
+    upper.startsWith('REMOVE ANALYZER')
+  ) {
     return 'Analyzers';
   }
   return 'Other';

@@ -68,7 +68,9 @@ export function queryMock<T>(result: T) {
 }
 
 /** Creates a mock live subscription with controllable async iterator */
-export function createMockSubscription(yieldedUpdates?: Array<{ action: string; value: unknown }>) {
+export function createMockSubscription(
+  yieldedUpdates?: Array<{ action: string; value: unknown }>,
+) {
   const updates = yieldedUpdates ?? [
     { action: 'CREATE' as const, value: { id: '1', name: 'Alice' } },
   ];
@@ -89,10 +91,12 @@ export function createMockSubscription(yieldedUpdates?: Array<{ action: string; 
     [Symbol.asyncIterator]: asyncIterable[Symbol.asyncIterator],
     isAlive: true,
     kill: vi.fn().mockResolvedValue(undefined),
-    subscribe: vi.fn((cb: (msg: { action: string; value: unknown }) => void) => {
-      cb({ action: 'CREATE', value: { id: '1' } });
-      return () => {};
-    }),
+    subscribe: vi.fn(
+      (cb: (msg: { action: string; value: unknown }) => void) => {
+        cb({ action: 'CREATE', value: { id: '1' } });
+        return () => {};
+      },
+    ),
   };
 }
 
@@ -104,10 +108,12 @@ export function createThrowingSubscription() {
     }),
     isAlive: true,
     kill: vi.fn().mockResolvedValue(undefined),
-    subscribe: vi.fn((cb: (msg: { action: string; value: unknown }) => void) => {
-      cb({ action: 'CREATE', value: { id: '1' } });
-      return () => {};
-    }),
+    subscribe: vi.fn(
+      (cb: (msg: { action: string; value: unknown }) => void) => {
+        cb({ action: 'CREATE', value: { id: '1' } });
+        return () => {};
+      },
+    ),
   };
 }
 
@@ -119,7 +125,10 @@ export class TestDriver extends BaseDriver {
   // @ts-expect-error — mock db, not real Surreal instance
   public db: Record<string, Mock>;
   connected = false;
-  subscriptions = new Map<string, { created: number; liveSubscription?: unknown }>();
+  subscriptions = new Map<
+    string,
+    { created: number; liveSubscription?: unknown }
+  >();
 
   constructor(mockDb: Record<string, Mock>) {
     super();

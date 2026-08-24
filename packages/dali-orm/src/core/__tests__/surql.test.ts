@@ -80,7 +80,9 @@ describe('escapeIdent', () => {
   });
 
   it('escapes backtick + SQL fragment injection', () => {
-    expect(escapeIdent('foo' + '\x60; DROP TABLE user')).toBe('`foo\\`; DROP TABLE user`');
+    expect(escapeIdent('foo' + '\x60; DROP TABLE user')).toBe(
+      '`foo\\`; DROP TABLE user`',
+    );
   });
 
   it('escapes closing backtick injection', () => {
@@ -241,7 +243,9 @@ describe('quoteString', () => {
   });
 
   it('handles injection payload in quoted string', () => {
-    expect(quoteString("'; DROP TABLE user; --")).toBe("'\\'; DROP TABLE user; --'");
+    expect(quoteString("'; DROP TABLE user; --")).toBe(
+      "'\\'; DROP TABLE user; --'",
+    );
   });
 });
 
@@ -275,7 +279,9 @@ describe('raw', () => {
   });
 
   it('handles complex SQL expressions', () => {
-    expect(raw('array::sort(<json>[1, 3, 2])').sql).toBe('array::sort(<json>[1, 3, 2])');
+    expect(raw('array::sort(<json>[1, 3, 2])').sql).toBe(
+      'array::sort(<json>[1, 3, 2])',
+    );
   });
 });
 
@@ -418,7 +424,9 @@ describe('serializeValue', () => {
   });
 
   it('serializes mixed array', () => {
-    expect(serializeValue([1, 'hello', true, null])).toBe("[1, 'hello', true, null]");
+    expect(serializeValue([1, 'hello', true, null])).toBe(
+      "[1, 'hello', true, null]",
+    );
   });
 
   it('serializes nested array', () => {
@@ -431,7 +439,9 @@ describe('serializeValue', () => {
   });
 
   it('serializes array with raw markers', () => {
-    expect(serializeValue([raw('NOW()'), raw('time::now()')])).toBe('[NOW(), time::now()]');
+    expect(serializeValue([raw('NOW()'), raw('time::now()')])).toBe(
+      '[NOW(), time::now()]',
+    );
   });
 
   it('serializes empty object', () => {
@@ -463,7 +473,9 @@ describe('serializeValue', () => {
 
   it('serializes object with Date value', () => {
     const d = new Date('2024-01-01T00:00:00.000Z');
-    expect(serializeValue({ created: d })).toBe("{ created: d'2024-01-01T00:00:00.000Z' }");
+    expect(serializeValue({ created: d })).toBe(
+      "{ created: d'2024-01-01T00:00:00.000Z' }",
+    );
   });
 
   it('serializes array of objects', () => {
@@ -503,7 +515,9 @@ describe('serializeValue', () => {
   });
 
   it('serializes deeply nested object (10 levels)', () => {
-    const obj = { a: { b: { c: { d: { e: { f: { g: { h: { i: { j: 'deep' } } } } } } } } } };
+    const obj = {
+      a: { b: { c: { d: { e: { f: { g: { h: { i: { j: 'deep' } } } } } } } } },
+    };
     const result = serializeValue(obj);
     expect(result).toContain("j: 'deep'");
   });
@@ -557,7 +571,15 @@ describe('formatDefault', () => {
   });
 
   it('produces same output as serializeValue for identical input', () => {
-    const inputs: unknown[] = ['hello', 42, true, null, undefined, raw('NOW()'), [1, 2]];
+    const inputs: unknown[] = [
+      'hello',
+      42,
+      true,
+      null,
+      undefined,
+      raw('NOW()'),
+      [1, 2],
+    ];
     for (const v of inputs) {
       expect(formatDefault(v)).toBe(serializeValue(v));
     }
@@ -599,11 +621,15 @@ describe('surql', () => {
 
   it('interpolates Date as datetime literal', () => {
     const d = new Date('2024-01-01T00:00:00.000Z');
-    expect(surql`created > ${d}`.sql).toBe("created > d'2024-01-01T00:00:00.000Z'");
+    expect(surql`created > ${d}`.sql).toBe(
+      "created > d'2024-01-01T00:00:00.000Z'",
+    );
   });
 
   it('interpolates arrays', () => {
-    expect(surql`tags CONTAINSALL ${['a', 'b']}`.sql).toBe("tags CONTAINSALL ['a', 'b']");
+    expect(surql`tags CONTAINSALL ${['a', 'b']}`.sql).toBe(
+      "tags CONTAINSALL ['a', 'b']",
+    );
   });
 
   it('handles no interpolations', () => {
@@ -619,7 +645,9 @@ describe('surql', () => {
   });
 
   it('handles multiple interpolations', () => {
-    const result = surql`SELECT * FROM ${raw('user')} WHERE name = ${'Alice'} AND age > ${25}`.sql;
+    const result =
+      surql`SELECT * FROM ${raw('user')} WHERE name = ${'Alice'} AND age > ${25}`
+        .sql;
     expect(result).toBe("SELECT * FROM user WHERE name = 'Alice' AND age > 25");
   });
 
@@ -644,31 +672,46 @@ describe('serializePermissionsFragment', () => {
   });
 
   it('serializes select: true as FOR select FULL', () => {
-    expect(serializePermissionsFragment({ select: true })).toBe('FOR select FULL');
+    expect(serializePermissionsFragment({ select: true })).toBe(
+      'FOR select FULL',
+    );
   });
 
   it('serializes select: false as FOR select NONE', () => {
-    expect(serializePermissionsFragment({ select: false })).toBe('FOR select NONE');
+    expect(serializePermissionsFragment({ select: false })).toBe(
+      'FOR select NONE',
+    );
   });
 
   it('serializes select: string as FOR select WHERE expr', () => {
-    expect(serializePermissionsFragment({ select: 'age > 18' })).toBe('FOR select WHERE age > 18');
+    expect(serializePermissionsFragment({ select: 'age > 18' })).toBe(
+      'FOR select WHERE age > 18',
+    );
   });
 
   it('serializes create: true as FOR create FULL', () => {
-    expect(serializePermissionsFragment({ create: true })).toBe('FOR create FULL');
+    expect(serializePermissionsFragment({ create: true })).toBe(
+      'FOR create FULL',
+    );
   });
 
   it('serializes update: true as FOR update FULL', () => {
-    expect(serializePermissionsFragment({ update: true })).toBe('FOR update FULL');
+    expect(serializePermissionsFragment({ update: true })).toBe(
+      'FOR update FULL',
+    );
   });
 
   it('serializes delete: true as FOR delete FULL', () => {
-    expect(serializePermissionsFragment({ delete: true })).toBe('FOR delete FULL');
+    expect(serializePermissionsFragment({ delete: true })).toBe(
+      'FOR delete FULL',
+    );
   });
 
   it('joins multiple ops with spaces (not commas)', () => {
-    const result = serializePermissionsFragment({ select: true, delete: false });
+    const result = serializePermissionsFragment({
+      select: true,
+      delete: false,
+    });
     expect(result).toBe('FOR select FULL FOR delete NONE');
   });
 
@@ -685,7 +728,10 @@ describe('serializePermissionsFragment', () => {
   });
 
   it('omits undefined keys from output', () => {
-    const result = serializePermissionsFragment({ select: true, create: undefined });
+    const result = serializePermissionsFragment({
+      select: true,
+      create: undefined,
+    });
     expect(result).toBe('FOR select FULL');
   });
 
@@ -694,7 +740,9 @@ describe('serializePermissionsFragment', () => {
       select: 'id = $auth.id',
       update: 'created_by = $auth.id',
     });
-    expect(result).toBe('FOR select WHERE id = $auth.id FOR update WHERE created_by = $auth.id');
+    expect(result).toBe(
+      'FOR select WHERE id = $auth.id FOR update WHERE created_by = $auth.id',
+    );
   });
 
   it('handles combination of FULL and WHERE', () => {

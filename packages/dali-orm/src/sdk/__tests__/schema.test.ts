@@ -4,15 +4,15 @@ import {
   type AccessConfig,
   AccessConfigSchema,
   accessToSQL,
+  defineDatabase,
+  defineNamespace,
+  defineSequence,
   type EventConfig,
   EventConfigSchema,
   eventToSQL,
   type FunctionConfig,
   FunctionConfigSchema,
   functionToSQL,
-  defineNamespace,
-  defineDatabase,
-  defineSequence,
   generateSigninFromSQL,
   generateSignupFromSQL,
   generateSignupFromTable,
@@ -23,7 +23,10 @@ import type { ColumnDefinition, TableDefinition } from '../table.js';
 // Helpers
 // =============================================================================
 
-function createColumn(name: string, overrides: Partial<ColumnDefinition> = {}): ColumnDefinition {
+function createColumn(
+  name: string,
+  overrides: Partial<ColumnDefinition> = {},
+): ColumnDefinition {
   return {
     name,
     config: {
@@ -35,7 +38,10 @@ function createColumn(name: string, overrides: Partial<ColumnDefinition> = {}): 
   };
 }
 
-function createTable(name: string, columns: ColumnDefinition[]): TableDefinition {
+function createTable(
+  name: string,
+  columns: ColumnDefinition[],
+): TableDefinition {
   return {
     name,
     columns,
@@ -127,7 +133,9 @@ describe('accessToSQL', () => {
       },
       { user: table },
     );
-    expect(sql).toContain('SIGNUP (CREATE user SET email = $email, name = $name)');
+    expect(sql).toContain(
+      'SIGNUP (CREATE user SET email = $email, name = $name)',
+    );
   });
 
   it('includes DURATION with both FOR TOKEN and FOR SESSION', () => {
@@ -161,7 +169,9 @@ describe('accessToSQL', () => {
   });
 
   it('throws on null config', () => {
-    expect(() => accessToSQL(null as unknown as AccessConfig)).toThrow('AccessConfig is required');
+    expect(() => accessToSQL(null as unknown as AccessConfig)).toThrow(
+      'AccessConfig is required',
+    );
   });
 
   it('throws on undefined config', () => {
@@ -178,7 +188,9 @@ describe('accessToSQL', () => {
 describe('functionToSQL', () => {
   it('generates basic function without args', () => {
     const sql = functionToSQL({ name: 'fn::hello', body: 'RETURN "hello"' });
-    expect(sql).toBe('DEFINE FUNCTION IF NOT EXISTS fn::hello { RETURN "hello" }');
+    expect(sql).toBe(
+      'DEFINE FUNCTION IF NOT EXISTS fn::hello { RETURN "hello" }',
+    );
   });
 
   it('generates function with arguments', () => {
@@ -243,9 +255,15 @@ describe('functionToSQL', () => {
   });
 
   it('handles empty args array', () => {
-    const sql = functionToSQL({ name: 'fn::noargs', args: [], body: 'RETURN true' });
+    const sql = functionToSQL({
+      name: 'fn::noargs',
+      args: [],
+      body: 'RETURN true',
+    });
     expect(sql).not.toContain('()');
-    expect(sql).toBe('DEFINE FUNCTION IF NOT EXISTS fn::noargs { RETURN true }');
+    expect(sql).toBe(
+      'DEFINE FUNCTION IF NOT EXISTS fn::noargs { RETURN true }',
+    );
   });
 });
 
@@ -272,7 +290,10 @@ describe('eventToSQL', () => {
       name: 'multi_then',
       on: 'order',
       when: '$before.status != $after.status',
-      then: ['CREATE audit SET action = "status_change"', 'UPDATE stats SET count += 1'],
+      then: [
+        'CREATE audit SET action = "status_change"',
+        'UPDATE stats SET count += 1',
+      ],
     });
     expect(sql).toContain('CREATE audit SET action = "status_change"');
     expect(sql).toContain('UPDATE stats SET count += 1');
@@ -334,7 +355,9 @@ describe('eventToSQL', () => {
       retry: 3,
       maxdepth: 10,
     });
-    expect(sql).toContain('DEFINE EVENT IF NOT EXISTS full_event ON TABLE user');
+    expect(sql).toContain(
+      'DEFINE EVENT IF NOT EXISTS full_event ON TABLE user',
+    );
     expect(sql).toContain('WHEN ($before.email != $after.email)');
     expect(sql).toContain('THEN { CREATE audit SET action = "email_change" }');
     expect(sql).toContain('COMMENT "Tracks email changes"');
@@ -344,31 +367,48 @@ describe('eventToSQL', () => {
   });
 
   it('throws on null config', () => {
-    expect(() => eventToSQL(null as unknown as EventConfig)).toThrow('EventConfig is required');
+    expect(() => eventToSQL(null as unknown as EventConfig)).toThrow(
+      'EventConfig is required',
+    );
   });
 
   it('throws on empty name', () => {
     expect(() =>
-      eventToSQL({ name: '', on: 'user', when: 'true', then: ['CREATE log SET msg = "x"'] }),
+      eventToSQL({
+        name: '',
+        on: 'user',
+        when: 'true',
+        then: ['CREATE log SET msg = "x"'],
+      }),
     ).toThrow('Event name is required');
   });
 
   it('throws on empty on (table)', () => {
     expect(() =>
-      eventToSQL({ name: 'evt', on: '', when: 'true', then: ['CREATE log SET msg = "x"'] }),
+      eventToSQL({
+        name: 'evt',
+        on: '',
+        when: 'true',
+        then: ['CREATE log SET msg = "x"'],
+      }),
     ).toThrow('Event table (on) is required');
   });
 
   it('throws on empty when', () => {
     expect(() =>
-      eventToSQL({ name: 'evt', on: 'user', when: '', then: ['CREATE log SET msg = "x"'] }),
+      eventToSQL({
+        name: 'evt',
+        on: 'user',
+        when: '',
+        then: ['CREATE log SET msg = "x"'],
+      }),
     ).toThrow('Event condition (when) is required');
   });
 
   it('throws on empty then', () => {
-    expect(() => eventToSQL({ name: 'evt', on: 'user', when: 'true', then: [] })).toThrow(
-      'Event action (then) is required',
-    );
+    expect(() =>
+      eventToSQL({ name: 'evt', on: 'user', when: 'true', then: [] }),
+    ).toThrow('Event action (then) is required');
   });
 });
 
@@ -390,14 +430,20 @@ describe('generateSignupFromTable', () => {
   });
 
   it('filters out id column', () => {
-    const table = createTable('user', [createColumn('id'), createColumn('email')]);
+    const table = createTable('user', [
+      createColumn('id'),
+      createColumn('email'),
+    ]);
     const result = generateSignupFromTable(table);
     expect(result).not.toContain('id');
     expect(result).toContain('email = $email');
   });
 
   it('filters out created_at column', () => {
-    const table = createTable('user', [createColumn('email'), createColumn('created_at')]);
+    const table = createTable('user', [
+      createColumn('email'),
+      createColumn('created_at'),
+    ]);
     const result = generateSignupFromTable(table);
     expect(result).not.toContain('created_at');
     expect(result).toContain('email = $email');
@@ -421,9 +467,9 @@ describe('generateSignupFromTable', () => {
   });
 
   it('throws on null table', () => {
-    expect(() => generateSignupFromTable(null as unknown as TableDefinition)).toThrow(
-      'Table definition is required',
-    );
+    expect(() =>
+      generateSignupFromTable(null as unknown as TableDefinition),
+    ).toThrow('Table definition is required');
   });
 });
 
@@ -433,7 +479,10 @@ describe('generateSignupFromTable', () => {
 
 describe('generateSignupFromSQL', () => {
   it('generates CREATE SQL from table definition', () => {
-    const table = createTable('user', [createColumn('email'), createColumn('password')]);
+    const table = createTable('user', [
+      createColumn('email'),
+      createColumn('password'),
+    ]);
     const sql = generateSignupFromSQL('user', table);
     expect(sql).toBe(
       'CREATE user SET email = $email, password = crypto::argon2::generate($password)',
@@ -460,7 +509,10 @@ describe('generateSignupFromSQL', () => {
 
 describe('generateSigninFromSQL', () => {
   it('uses inferred identifier (email) from table columns', () => {
-    const table = createTable('user', [createColumn('email'), createColumn('password')]);
+    const table = createTable('user', [
+      createColumn('email'),
+      createColumn('password'),
+    ]);
     const sql = generateSigninFromSQL('user', table);
     expect(sql).toBe(
       'SELECT * FROM user WHERE email = $email AND crypto::argon2::compare(password, $password)',
@@ -468,7 +520,10 @@ describe('generateSigninFromSQL', () => {
   });
 
   it('uses explicit identifier when provided', () => {
-    const table = createTable('user', [createColumn('username'), createColumn('password')]);
+    const table = createTable('user', [
+      createColumn('username'),
+      createColumn('password'),
+    ]);
     const sql = generateSigninFromSQL('user', table, 'username');
     expect(sql).toBe(
       'SELECT * FROM user WHERE username = $username AND crypto::argon2::compare(password, $password)',
@@ -476,22 +531,28 @@ describe('generateSigninFromSQL', () => {
   });
 
   it('prefers explicit identifier over inferred', () => {
-    const table = createTable('user', [createColumn('email'), createColumn('password')]);
+    const table = createTable('user', [
+      createColumn('email'),
+      createColumn('password'),
+    ]);
     const sql = generateSigninFromSQL('user', table, 'phone');
     expect(sql).toContain('phone = $phone');
     expect(sql).not.toContain('email = $email');
   });
 
   it('falls back to first column when no identifier column found', () => {
-    const table = createTable('user', [createColumn('login'), createColumn('password')]);
+    const table = createTable('user', [
+      createColumn('login'),
+      createColumn('password'),
+    ]);
     const sql = generateSigninFromSQL('user', table);
     expect(sql).toContain('login = $login');
   });
 
   it('throws on null table', () => {
-    expect(() => generateSigninFromSQL('user', null as unknown as TableDefinition)).toThrow(
-      'Table definition is required',
-    );
+    expect(() =>
+      generateSigninFromSQL('user', null as unknown as TableDefinition),
+    ).toThrow('Table definition is required');
   });
 
   it('falls back to "identifier" when columns array is empty', () => {
@@ -507,7 +568,10 @@ describe('generateSigninFromSQL', () => {
 
 describe('AccessConfigSchema validation', () => {
   it('accepts minimal valid config', () => {
-    const result = safeParse(AccessConfigSchema, { name: 'test', type: 'RECORD' });
+    const result = safeParse(AccessConfigSchema, {
+      name: 'test',
+      type: 'RECORD',
+    });
     expect(result.success).toBe(true);
   });
 
@@ -528,7 +592,10 @@ describe('AccessConfigSchema validation', () => {
   });
 
   it('rejects invalid type', () => {
-    const result = safeParse(AccessConfigSchema, { name: 'test', type: 'INVALID' });
+    const result = safeParse(AccessConfigSchema, {
+      name: 'test',
+      type: 'INVALID',
+    });
     expect(result.success).toBe(false);
   });
 
@@ -664,13 +731,23 @@ describe('defineNamespace builder', () => {
   });
 
   it('chains all options together', () => {
-    const sql = defineNamespace('test').ifNotExists().comment('Test env').toSQL();
+    const sql = defineNamespace('test')
+      .ifNotExists()
+      .comment('Test env')
+      .toSQL();
     expect(sql).toBe('DEFINE NAMESPACE IF NOT EXISTS test COMMENT "Test env"');
   });
 
   it('returns config via build()', () => {
-    const config = defineNamespace('prod').comment('Prod').ifNotExists().build();
-    expect(config).toEqual({ name: 'prod', comment: 'Prod', ifNotExists: true });
+    const config = defineNamespace('prod')
+      .comment('Prod')
+      .ifNotExists()
+      .build();
+    expect(config).toEqual({
+      name: 'prod',
+      comment: 'Prod',
+      ifNotExists: true,
+    });
   });
 
   it('build() without options returns minimal config', () => {
@@ -715,8 +792,15 @@ describe('defineDatabase', () => {
   });
 
   it('build() returns config object', () => {
-    const config = defineDatabase('mydb').comment('My DB').ifNotExists().build();
-    expect(config).toEqual({ name: 'mydb', comment: 'My DB', ifNotExists: true });
+    const config = defineDatabase('mydb')
+      .comment('My DB')
+      .ifNotExists()
+      .build();
+    expect(config).toEqual({
+      name: 'mydb',
+      comment: 'My DB',
+      ifNotExists: true,
+    });
   });
 
   it('build() without options returns minimal config', () => {
@@ -734,7 +818,9 @@ describe('defineSequence', () => {
   });
 
   it('toSQL() returns basic DEFINE SEQUENCE', () => {
-    expect(defineSequence('my_seq').toSQL()).toBe('DEFINE SEQUENCE IF NOT EXISTS my_seq');
+    expect(defineSequence('my_seq').toSQL()).toBe(
+      'DEFINE SEQUENCE IF NOT EXISTS my_seq',
+    );
   });
 
   it('toSQL() with start and increment', () => {
@@ -778,7 +864,11 @@ describe('defineSequence', () => {
   });
 
   it('build() returns config object', () => {
-    const config = defineSequence('my_seq').start(1).increment(2).cycle().build();
+    const config = defineSequence('my_seq')
+      .start(1)
+      .increment(2)
+      .cycle()
+      .build();
     expect(config).toEqual({
       name: 'my_seq',
       start: 1,

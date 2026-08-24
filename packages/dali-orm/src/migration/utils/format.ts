@@ -12,7 +12,11 @@ import { isRaw, quoteString } from '../../core/surql.js';
  */
 export function isNowVariant(value: string): boolean {
   const normalized = value.trim().toLowerCase();
-  return normalized === 'now' || normalized === 'now()' || normalized === 'time::now()';
+  return (
+    normalized === 'now' ||
+    normalized === 'now()' ||
+    normalized === 'time::now()'
+  );
 }
 
 /**
@@ -87,6 +91,8 @@ export function validateChangefeed(value: string | undefined): void {
   // Pattern: number + unit (s, m, h, d, w)
   const pattern = /^\d+[smhdw]+$/;
   if (!pattern.test(value)) {
-    throw new Error(`Invalid changefeed duration: '${value}'. Expected format: '7d', '24h', '1w'`);
+    throw new Error(
+      `Invalid changefeed duration: '${value}'. Expected format: '7d', '24h', '1w'`,
+    );
   }
 }
