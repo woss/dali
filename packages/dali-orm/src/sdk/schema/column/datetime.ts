@@ -1,5 +1,5 @@
-import { BaseColumnBuilder } from './base.js';
 import { quoteString } from '../../../core/surql.ts';
+import { BaseColumnBuilder } from './base.js';
 
 export class DatetimeColumnBuilder extends BaseColumnBuilder<DatetimeColumnBuilder> {
   constructor(name: string) {

@@ -206,14 +206,20 @@ describe('validateChangefeed', () => {
   });
 
   it('throws for "abc"', () => {
-    expect(() => validateChangefeed('abc')).toThrow(/invalid changefeed duration/i);
+    expect(() => validateChangefeed('abc')).toThrow(
+      /invalid changefeed duration/i,
+    );
   });
 
   it('throws for "5" (no unit)', () => {
-    expect(() => validateChangefeed('5')).toThrow(/invalid changefeed duration/i);
+    expect(() => validateChangefeed('5')).toThrow(
+      /invalid changefeed duration/i,
+    );
   });
 
   it('rejects compound durations like "1h30m" (single unit only)', () => {
-    expect(() => validateChangefeed('1h30m')).toThrow(/invalid changefeed duration/i);
+    expect(() => validateChangefeed('1h30m')).toThrow(
+      /invalid changefeed duration/i,
+    );
   });
 });

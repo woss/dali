@@ -1,4 +1,8 @@
-import type { ColumnConfig, ColumnDefinition, SurrealColumnType } from './types.js';
+import type {
+  ColumnConfig,
+  ColumnDefinition,
+  SurrealColumnType,
+} from './types.js';
 
 export type Builder<TType extends SurrealColumnType> = {
   readonly name: string;
@@ -28,8 +32,13 @@ export function createBuilder<const TType extends SurrealColumnType>(
     get name() {
       return name;
     },
-    build(tableName?: string, _columnName?: string): ColumnDefinition & { config: ConfigT } {
-      return { name, config: { ...config }, tableName } as ColumnDefinition & { config: ConfigT };
+    build(
+      tableName?: string,
+      _columnName?: string,
+    ): ColumnDefinition & { config: ConfigT } {
+      return { name, config: { ...config }, tableName } as ColumnDefinition & {
+        config: ConfigT;
+      };
     },
     optional(): Builder<TType> {
       config = { ...config, optional: true } as ConfigT;

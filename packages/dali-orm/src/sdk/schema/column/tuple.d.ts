@@ -11,28 +11,32 @@ import type { ElementConfig, SurrealColumnType } from './types.js';
  * ])
  */
 export declare class TupleColumnBuilder extends BaseColumnBuilder<TupleColumnBuilder> {
-    private _elements;
-    constructor(name: string, size: number);
-    /** Formats the default value as JSON string. */
-    protected formatDefault(value: unknown): string;
-    /**
-     * Configure all tuple elements at once
-     */
-    elements(elementConfigs: ElementConfig[]): TupleColumnBuilder;
-    /**
-     * Configure a single element at the given index
-     */
-    element(index: number, type: SurrealColumnType, assert?: string): TupleColumnBuilder;
-    /**
-     * Set an array-level assertion that must hold for all elements.
-     * The expression is checked against each element using the $value variable.
-     *
-     * @example
-     * // Assert all elements are bytes in range 0-255
-     * tuple('data', 640).assertAll('$value IN 0..=255')
-     */
-    assertAll(expression: string): TupleColumnBuilder;
-    build(tableName?: string): import("./types.js").ColumnDefinition;
+  private _elements;
+  constructor(name: string, size: number);
+  /** Formats the default value as JSON string. */
+  protected formatDefault(value: unknown): string;
+  /**
+   * Configure all tuple elements at once
+   */
+  elements(elementConfigs: ElementConfig[]): TupleColumnBuilder;
+  /**
+   * Configure a single element at the given index
+   */
+  element(
+    index: number,
+    type: SurrealColumnType,
+    assert?: string,
+  ): TupleColumnBuilder;
+  /**
+   * Set an array-level assertion that must hold for all elements.
+   * The expression is checked against each element using the $value variable.
+   *
+   * @example
+   * // Assert all elements are bytes in range 0-255
+   * tuple('data', 640).assertAll('$value IN 0..=255')
+   */
+  assertAll(expression: string): TupleColumnBuilder;
+  build(tableName?: string): import('./types.js').ColumnDefinition;
 }
 /**
  * Create a fixed-size tuple array column

@@ -1,22 +1,22 @@
+import type { DaliORM } from '../../sdk/dali-orm.js';
+import type { EmbeddedDriver } from '../../sdk/driver/embedded-driver.js';
 import {
   afterEach,
   beforeEach,
+  bindTable,
+  createTestDriver,
+  defineTables,
   describe,
   expect,
+  graphPath,
   it,
-  createTestDriver,
-  wrote,
+  relate,
   review,
+  wrote,
+  wroteMultiBoth,
   wroteMultiIn,
   wroteMultiOut,
-  wroteMultiBoth,
-  defineTables,
-  relate,
-  graphPath,
-  bindTable,
 } from './test-utils.js';
-import type { EmbeddedDriver } from '../../sdk/driver/embedded-driver.js';
-import type { DaliORM } from '../../sdk/dali-orm.js';
 
 let driver: EmbeddedDriver;
 let orm: DaliORM;
@@ -41,7 +41,10 @@ describe('RelateBuilder', () => {
     await driver.query("CREATE user:alice SET name = 'Alice'");
     await driver.query("CREATE post:1 SET title = 'Post 1'");
 
-    const results = await relate(orm, wrote).from('user:alice').to('post:1').execute();
+    const results = await relate(orm, wrote)
+      .from('user:alice')
+      .to('post:1')
+      .execute();
 
     expect(results).toHaveLength(1);
     const edge = results[0] as Record<string, unknown>;
@@ -72,9 +75,9 @@ describe('RelateBuilder', () => {
   });
 
   it('relate throws without to', async () => {
-    await expect(relate(orm, wrote).from('user:alice').execute()).rejects.toThrow(
-      'Target record is required',
-    );
+    await expect(
+      relate(orm, wrote).from('user:alice').execute(),
+    ).rejects.toThrow('Target record is required');
   });
 });
 
@@ -163,9 +166,9 @@ describe('Typed RelateBuilder', () => {
   });
 
   it('relate throws without to', async () => {
-    await expect(relate(orm, review).from('user:alice').execute()).rejects.toThrow(
-      'Target record is required',
-    );
+    await expect(
+      relate(orm, review).from('user:alice').execute(),
+    ).rejects.toThrow('Target record is required');
   });
 });
 
@@ -244,7 +247,9 @@ describe('GraphPath', () => {
   });
 
   it('graphPath depth validates min >= 0', () => {
-    expect(() => graphPath().out('wrote').depth(-1).to('post')).toThrow('Depth min must be >= 0');
+    expect(() => graphPath().out('wrote').depth(-1).to('post')).toThrow(
+      'Depth min must be >= 0',
+    );
   });
 
   it('graphPath depth validates max >= min', () => {
@@ -289,7 +294,9 @@ describe('Multi IN/OUT Relation Tables', () => {
     // Verify the tables were created in the helper (already called in beforeEach)
     const result = await driver.query('INFO FOR DB');
     const dbInfo = Array.isArray(result) ? result[0] : result;
-    const tables = Object.keys((dbInfo as Record<string, unknown>)?.tables ?? {});
+    const tables = Object.keys(
+      (dbInfo as Record<string, unknown>)?.tables ?? {},
+    );
     expect(tables).toContain('wrote_multi_in');
     expect(tables).toContain('wrote_multi_out');
     expect(tables).toContain('wrote_multi_both');
@@ -302,7 +309,10 @@ describe('Multi IN/OUT Relation Tables', () => {
     await driver.query("CREATE post:hello SET title = 'Hello'");
 
     // Relate from user to post (single in, single out — still works)
-    const result = await relate(orm, wrote).from('user:alice').to('post:hello').execute();
+    const result = await relate(orm, wrote)
+      .from('user:alice')
+      .to('post:hello')
+      .execute();
 
     expect(result).toHaveLength(1);
   });

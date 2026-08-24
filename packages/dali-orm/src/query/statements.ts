@@ -6,8 +6,8 @@
  * Some wrap driver methods, others build raw SQL strings.
  */
 
-import type { SurrealDriver } from '../sdk/driver/types.js';
 import type { DaliORM } from '../sdk/dali-orm.js';
+import type { SurrealDriver } from '../sdk/driver/types.js';
 
 // ============================================================================
 // Types
@@ -370,7 +370,9 @@ export class ReturnBuilder {
     if (this.rawExpr !== undefined) {
       return this.driver.query<unknown>(`RETURN ${this.rawExpr}`, {});
     }
-    throw new Error('Value or raw expression is required — use .value() or .raw()');
+    throw new Error(
+      'Value or raw expression is required — use .value() or .raw()',
+    );
   }
 }
 
@@ -414,7 +416,9 @@ export class ThrowBuilder {
     if (this.rawExpr !== undefined) {
       return this.driver.query<unknown>(`THROW ${this.rawExpr}`, {});
     }
-    throw new Error('Message or raw expression is required — use .message() or .raw()');
+    throw new Error(
+      'Message or raw expression is required — use .message() or .raw()',
+    );
   }
 }
 

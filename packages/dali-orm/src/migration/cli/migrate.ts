@@ -1,14 +1,18 @@
 import type { SurrealDriver } from '../../sdk/driver/types.js';
+import type { Config } from '../config.js';
+import { MigrationRunner } from '../core/runner.js';
+import {
+  connectToShadow,
+  destroyShadow,
+  validateWithShadow,
+} from '../core/shadow.js';
+import { generateMigration, loadSchemaFiles } from './generate.js';
 import {
   createConnection,
   createConnectionWithTimeout,
   formatError,
   safeDisconnect,
 } from './operations.js';
-import type { Config } from '../config.js';
-import { MigrationRunner } from '../core/runner.js';
-import { connectToShadow, destroyShadow, validateWithShadow } from '../core/shadow.js';
-import { generateMigration, loadSchemaFiles } from './generate.js';
 
 export interface MigrateOptions {
   to?: string; // Target version
@@ -22,7 +26,10 @@ export interface MigrateOptions {
 /**
  * Run pending migrations
  */
-export async function migrateUp(options: MigrateOptions, driver?: SurrealDriver): Promise<void> {
+export async function migrateUp(
+  options: MigrateOptions,
+  driver?: SurrealDriver,
+): Promise<void> {
   const { config, embeddedDriver } = options;
 
   let ownsDriver = false;
@@ -80,14 +87,18 @@ export async function migrateUp(options: MigrateOptions, driver?: SurrealDriver)
 
     // Apply pending migrations
     if (status.pending.length > 0) {
-      console.log(`\n  Applying ${status.pending.length} pending migration(s)...`);
+      console.log(
+        `\n  Applying ${status.pending.length} pending migration(s)...`,
+      );
       const result = await runner.up(options.to);
       console.log(`\n  ✔ Applied ${result.applied.length} migration(s):`);
       for (const name of result.applied) {
         console.log(`    ✓ ${name}`);
       }
       if (result.skipped.length > 0) {
-        console.log(`\n  ○ Skipped ${result.skipped.length} migration(s) (beyond target)`);
+        console.log(
+          `\n  ○ Skipped ${result.skipped.length} migration(s) (beyond target)`,
+        );
       }
     } else {
       console.log('\n  No pending migrations to apply.');
@@ -231,7 +242,9 @@ export async function getMigrationProgressString(
 /**
  * Handle resume with progress display
  */
-export async function handleResumeWithProgress(runner: MigrationRunner): Promise<void> {
+export async function handleResumeWithProgress(
+  runner: MigrationRunner,
+): Promise<void> {
   const progressList = await runner.getPartialMigrationsProgress();
 
   for (const progress of progressList) {
@@ -239,14 +252,18 @@ export async function handleResumeWithProgress(runner: MigrationRunner): Promise
     const migration = migrationFiles.find((f) => f.name === progress.name);
 
     if (!migration) {
-      console.log(`Warning: Migration file not found for ${progress.name}, skipping.`);
+      console.log(
+        `Warning: Migration file not found for ${progress.name}, skipping.`,
+      );
       continue;
     }
 
     const startFrom = progress.appliedStatements + 1;
     const total = progress.totalStatements;
 
-    console.log(`\nResuming migration ${progress.name} from statement ${startFrom}/${total}`);
+    console.log(
+      `\nResuming migration ${progress.name} from statement ${startFrom}/${total}`,
+    );
 
     // Resume the migration
     await runner.resume(migration);
@@ -334,7 +351,9 @@ export async function migrateDev(
 
   // 3. No new changes — still apply pending migrations
   if (!outputPath) {
-    console.log('No new schema changes detected. Applying pending migrations...');
+    console.log(
+      'No new schema changes detected. Applying pending migrations...',
+    );
   } else {
     console.log(`Migration generated: ${outputPath}`);
   }
@@ -342,7 +361,9 @@ export async function migrateDev(
   // 4. Shadow validation (optional — skip if no shadow config)
   const shadow = config.shadow;
   if (shadow) {
-    console.log(`Validating on shadow (${shadow.namespace}/${shadow.database})...`);
+    console.log(
+      `Validating on shadow (${shadow.namespace}/${shadow.database})...`,
+    );
     const shadowDriver = await connectToShadow(config, shadow);
     try {
       // Destroy any leftover shadow state from previous runs
@@ -369,7 +390,9 @@ export async function migrateDev(
         for (const err of result.errors) {
           console.error(`   Error: ${err}`);
         }
-        throw new Error('Shadow validation failed — target DB was not modified.');
+        throw new Error(
+          'Shadow validation failed — target DB was not modified.',
+        );
       }
 
       console.log(
@@ -457,7 +480,9 @@ export async function migrateDeploy(
       throw new Error('Shadow validation failed — target DB was not modified.');
     }
 
-    console.log(`✓ Shadow validation passed (${result.appliedCount} migrations applied on shadow)`);
+    console.log(
+      `✓ Shadow validation passed (${result.appliedCount} migrations applied on shadow)`,
+    );
   } finally {
     await destroyShadow(validateDriver, shadow);
     await safeDisconnect(validateDriver);

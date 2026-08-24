@@ -64,7 +64,9 @@ export type TableBinding<TDef extends TableDefinition> = TDef & {
  * @param tableDef - The table definition to enhance
  * @returns A new object typed with builder methods
  */
-export function bindTable<TDef extends TableDefinition>(tableDef: TDef): TableBinding<TDef> {
+export function bindTable<TDef extends TableDefinition>(
+  tableDef: TDef,
+): TableBinding<TDef> {
   return {
     ...tableDef,
     select: (orm: DaliORM) => new SelectBuilder(orm, tableDef),

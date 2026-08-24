@@ -12,6 +12,8 @@
  */
 
 import { describe, expect, it } from 'vitest';
+// Direct runtime import of DaliORM class
+import { DaliORM } from '../../sdk/dali-orm.js';
 import type { SurrealDriver } from '../../sdk/driver/types.js';
 import { string } from '../../sdk/schema/column/index.js';
 import { defineTable } from '../../sdk/table.js';
@@ -24,8 +26,6 @@ import { RelateBuilder, relate } from '../relate.js';
 import { SelectBuilder, select } from '../select.js';
 import { UpdateBuilder, update } from '../update.js';
 import { UpsertBuilder, upsert } from '../upsert.js';
-// Direct runtime import of DaliORM class
-import { DaliORM } from '../../sdk/dali-orm.js';
 
 // ============================================================================
 // Mocks
@@ -55,7 +55,9 @@ function createMockDriver() {
         isAlive: true,
         kill: async () => {},
         subscribe: () => () => {},
-        [Symbol.asyncIterator]: () => ({ next: async () => ({ done: true, value: undefined }) }),
+        [Symbol.asyncIterator]: () => ({
+          next: async () => ({ done: true, value: undefined }),
+        }),
       };
     },
     kill: async () => {},
@@ -267,7 +269,9 @@ describe('builders call getDriver() and execute through it', () => {
 
 describe('passing null/undefined throws', () => {
   it('SelectBuilder throws on null', () => {
-    expect(() => new (SelectBuilder as any)(null, users)).toThrow('DaliORM instance is required');
+    expect(() => new (SelectBuilder as any)(null, users)).toThrow(
+      'DaliORM instance is required',
+    );
   });
 
   it('SelectBuilder throws on undefined', () => {
@@ -277,27 +281,39 @@ describe('passing null/undefined throws', () => {
   });
 
   it('InsertBuilder throws on null', () => {
-    expect(() => new (InsertBuilder as any)(null, users)).toThrow('DaliORM instance is required');
+    expect(() => new (InsertBuilder as any)(null, users)).toThrow(
+      'DaliORM instance is required',
+    );
   });
 
   it('UpdateBuilder throws on null', () => {
-    expect(() => new (UpdateBuilder as any)(null, users)).toThrow('DaliORM instance is required');
+    expect(() => new (UpdateBuilder as any)(null, users)).toThrow(
+      'DaliORM instance is required',
+    );
   });
 
   it('DeleteBuilder throws on null', () => {
-    expect(() => new (DeleteBuilder as any)(null, users)).toThrow('DaliORM instance is required');
+    expect(() => new (DeleteBuilder as any)(null, users)).toThrow(
+      'DaliORM instance is required',
+    );
   });
 
   it('CreateBuilder throws on null', () => {
-    expect(() => new (CreateBuilder as any)(null, users)).toThrow('DaliORM instance is required');
+    expect(() => new (CreateBuilder as any)(null, users)).toThrow(
+      'DaliORM instance is required',
+    );
   });
 
   it('UpsertBuilder throws on null', () => {
-    expect(() => new (UpsertBuilder as any)(null, users)).toThrow('DaliORM instance is required');
+    expect(() => new (UpsertBuilder as any)(null, users)).toThrow(
+      'DaliORM instance is required',
+    );
   });
 
   it('RelateBuilder throws on null', () => {
-    expect(() => new (RelateBuilder as any)(null, users)).toThrow('DaliORM instance is required');
+    expect(() => new (RelateBuilder as any)(null, users)).toThrow(
+      'DaliORM instance is required',
+    );
   });
 
   it('LiveQueryBuilder throws on null', () => {

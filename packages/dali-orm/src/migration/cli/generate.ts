@@ -2,12 +2,23 @@ import * as fs from 'node:fs/promises';
 import { readdir } from 'node:fs/promises';
 import * as path from 'node:path';
 import { createDebug as debug } from 'obug';
-import type { SurrealDriver } from '../../sdk/driver/types.js';
-import type { ColumnConfig, ColumnDefinition } from '../../sdk/schema/column/types.js';
-import type { AccessConfig, EventConfig, FunctionConfig } from '../../sdk/schema.js';
-import { accessToSQL, eventToSQL, functionToSQL } from '../../sdk/schema.js';
 import { escapeIdent } from '../../core/surql.ts';
-import type { AnalyzerDefinition, IndexDefinition, TableDefinition } from '../../sdk/table.js';
+import type { SurrealDriver } from '../../sdk/driver/types.js';
+import type {
+  ColumnConfig,
+  ColumnDefinition,
+} from '../../sdk/schema/column/types.js';
+import type {
+  AccessConfig,
+  EventConfig,
+  FunctionConfig,
+} from '../../sdk/schema.js';
+import { accessToSQL, eventToSQL, functionToSQL } from '../../sdk/schema.js';
+import type {
+  AnalyzerDefinition,
+  IndexDefinition,
+  TableDefinition,
+} from '../../sdk/table.js';
 import { SchemaDiffer } from '../core/diff.js';
 import { serializeColumnPermissions } from '../core/format-utils.js';
 import { SurrealQLGenerator } from '../core/generator.js';
@@ -21,23 +32,30 @@ import type {
 import { SnapshotManager } from '../core/snapshot.js';
 import { introspectAccess, introspectTable } from '../ddl/introspect.js';
 import { computeMigrationHash } from '../ddl/journal.js';
-import { getNonTableChanges, printDiffSummary, addSectionSeparators } from './diff-summary.js';
-
-export { serializeColumnPermissions, normalizeSql } from '../core/format-utils.js';
-export {
-  type NonTableChangeCounts,
+import {
+  addSectionSeparators,
   getNonTableChanges,
   printDiffSummary,
-  detectSection,
+} from './diff-summary.js';
+
+export {
+  normalizeSql,
+  serializeColumnPermissions,
+} from '../core/format-utils.js';
+export {
   addSectionSeparators,
+  detectSection,
+  getNonTableChanges,
+  type NonTableChangeCounts,
+  printDiffSummary,
 } from './diff-summary.js';
 export {
-  type SchemaFilesResult,
-  loadSchemaFiles,
-  loadSchemaFromFile,
   findMatchingFiles,
   isTableDefinition,
+  loadSchemaFiles,
+  loadSchemaFromFile,
   normalizeTableDefinition,
+  type SchemaFilesResult,
 } from './schema-loader.js';
 
 const log = debug('dali-orm:kit:generate');
@@ -69,7 +87,9 @@ export interface CoLocatedSnapshot {
  * Find the most recent co-located snapshot in migration directories
  * Scans outputDir for {timestamp}_{name}/snapshot.json files
  */
-async function findCoLocatedSnapshot(outputDir: string): Promise<CoLocatedSnapshot | undefined> {
+async function findCoLocatedSnapshot(
+  outputDir: string,
+): Promise<CoLocatedSnapshot | undefined> {
   try {
     const entries = await readdir(outputDir);
     // Filter directories with migration pattern: {timestamp}_{name}
@@ -85,7 +105,9 @@ async function findCoLocatedSnapshot(outputDir: string): Promise<CoLocatedSnapsh
         const snapshot: SchemaSnapshot = JSON.parse(content);
         const snapManager = new SnapshotManager('');
         const tables = snapManager.restoreSnapshot(snapshot);
-        console.log(`Found co-located snapshot from migration: ${dir} (${tables.length} tables)`);
+        console.log(
+          `Found co-located snapshot from migration: ${dir} (${tables.length} tables)`,
+        );
         return {
           tables,
           access: snapshot.access,
@@ -132,7 +154,8 @@ export async function getLiveSchema(
           (String(col.kind).includes('option<') ||
             String(col.kind).includes('| none') ||
             String(col.kind).startsWith('none |'));
-        const isRequired = !col.readonly && !isOptionType && surrealTable.schema === 'full';
+        const isRequired =
+          !col.readonly && !isOptionType && surrealTable.schema === 'full';
 
         return {
           name: col.name,
@@ -217,7 +240,10 @@ export async function generateMigration(
       ].join('');
     })();
   const safeName = options.name.toLowerCase().replace(/\s+/g, '_');
-  const migrationDir = path.join(options.outputDir!, `${timestamp}_${safeName}`);
+  const migrationDir = path.join(
+    options.outputDir!,
+    `${timestamp}_${safeName}`,
+  );
   const migrationFilePath = path.join(migrationDir, 'migration.surql');
   const snapshotFilePath = path.join(migrationDir, 'snapshot.json');
 
@@ -258,7 +284,9 @@ export async function generateMigration(
     // No explicit snapshot dir — try co-located snapshot from latest migration dir
     const coLocated = await findCoLocatedSnapshot(options.outputDir!);
     if (coLocated) {
-      log('Using co-located snapshot for comparison (from migration directory)');
+      log(
+        'Using co-located snapshot for comparison (from migration directory)',
+      );
       ({ upStatements } = await generateSnapshotMigration(
         tables,
         coLocated,
@@ -351,7 +379,10 @@ export async function generateMigration(
 
       const existingHash = computeMigrationHash(fileContent);
       if (existingHash === newHash) {
-        console.log('Migration already exists with same content (hash match), skipping:', entry);
+        console.log(
+          'Migration already exists with same content (hash match), skipping:',
+          entry,
+        );
         console.log('Nothing to do.');
         return migrationDir;
       }
@@ -375,7 +406,11 @@ export async function generateMigration(
     functions,
     analyzers,
   );
-  await fs.writeFile(snapshotFilePath, JSON.stringify(snapshot, null, 2), 'utf-8');
+  await fs.writeFile(
+    snapshotFilePath,
+    JSON.stringify(snapshot, null, 2),
+    'utf-8',
+  );
 
   // Also save snapshot to meta/snapshots/ if configured (backward compat for diffing)
   if (options.snapshotDir && allUpStatements.length > 0) {
@@ -425,13 +460,19 @@ export async function generateSnapshotMigration(
       lastEvents = lastSnapshot.events ?? [];
       lastFunctions = lastSnapshot.functions ?? [];
       lastAnalyzers = lastSnapshot.analyzers ?? [];
-      console.log(`Loaded snapshot: ${lastSnapshot.name} (${lastSnapshot.version})`);
-      console.log(`Comparing against ${baseTables.length} tables from snapshot`);
+      console.log(
+        `Loaded snapshot: ${lastSnapshot.name} (${lastSnapshot.version})`,
+      );
+      console.log(
+        `Comparing against ${baseTables.length} tables from snapshot`,
+      );
     } else {
       // No snapshot exists - compare against empty schema
       // This means ALL tables will be generated as new
       baseTables = [];
-      console.log('No snapshot found - generating initial migration for all tables');
+      console.log(
+        'No snapshot found - generating initial migration for all tables',
+      );
     }
   } else {
     baseTables = snapshotDir.tables;
@@ -525,17 +566,25 @@ export async function generateSnapshotMigration(
 
   // Add new indexes
   for (const indexChange of diff.added.indexes) {
-    upStatements.push(generator.generateIndexDefinition(indexChange.index, indexChange.table));
+    upStatements.push(
+      generator.generateIndexDefinition(indexChange.index, indexChange.table),
+    );
   }
 
   // Handle removed fields — emit REMOVE FIELD for fields no longer in schema
   for (const removedField of diff.removed.fields) {
-    log('Removed field detected: %s.%s', removedField.table, removedField.field);
+    log(
+      'Removed field detected: %s.%s',
+      removedField.table,
+      removedField.field,
+    );
     // Note: snapshot-based comparison can't check data existence in DB.
     // Field removal is assumed safe — user explicitly defined the schema without this field.
     // If data exists, SurrealDB REMOVE FIELD removes the definition but NOT data values.
     // Data remains in records but field becomes unconstrained.
-    upStatements.push(generator.generateRemoveField(removedField.table, removedField.field));
+    upStatements.push(
+      generator.generateRemoveField(removedField.table, removedField.field),
+    );
     // No down statement — can't restore removed field definition without snapshot of old state
   }
 
@@ -555,16 +604,22 @@ export async function generateSnapshotMigration(
   const generatedFieldChanges: Array<{ table: string; field: string }> = [];
   for (const fieldChange of diff.changed.fields) {
     const oldEffectiveDefault =
-      fieldChange.oldColumn.config.defaultRaw ?? fieldChange.oldColumn.config.default;
+      fieldChange.oldColumn.config.defaultRaw ??
+      fieldChange.oldColumn.config.default;
     const newEffectiveDefault =
-      fieldChange.newColumn.config.defaultRaw ?? fieldChange.newColumn.config.default;
-    const typeChanged = fieldChange.oldColumn.config.type !== fieldChange.newColumn.config.type;
+      fieldChange.newColumn.config.defaultRaw ??
+      fieldChange.newColumn.config.default;
+    const typeChanged =
+      fieldChange.oldColumn.config.type !== fieldChange.newColumn.config.type;
     const optionalChanged =
-      fieldChange.oldColumn.config.optional !== fieldChange.newColumn.config.optional;
+      fieldChange.oldColumn.config.optional !==
+      fieldChange.newColumn.config.optional;
     const flexibleChanged =
-      fieldChange.oldColumn.config.flexible !== fieldChange.newColumn.config.flexible;
+      fieldChange.oldColumn.config.flexible !==
+      fieldChange.newColumn.config.flexible;
     const readonlyChanged =
-      fieldChange.oldColumn.config.readonly !== fieldChange.newColumn.config.readonly;
+      fieldChange.oldColumn.config.readonly !==
+      fieldChange.newColumn.config.readonly;
 
     if (typeChanged || optionalChanged || flexibleChanged || readonlyChanged) {
       // For structural changes, emit full DEFINE FIELD (without IF NOT EXISTS)
@@ -574,7 +629,10 @@ export async function generateSnapshotMigration(
         tableName: fieldChange.table,
       };
       upStatements.push(generator.generateFieldRedefine(newColumn));
-      generatedFieldChanges.push({ table: fieldChange.table, field: fieldChange.field });
+      generatedFieldChanges.push({
+        table: fieldChange.table,
+        field: fieldChange.field,
+      });
       // No down statement for field redefines (would need to know old definition)
     } else if (oldEffectiveDefault !== newEffectiveDefault) {
       // Default-only changes: simpler ALTER FIELD DEFAULT
@@ -586,7 +644,10 @@ export async function generateSnapshotMigration(
           fieldChange.newColumn.config.defaultRaw,
         ),
       );
-      generatedFieldChanges.push({ table: fieldChange.table, field: fieldChange.field });
+      generatedFieldChanges.push({
+        table: fieldChange.table,
+        field: fieldChange.field,
+      });
     }
   }
 
@@ -650,12 +711,21 @@ export async function generateSnapshotMigration(
   // Print summary of changes (only showing what's being added)
   const filteredDiff = {
     added: diff.added,
-    removed: { tables: diff.removed.tables, fields: diff.removed.fields, indexes: [] },
+    removed: {
+      tables: diff.removed.tables,
+      fields: diff.removed.fields,
+      indexes: [],
+    },
     changed: { tables: [], fields: generatedFieldChanges },
   };
   const nonTableChanges = getNonTableChanges(
     { access, events, functions, analyzers },
-    { access: lastAccess, events: lastEvents, functions: lastFunctions, analyzers: lastAnalyzers },
+    {
+      access: lastAccess,
+      events: lastEvents,
+      functions: lastFunctions,
+      analyzers: lastAnalyzers,
+    },
   );
   printDiffSummary(filteredDiff, access, lastAccess, nonTableChanges);
 
@@ -723,8 +793,14 @@ export async function generateLiveMigration(
     liveTables.filter((t) => t.columns.length > 0).map((t) => t.name),
   );
 
-  log('Tables with no columns in DB (new or schemaless): %O', Array.from(tablesWithNoColumns));
-  log('Tables with columns in DB (existing): %O', Array.from(tablesWithColumns));
+  log(
+    'Tables with no columns in DB (new or schemaless): %O',
+    Array.from(tablesWithNoColumns),
+  );
+  log(
+    'Tables with columns in DB (existing): %O',
+    Array.from(tablesWithColumns),
+  );
 
   // KEY FIX: Only generate SQL for NEW tables and NEW fields
   // NEVER include tables that already exist (even if they have field changes)
@@ -748,7 +824,9 @@ export async function generateLiveMigration(
         'analyzers' in (dbInfo as Record<string, unknown>)
       ) {
         const info = dbInfo as Record<string, unknown>;
-        existingAnalyzerNames = Object.keys(info.analyzers as Record<string, unknown>);
+        existingAnalyzerNames = Object.keys(
+          info.analyzers as Record<string, unknown>,
+        );
       }
     } catch {
       // DB may not exist yet
@@ -786,7 +864,9 @@ export async function generateLiveMigration(
   // Get tables that need full definition (not in live schema with columns)
   // SchemaDiffer already filtered for diff.added.tables, but we need to add
   // tables that exist but have no columns
-  const newTables = tables.filter((t) => tablesNeedingFullDefinition.has(t.name));
+  const newTables = tables.filter((t) =>
+    tablesNeedingFullDefinition.has(t.name),
+  );
 
   // Add full table definition for new/schemaless tables
   for (const table of newTables) {
@@ -811,7 +891,9 @@ export async function generateLiveMigration(
     (i) => !tablesNeedingFullDefinition.has(i.table),
   );
   for (const indexChange of newIndexesForExistingTables) {
-    upStatements.push(generator.generateIndexDefinition(indexChange.index, indexChange.table));
+    upStatements.push(
+      generator.generateIndexDefinition(indexChange.index, indexChange.table),
+    );
   }
 
   // Handle removed fields — check for existing data before generating REMOVE FIELD
@@ -838,12 +920,19 @@ export async function generateLiveMigration(
           removedField.table,
           removedField.field,
         );
-        upStatements.push(generator.generateRemoveField(removedField.table, removedField.field));
+        upStatements.push(
+          generator.generateRemoveField(removedField.table, removedField.field),
+        );
         // No down statement — can't restore removed field
       }
     } catch (error) {
       // Table may not exist yet or other transient error — skip removal
-      log('Error checking removed field %s.%s: %O', removedField.table, removedField.field, error);
+      log(
+        'Error checking removed field %s.%s: %O',
+        removedField.table,
+        removedField.field,
+        error,
+      );
     }
   }
 
@@ -861,7 +950,10 @@ export async function generateLiveMigration(
           count,
         );
       } else {
-        log('Removed table %s — no data found, generating REMOVE TABLE', tableName);
+        log(
+          'Removed table %s — no data found, generating REMOVE TABLE',
+          tableName,
+        );
         upStatements.push(generator.generateRemoveTable(tableName));
         // No down statement — can't restore removed table's full definition
       }
@@ -880,16 +972,22 @@ export async function generateLiveMigration(
     if (tablesNeedingFullDefinition.has(fieldChange.table)) continue;
 
     const oldEffectiveDefault =
-      fieldChange.oldColumn.config.defaultRaw ?? fieldChange.oldColumn.config.default;
+      fieldChange.oldColumn.config.defaultRaw ??
+      fieldChange.oldColumn.config.default;
     const newEffectiveDefault =
-      fieldChange.newColumn.config.defaultRaw ?? fieldChange.newColumn.config.default;
-    const typeChanged = fieldChange.oldColumn.config.type !== fieldChange.newColumn.config.type;
+      fieldChange.newColumn.config.defaultRaw ??
+      fieldChange.newColumn.config.default;
+    const typeChanged =
+      fieldChange.oldColumn.config.type !== fieldChange.newColumn.config.type;
     const optionalChanged =
-      fieldChange.oldColumn.config.optional !== fieldChange.newColumn.config.optional;
+      fieldChange.oldColumn.config.optional !==
+      fieldChange.newColumn.config.optional;
     const flexibleChanged =
-      fieldChange.oldColumn.config.flexible !== fieldChange.newColumn.config.flexible;
+      fieldChange.oldColumn.config.flexible !==
+      fieldChange.newColumn.config.flexible;
     const readonlyChanged =
-      fieldChange.oldColumn.config.readonly !== fieldChange.newColumn.config.readonly;
+      fieldChange.oldColumn.config.readonly !==
+      fieldChange.newColumn.config.readonly;
 
     if (typeChanged || optionalChanged || flexibleChanged || readonlyChanged) {
       // For structural changes, emit full DEFINE FIELD (without IF NOT EXISTS)
@@ -899,7 +997,10 @@ export async function generateLiveMigration(
         tableName: fieldChange.table,
       };
       upStatements.push(generator.generateFieldRedefine(newColumn));
-      liveFieldChanges.push({ table: fieldChange.table, field: fieldChange.field });
+      liveFieldChanges.push({
+        table: fieldChange.table,
+        field: fieldChange.field,
+      });
       // No down statement for field redefines (would need to know old definition)
     } else if (oldEffectiveDefault !== newEffectiveDefault) {
       // Default-only changes: simpler ALTER FIELD DEFAULT
@@ -911,7 +1012,10 @@ export async function generateLiveMigration(
           fieldChange.newColumn.config.defaultRaw,
         ),
       );
-      liveFieldChanges.push({ table: fieldChange.table, field: fieldChange.field });
+      liveFieldChanges.push({
+        table: fieldChange.table,
+        field: fieldChange.field,
+      });
     }
   }
 
@@ -952,7 +1056,9 @@ export async function generateLiveMigration(
         'functions' in (dbInfo as Record<string, unknown>)
       ) {
         const info = dbInfo as Record<string, unknown>;
-        existingFunctionNames = Object.keys(info.functions as Record<string, unknown>);
+        existingFunctionNames = Object.keys(
+          info.functions as Record<string, unknown>,
+        );
       }
     } catch {
       // DB may not exist yet
@@ -980,7 +1086,9 @@ export async function generateLiveMigration(
       if (!evt.on) continue;
       try {
         const result = await driver.query(`INFO FOR TABLE ${evt.on} STRUCTURE`);
-        const infoResult = result as unknown as Array<{ events?: Array<{ name: string }> }>;
+        const infoResult = result as unknown as Array<{
+          events?: Array<{ name: string }>;
+        }>;
         if (infoResult?.[0]?.events) {
           for (const dbEvent of infoResult[0].events) {
             existingEvents.push({ name: dbEvent.name, what: evt.on });
@@ -991,7 +1099,9 @@ export async function generateLiveMigration(
       }
     }
 
-    const existingEventKeys = new Set(existingEvents.map((e) => `${e.what}:${e.name}`));
+    const existingEventKeys = new Set(
+      existingEvents.map((e) => `${e.what}:${e.name}`),
+    );
 
     for (const evt of events ?? []) {
       const eventKey = `${evt.on}:${evt.name}`;
@@ -1016,7 +1126,11 @@ export async function generateLiveMigration(
       fields: newFieldsForExistingTables,
       indexes: newIndexesForExistingTables,
     },
-    removed: { tables: diff.removed.tables, fields: diff.removed.fields, indexes: [] },
+    removed: {
+      tables: diff.removed.tables,
+      fields: diff.removed.fields,
+      indexes: [],
+    },
     changed: { tables: [], fields: liveFieldChanges },
   };
   printDiffSummary(filteredDiff, undefined, undefined, nonTableCounts);
@@ -1060,7 +1174,11 @@ export function generateFullMigration(
       sql = (acc as any).toSQL();
     } else if (acc.type) {
       // New: AccessConfig object with type
-      console.log('acc is AccessConfig with type %s, generating SQL', acc, tablesRecord);
+      console.log(
+        'acc is AccessConfig with type %s, generating SQL',
+        acc,
+        tablesRecord,
+      );
       sql = accessToSQL(acc, tablesRecord);
     }
     // Skip access objects without toSQL() or valid type
@@ -1162,7 +1280,9 @@ export function generateMigrationFile(
 
   // Add semicolons between statements for proper parsing
   // Separator comments (-- ---- Section ----) are left as-is
-  const upSection = sectionedUp.map((s) => (s.startsWith('--') ? s : `${s};`)).join('\n');
+  const upSection = sectionedUp
+    .map((s) => (s.startsWith('--') ? s : `${s};`))
+    .join('\n');
 
   return `-- Migration: ${name}
 -- Version: ${version}

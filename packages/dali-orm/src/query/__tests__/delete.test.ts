@@ -1,18 +1,18 @@
+import type { DaliORM } from '../../sdk/dali-orm.js';
+import { buildCondition, graphFieldPath } from '../conditions.js';
 import {
   afterEach,
   beforeEach,
+  createTestDriver,
+  defineTables,
+  delete_,
   describe,
+  type EmbeddedDriver,
   expect,
   it,
-  users,
-  defineTables,
   select,
-  delete_,
-  createTestDriver,
-  EmbeddedDriver,
+  users,
 } from './test-utils.js';
-import { buildCondition, graphFieldPath } from '../conditions.js';
-import type { DaliORM } from '../../sdk/dali-orm.js';
 
 let driver: EmbeddedDriver;
 let orm: DaliORM;
@@ -86,7 +86,9 @@ describe('DeleteBuilder - WHERE', () => {
   it('where callback overload deletes matching records', async () => {
     await driver.query("CREATE user:alice SET name = 'Alice', active = true");
     await driver.query("CREATE user:bob SET name = 'Bob', active = false");
-    await driver.query("CREATE user:charlie SET name = 'Charlie', active = true");
+    await driver.query(
+      "CREATE user:charlie SET name = 'Charlie', active = true",
+    );
 
     const results = await delete_(orm, users)
       .where((w) => w.eq('active', true))
@@ -133,7 +135,9 @@ describe('DeleteBuilder - LIMIT', () => {
   it('limit restricts number of deleted records', async () => {
     await driver.query("CREATE user:alice SET name = 'Alice', active = true");
     await driver.query("CREATE user:bob SET name = 'Bob', active = true");
-    await driver.query("CREATE user:charlie SET name = 'Charlie', active = true");
+    await driver.query(
+      "CREATE user:charlie SET name = 'Charlie', active = true",
+    );
 
     const results = await delete_(orm, users)
       .where((w) => w.eq('active', true))
@@ -179,7 +183,9 @@ describe('DeleteBuilder - toSQL', () => {
       .limit(5)
       .toSQL();
 
-    expect(sql).toBe('DELETE FROM (SELECT id FROM user WHERE active = $p0 LIMIT 5)');
+    expect(sql).toBe(
+      'DELETE FROM (SELECT id FROM user WHERE active = $p0 LIMIT 5)',
+    );
     expect(params).toEqual({ p0: true });
   });
 
@@ -198,9 +204,15 @@ describe('DeleteBuilder - toSQL', () => {
 describe('DeleteBuilder - CONTAINS/INSIDE + graph paths', () => {
   describe('CONTAINS with field values', () => {
     it.skip('delete where array field CONTAINS value (SurrealDB limitation: embedded DB shared state makes DEFINE FIELD unreliable)', async () => {
-      await driver.query("CREATE user:u1 SET name = 'Alice', tags = ['admin', 'active']");
-      await driver.query("CREATE user:u2 SET name = 'Bob', tags = ['viewer', 'active']");
-      await driver.query("CREATE user:u3 SET name = 'Charlie', tags = ['viewer', 'inactive']");
+      await driver.query(
+        "CREATE user:u1 SET name = 'Alice', tags = ['admin', 'active']",
+      );
+      await driver.query(
+        "CREATE user:u2 SET name = 'Bob', tags = ['viewer', 'active']",
+      );
+      await driver.query(
+        "CREATE user:u3 SET name = 'Charlie', tags = ['viewer', 'inactive']",
+      );
 
       const results = await delete_(orm, users)
         .where((w) => w.contains('tags', 'admin'))
@@ -217,9 +229,15 @@ describe('DeleteBuilder - CONTAINS/INSIDE + graph paths', () => {
     });
 
     it.skip('delete where multiple records match CONTAINS (SurrealDB limitation: embedded DB shared state makes DEFINE FIELD unreliable)', async () => {
-      await driver.query("CREATE user:u1 SET name = 'Alice', tags = ['admin', 'editor']");
-      await driver.query("CREATE user:u2 SET name = 'Bob', tags = ['admin', 'viewer']");
-      await driver.query("CREATE user:u3 SET name = 'Charlie', tags = ['viewer']");
+      await driver.query(
+        "CREATE user:u1 SET name = 'Alice', tags = ['admin', 'editor']",
+      );
+      await driver.query(
+        "CREATE user:u2 SET name = 'Bob', tags = ['admin', 'viewer']",
+      );
+      await driver.query(
+        "CREATE user:u3 SET name = 'Charlie', tags = ['viewer']",
+      );
 
       const results = await delete_(orm, users)
         .where((w) => w.contains('tags', 'admin'))
@@ -233,7 +251,9 @@ describe('DeleteBuilder - CONTAINS/INSIDE + graph paths', () => {
     });
 
     it.skip('delete where no records match CONTAINS (SurrealDB limitation: embedded DB shared state makes DEFINE FIELD unreliable)', async () => {
-      await driver.query("CREATE user:u1 SET name = 'Alice', tags = ['viewer']");
+      await driver.query(
+        "CREATE user:u1 SET name = 'Alice', tags = ['viewer']",
+      );
       await driver.query("CREATE user:u2 SET name = 'Bob', tags = ['editor']");
 
       const results = await delete_(orm, users)
@@ -253,7 +273,9 @@ describe('DeleteBuilder - CONTAINS/INSIDE + graph paths', () => {
 
       await driver.query("CREATE user:u1 SET name = 'Alice', role = 'admin'");
       await driver.query("CREATE user:u2 SET name = 'Bob', role = 'editor'");
-      await driver.query("CREATE user:u3 SET name = 'Charlie', role = 'viewer'");
+      await driver.query(
+        "CREATE user:u3 SET name = 'Charlie', role = 'viewer'",
+      );
 
       const results = await delete_(orm, users)
         .where((w) => w.inside('role', ['admin', 'editor']))
@@ -309,9 +331,15 @@ describe('DeleteBuilder - CONTAINS/INSIDE + graph paths', () => {
       await driver.query("CREATE user:bob SET name = 'Bob'");
 
       // Create posts
-      await driver.query("CREATE post:p1 SET title = 'Alice First Post', content = 'Hello'");
-      await driver.query("CREATE post:p2 SET title = 'Alice Second Post', content = 'World'");
-      await driver.query("CREATE post:p3 SET title = 'Bob Post', content = 'Hi'");
+      await driver.query(
+        "CREATE post:p1 SET title = 'Alice First Post', content = 'Hello'",
+      );
+      await driver.query(
+        "CREATE post:p2 SET title = 'Alice Second Post', content = 'World'",
+      );
+      await driver.query(
+        "CREATE post:p3 SET title = 'Bob Post', content = 'Hi'",
+      );
 
       // Create graph relationships
       await driver.query('RELATE user:alice->wrote->post:p1');
@@ -320,7 +348,9 @@ describe('DeleteBuilder - CONTAINS/INSIDE + graph paths', () => {
 
       // Delete users whose written posts' title CONTAINS 'Alice'
       const results = await delete_(orm, users)
-        .where((w) => w.contains(graphFieldPath('->wrote->post.title'), 'Alice'))
+        .where((w) =>
+          w.contains(graphFieldPath('->wrote->post.title'), 'Alice'),
+        )
         .execute();
 
       expect(results).toHaveLength(1);
@@ -335,9 +365,15 @@ describe('DeleteBuilder - CONTAINS/INSIDE + graph paths', () => {
       await driver.query("CREATE user:alice SET name = 'Alice'");
       await driver.query("CREATE user:bob SET name = 'Bob'");
 
-      await driver.query("CREATE post:p1 SET title = 'Alice First Post', content = 'Hello'");
-      await driver.query("CREATE post:p2 SET title = 'Bob First Post', content = 'World'");
-      await driver.query("CREATE post:p3 SET title = 'Bob Second Post', content = 'Hi'");
+      await driver.query(
+        "CREATE post:p1 SET title = 'Alice First Post', content = 'Hello'",
+      );
+      await driver.query(
+        "CREATE post:p2 SET title = 'Bob First Post', content = 'World'",
+      );
+      await driver.query(
+        "CREATE post:p3 SET title = 'Bob Second Post', content = 'Hi'",
+      );
 
       // Both users wrote posts with 'Post' in title
       await driver.query('RELATE user:alice->wrote->post:p1');
@@ -363,13 +399,19 @@ describe('DeleteBuilder - CONTAINS/INSIDE + graph paths', () => {
       await driver.query(
         `CREATE post:p1_${testId} SET title = 'Alice First Post', content = 'Hello'`,
       );
-      await driver.query(`CREATE post:p2_${testId} SET title = 'Bob Post', content = 'Hi'`);
+      await driver.query(
+        `CREATE post:p2_${testId} SET title = 'Bob Post', content = 'Hi'`,
+      );
 
-      await driver.query(`RELATE user:alice_${testId}->wrote->post:p1_${testId}`);
+      await driver.query(
+        `RELATE user:alice_${testId}->wrote->post:p1_${testId}`,
+      );
       await driver.query(`RELATE user:bob_${testId}->wrote->post:p2_${testId}`);
 
       const found = await select(orm, users)
-        .where((w) => w.contains(graphFieldPath('->wrote->post.title'), 'Alice'))
+        .where((w) =>
+          w.contains(graphFieldPath('->wrote->post.title'), 'Alice'),
+        )
         .execute();
 
       expect(found).toHaveLength(1);
@@ -401,7 +443,9 @@ describe('DeleteBuilder - CONTAINS/INSIDE + graph paths', () => {
         .where((w) => w.contains(graphFieldPath('->wrote->post.title'), 'Test'))
         .toSQL();
 
-      expect(sql).toBe('DELETE FROM user WHERE ->wrote->post.title CONTAINS $p0');
+      expect(sql).toBe(
+        'DELETE FROM user WHERE ->wrote->post.title CONTAINS $p0',
+      );
       expect(params).toEqual({ p0: 'Test' });
     });
 
@@ -411,7 +455,9 @@ describe('DeleteBuilder - CONTAINS/INSIDE + graph paths', () => {
         .limit(5)
         .toSQL();
 
-      expect(sql).toBe('DELETE FROM (SELECT id FROM user WHERE tags CONTAINS $p0 LIMIT 5)');
+      expect(sql).toBe(
+        'DELETE FROM (SELECT id FROM user WHERE tags CONTAINS $p0 LIMIT 5)',
+      );
       expect(params).toEqual({ p0: 'admin' });
     });
 
@@ -421,7 +467,9 @@ describe('DeleteBuilder - CONTAINS/INSIDE + graph paths', () => {
         .limit(3)
         .toSQL();
 
-      expect(sql).toBe('DELETE FROM (SELECT id FROM user WHERE role INSIDE $p0 LIMIT 3)');
+      expect(sql).toBe(
+        'DELETE FROM (SELECT id FROM user WHERE role INSIDE $p0 LIMIT 3)',
+      );
       expect(params).toEqual({ p0: ['admin'] });
     });
   });

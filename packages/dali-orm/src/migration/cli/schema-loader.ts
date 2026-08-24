@@ -36,7 +36,9 @@ export async function loadSchemaFiles(
       }
     } catch (err) {
       if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
-        throw new Error(`Failed to scan schema directory: ${schemaPath} does not exist`);
+        throw new Error(
+          `Failed to scan schema directory: ${schemaPath} does not exist`,
+        );
       }
       throw err;
     }
@@ -266,7 +268,9 @@ export async function loadSchemaFiles(
     }
   } catch (scanError) {
     // Fail loud for directory scan errors
-    throw new Error(`Failed to scan schema directory ${schemaPath}: ${String(scanError)}`);
+    throw new Error(
+      `Failed to scan schema directory ${schemaPath}: ${String(scanError)}`,
+    );
   }
 
   return { tables, access, functions, analyzers };
@@ -276,7 +280,9 @@ export async function loadSchemaFiles(
  * Load schema from a single file path
  * Extracts table definitions from the module's exports
  */
-export async function loadSchemaFromFile(filePath: string): Promise<SchemaFilesResult> {
+export async function loadSchemaFromFile(
+  filePath: string,
+): Promise<SchemaFilesResult> {
   const tables: TableDefinition[] = [];
   const access: any[] = [];
   const functions: FunctionConfig[] = [];
@@ -458,7 +464,9 @@ export async function loadSchemaFromFile(filePath: string): Promise<SchemaFilesR
       }
     }
   } catch (importError) {
-    throw new Error(`Failed to import schema file ${filePath}: ${String(importError)}`);
+    throw new Error(
+      `Failed to import schema file ${filePath}: ${String(importError)}`,
+    );
   }
 
   return { tables, access, functions, analyzers };
@@ -468,7 +476,10 @@ export async function loadSchemaFromFile(filePath: string): Promise<SchemaFilesR
  * Find files matching a glob-like pattern recursively
  * Supports: patterns like **\/*.ts (recursive) or *.ts (current dir only)
  */
-export async function findMatchingFiles(dir: string, pattern: string): Promise<string[]> {
+export async function findMatchingFiles(
+  dir: string,
+  pattern: string,
+): Promise<string[]> {
   const results: string[] = [];
   const isRecursive = pattern.startsWith('**/');
   const searchPattern = isRecursive ? pattern.slice(3) : pattern;
@@ -534,10 +545,14 @@ export function isTableDefinition(value: unknown): value is TableDefinition {
   const config = obj.config as Record<string, unknown> | undefined;
 
   // Check for SurrealTableInstance (has $name and $columns)
-  const isSurrealTable = typeof obj.$name === 'string' && typeof obj.$columns === 'object';
+  const isSurrealTable =
+    typeof obj.$name === 'string' && typeof obj.$columns === 'object';
 
   // Must have name (either direct or via $name), columns array, and config object
-  const isValid = typeof name === 'string' && Array.isArray(columns) && typeof config === 'object';
+  const isValid =
+    typeof name === 'string' &&
+    Array.isArray(columns) &&
+    typeof config === 'object';
 
   return isSurrealTable || isValid;
 }
@@ -546,7 +561,9 @@ export function isTableDefinition(value: unknown): value is TableDefinition {
  * Convert a SurrealTableInstance to a plain TableDefinition
  * This extracts the real name from $name and normalizes the structure
  */
-export function normalizeTableDefinition(table: unknown): TableDefinition | null {
+export function normalizeTableDefinition(
+  table: unknown,
+): TableDefinition | null {
   if (!table || typeof table !== 'object') {
     return null;
   }
@@ -559,13 +576,21 @@ export function normalizeTableDefinition(table: unknown): TableDefinition | null
   let columns = obj.columns as ColumnDefinition[] | undefined;
 
   // Fallback: if columns is not an array, try converting $columns Record to array
-  if (!Array.isArray(columns) && obj.$columns && typeof obj.$columns === 'object') {
+  if (
+    !Array.isArray(columns) &&
+    obj.$columns &&
+    typeof obj.$columns === 'object'
+  ) {
     columns = Object.values(obj.$columns as Record<string, ColumnDefinition>);
   }
   const rawConfig = obj.config as TableDefinition['config'] | undefined;
 
   // Must have name, columns, and config
-  if (typeof name !== 'string' || !Array.isArray(columns) || typeof rawConfig !== 'object') {
+  if (
+    typeof name !== 'string' ||
+    !Array.isArray(columns) ||
+    typeof rawConfig !== 'object'
+  ) {
     return null;
   }
 

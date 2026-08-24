@@ -111,7 +111,10 @@ export class LiveSubscription<T = unknown> {
  * }
  * ```
  */
-export class LiveQueryBuilder<TDef extends TableDefinition, TResult = InferSelectResult<TDef>> {
+export class LiveQueryBuilder<
+  TDef extends TableDefinition,
+  TResult = InferSelectResult<TDef>,
+> {
   private readonly driver: SurrealDriver;
   private readonly tableDef: TDef;
   private readonly options: LiveQueryOptions = {};
@@ -119,7 +122,8 @@ export class LiveQueryBuilder<TDef extends TableDefinition, TResult = InferSelec
 
   constructor(orm: DaliORM, tableDef: TDef) {
     if (!orm) throw new Error('DaliORM instance is required');
-    if (!tableDef?.name) throw new Error('Table definition with name is required');
+    if (!tableDef?.name)
+      throw new Error('Table definition with name is required');
 
     this.driver = orm.getDriver();
     this.tableDef = tableDef;
@@ -143,7 +147,8 @@ export class LiveQueryBuilder<TDef extends TableDefinition, TResult = InferSelec
    * Provides autocomplete from TableDefinition columns.
    */
   fields(...names: (keyof TResult)[]): this {
-    if (names.length === 0) throw new Error('At least one field name is required');
+    if (names.length === 0)
+      throw new Error('At least one field name is required');
     this.options.fields = names as string[];
     return this;
   }
@@ -172,7 +177,8 @@ export class LiveQueryBuilder<TDef extends TableDefinition, TResult = InferSelec
    * ```
    */
   where(condition: ExprLike): this {
-    if (condition == null) throw new Error('WHERE condition cannot be null or undefined');
+    if (condition == null)
+      throw new Error('WHERE condition cannot be null or undefined');
     this.options.where = condition;
     return this;
   }
@@ -183,7 +189,8 @@ export class LiveQueryBuilder<TDef extends TableDefinition, TResult = InferSelec
    * Fetch record link contents for the specified fields.
    */
   fetch(...fields: string[]): this {
-    if (fields.length === 0) throw new Error('At least one field name is required for fetch');
+    if (fields.length === 0)
+      throw new Error('At least one field name is required for fetch');
     this.options.fetch = fields;
     return this;
   }
@@ -218,7 +225,10 @@ export class LiveQueryBuilder<TDef extends TableDefinition, TResult = InferSelec
    * ```
    */
   async start(): Promise<LiveSubscription<TResult>> {
-    const handle = await this.driver.liveWithOptions<TResult>(this.tableDef.name, this.options);
+    const handle = await this.driver.liveWithOptions<TResult>(
+      this.tableDef.name,
+      this.options,
+    );
     return new LiveSubscription(handle, this.recordId);
   }
 

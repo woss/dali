@@ -1,8 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 import { DaliORM } from '../dali-orm.js';
 import type { SurrealDriver } from '../driver/types.js';
+import { int, string } from '../schema/column/simple-builders.js';
 import { defineTable } from '../table.js';
-import { string, int } from '../schema/column/simple-builders.js';
 
 // =============================================================================
 // Table definition for typed CRUD tests
@@ -21,7 +21,9 @@ const emptyTable = defineTable('nowhere', {});
 
 describe('insertInto', () => {
   it('delegates to driver.insert with table name and single record, returns typed result', async () => {
-    const mockInsert = vi.fn().mockResolvedValue([{ id: 'users:1', name: 'Alice', age: 30 }]);
+    const mockInsert = vi
+      .fn()
+      .mockResolvedValue([{ id: 'users:1', name: 'Alice', age: 30 }]);
     const mockDriver = { insert: mockInsert } as unknown as SurrealDriver;
 
     // @ts-expect-error - accessing private constructor for testing
@@ -30,7 +32,10 @@ describe('insertInto', () => {
     const result = await orm.insertInto(usersTable, { name: 'Alice', age: 30 });
 
     expect(mockInsert).toHaveBeenCalledOnce();
-    expect(mockInsert).toHaveBeenCalledWith('users', { name: 'Alice', age: 30 });
+    expect(mockInsert).toHaveBeenCalledWith('users', {
+      name: 'Alice',
+      age: 30,
+    });
     expect(result).toEqual([{ id: 'users:1', name: 'Alice', age: 30 }]);
   });
 
@@ -77,9 +82,9 @@ describe('insertInto', () => {
     // @ts-expect-error - accessing private constructor for testing
     const orm = new DaliORM(mockDriver);
 
-    await expect(orm.insertInto(usersTable, { name: 'Fail', age: 1 })).rejects.toThrow(
-      'Insert failed: duplicate key',
-    );
+    await expect(
+      orm.insertInto(usersTable, { name: 'Fail', age: 1 }),
+    ).rejects.toThrow('Insert failed: duplicate key');
   });
 });
 
@@ -97,15 +102,23 @@ describe('updateTable', () => {
     // @ts-expect-error - accessing private constructor for testing
     const orm = new DaliORM(mockDriver);
 
-    const result = await orm.updateTable(usersTable, { name: 'Alice Updated', age: 31 });
+    const result = await orm.updateTable(usersTable, {
+      name: 'Alice Updated',
+      age: 31,
+    });
 
     expect(mockUpdate).toHaveBeenCalledOnce();
-    expect(mockUpdate).toHaveBeenCalledWith('users', { name: 'Alice Updated', age: 31 });
+    expect(mockUpdate).toHaveBeenCalledWith('users', {
+      name: 'Alice Updated',
+      age: 31,
+    });
     expect(result).toEqual([{ id: 'users:1', name: 'Alice Updated', age: 31 }]);
   });
 
   it('allows partial update with only some fields', async () => {
-    const mockUpdate = vi.fn().mockResolvedValue([{ id: 'users:1', name: 'Alice', age: 30 }]);
+    const mockUpdate = vi
+      .fn()
+      .mockResolvedValue([{ id: 'users:1', name: 'Alice', age: 30 }]);
     const mockDriver = { update: mockUpdate } as unknown as SurrealDriver;
 
     // @ts-expect-error - accessing private constructor for testing
@@ -186,7 +199,9 @@ describe('deleteFrom', () => {
     // @ts-expect-error - accessing private constructor for testing
     const orm = new DaliORM(mockDriver);
 
-    await expect(orm.deleteFrom(usersTable)).rejects.toThrow('Delete failed: permission denied');
+    await expect(orm.deleteFrom(usersTable)).rejects.toThrow(
+      'Delete failed: permission denied',
+    );
   });
 });
 
@@ -196,7 +211,9 @@ describe('deleteFrom', () => {
 
 describe('selectFrom', () => {
   it('delegates to driver.select with table name, returns typed result', async () => {
-    const mockSelect = vi.fn().mockResolvedValue([{ id: 'users:1', name: 'Alice', age: 30 }]);
+    const mockSelect = vi
+      .fn()
+      .mockResolvedValue([{ id: 'users:1', name: 'Alice', age: 30 }]);
     const mockDriver = { select: mockSelect } as unknown as SurrealDriver;
 
     // @ts-expect-error - accessing private constructor for testing
@@ -217,6 +234,8 @@ describe('selectFrom', () => {
     // @ts-expect-error - accessing private constructor for testing
     const orm = new DaliORM(mockDriver);
 
-    await expect(orm.selectFrom(usersTable)).rejects.toThrow('Select failed: connection lost');
+    await expect(orm.selectFrom(usersTable)).rejects.toThrow(
+      'Select failed: connection lost',
+    );
   });
 });

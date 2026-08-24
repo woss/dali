@@ -5,13 +5,16 @@
  * Supports single, multiple, or bulk record insertion.
  */
 
-import type { SurrealDriver } from '../sdk/driver/types.js';
+import { escapeIdent, serializeValue } from '../core/surql.js';
 import type { DaliORM } from '../sdk/dali-orm.js';
+import type { SurrealDriver } from '../sdk/driver/types.js';
 import type { TableDefinition } from '../sdk/table.js';
 import type { InferSelectResult } from './types.js';
-import { escapeIdent, serializeValue } from '../core/surql.js';
 
-export class InsertBuilder<TDef extends TableDefinition, TResult = InferSelectResult<TDef>> {
+export class InsertBuilder<
+  TDef extends TableDefinition,
+  TResult = InferSelectResult<TDef>,
+> {
   private readonly driver: SurrealDriver;
   private readonly tableDef: TDef;
   private _records: Record<string, unknown>[] = [];
@@ -19,7 +22,8 @@ export class InsertBuilder<TDef extends TableDefinition, TResult = InferSelectRe
 
   constructor(orm: DaliORM, tableDef: TDef) {
     if (!orm) throw new Error('DaliORM instance is required');
-    if (!tableDef?.name) throw new Error('Table definition with name is required');
+    if (!tableDef?.name)
+      throw new Error('Table definition with name is required');
 
     this.driver = orm.getDriver();
     this.tableDef = tableDef;
@@ -28,7 +32,8 @@ export class InsertBuilder<TDef extends TableDefinition, TResult = InferSelectRe
   /** Add a single record */
   one(data: Record<string, unknown>): this;
   one(data: Record<string, unknown>): this {
-    if (!data || typeof data !== 'object') throw new Error('Data object is required');
+    if (!data || typeof data !== 'object')
+      throw new Error('Data object is required');
     this._records.push({ ...data });
     return this;
   }
@@ -68,7 +73,9 @@ export class InsertBuilder<TDef extends TableDefinition, TResult = InferSelectRe
       // Use VALUES syntax (SurrealDB object literal [ { ... } ] not supported with ON DUPLICATE KEY UPDATE)
       const fields = [...new Set(this._records.flatMap((r) => Object.keys(r)))];
       const values = this._records
-        .map((r) => `(${fields.map((f) => this.serializeValue(r[f])).join(', ')})`)
+        .map(
+          (r) => `(${fields.map((f) => this.serializeValue(r[f])).join(', ')})`,
+        )
         .join(', ');
       const sql = `INSERT INTO ${escapeIdent(this.tableDef.name)} (${fields.map((f) => escapeIdent(f)).join(', ')}) VALUES ${values} ON DUPLICATE KEY UPDATE id = id`;
       return this.driver.query<TResult>(sql);

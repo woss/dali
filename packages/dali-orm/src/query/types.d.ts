@@ -5,7 +5,12 @@
  * Parse at boundary, trust internally.
  */
 import type { ColumnConfig } from '../sdk/schema/column/types.js';
-import type { ColumnBuilder, RelationTableConfig, TableConfig, TableDefinition } from '../sdk/table.js';
+import type {
+  ColumnBuilder,
+  RelationTableConfig,
+  TableConfig,
+  TableDefinition,
+} from '../sdk/table.js';
 /**
  * Branded column reference for typed WHERE/SELECT operations.
  *
@@ -20,16 +25,20 @@ import type { ColumnBuilder, RelationTableConfig, TableConfig, TableDefinition }
  * ```
  */
 export interface ColumnRef<K extends string = string, T = unknown> {
-    readonly _brand: 'ColumnRef';
-    readonly name: K;
-    readonly _type: T;
-    readonly tableName: string;
+  readonly _brand: 'ColumnRef';
+  readonly name: K;
+  readonly _type: T;
+  readonly tableName: string;
 }
 /**
  * Factory to create a ColumnRef instance.
  * Must return a plain object (not class instance) for structural typing.
  */
-export declare function columnRef<K extends string, T>(name: K, type: T, tableName: string): ColumnRef<K, T>;
+export declare function columnRef<K extends string, T>(
+  name: K,
+  type: T,
+  tableName: string,
+): ColumnRef<K, T>;
 /**
  * Construct a SurrealDB record ID string in `table:id` format.
  *
@@ -42,9 +51,14 @@ export declare function columnRef<K extends string, T>(name: K, type: T, tableNa
  * @param id - Record ID (plain UUID, string ID, or already in table:id format)
  * @returns Record ID string in `table:id` format
  */
-export declare function recordId(table: {
-    name: string;
-} | string, id: string): string;
+export declare function recordId(
+  table:
+    | {
+        name: string;
+      }
+    | string,
+  id: string,
+): string;
 /** Convenience alias - a ColumnRef is a valid select field */
 export type SelectField = ColumnRef;
 /**
@@ -57,7 +71,9 @@ export type SelectField = ColumnRef;
  * ```
  */
 export type InferSelection<TSelection extends Record<string, SelectField>> = {
-    [K in keyof TSelection]: TSelection[K] extends ColumnRef<string, infer T> ? T : unknown;
+  [K in keyof TSelection]: TSelection[K] extends ColumnRef<string, infer T>
+    ? T
+    : unknown;
 };
 /**
  * Map a TableDefinition's columns to a typed Record of ColumnRefs.
@@ -70,61 +86,117 @@ export type InferSelection<TSelection extends Record<string, SelectField>> = {
  * ```
  */
 export type ColumnsToRecord<TDef extends TableDefinition> = {
-    [K in TDef['columns'][number] as K['name']]: K extends {
-        config: infer C extends ColumnConfig;
-    } ? ColumnRef<K['name'], ColumnType<C>> : ColumnRef<K['name'], unknown>;
+  [K in TDef['columns'][number] as K['name']]: K extends {
+    config: infer C extends ColumnConfig;
+  }
+    ? ColumnRef<K['name'], ColumnType<C>>
+    : ColumnRef<K['name'], unknown>;
 };
 /** Infer select result type from TableDefinition columns */
-export type InferSelectResult<TDef extends TableDefinition> = InferTypedRecord<TDef>;
+export type InferSelectResult<TDef extends TableDefinition> =
+  InferTypedRecord<TDef>;
 /** Infer insert input type (partial of columns, no id required) */
-export type InferInsertInput<TDef extends TableDefinition> = Partial<InferTypedRecord<TDef>>;
+export type InferInsertInput<TDef extends TableDefinition> = Partial<
+  InferTypedRecord<TDef>
+>;
 /** Infer update input type (partial, no id) */
-export type InferUpdateInput<TDef extends TableDefinition> = Partial<InferTypedRecord<TDef>>;
+export type InferUpdateInput<TDef extends TableDefinition> = Partial<
+  InferTypedRecord<TDef>
+>;
 /** Graph traversal result type with aliased fields */
 export type WithGraphAliases<TBase, TAliases> = TBase & TAliases;
 /** Map column config to TypeScript type */
-export type ColumnType<TConfig extends ColumnConfig> = TConfig['type'] extends 'string' ? string : TConfig['type'] extends 'int' | 'float' | 'decimal' | 'number' ? number : TConfig['type'] extends 'bool' ? boolean : TConfig['type'] extends 'datetime' ? Date | string : TConfig['type'] extends 'duration' ? string : TConfig['type'] extends 'array' ? unknown[] : TConfig['type'] extends 'object' ? Record<string, unknown> : TConfig['type'] extends 'record' ? string : TConfig['type'] extends 'null' ? null : unknown;
+export type ColumnType<TConfig extends ColumnConfig> =
+  TConfig['type'] extends 'string'
+    ? string
+    : TConfig['type'] extends 'int' | 'float' | 'decimal' | 'number'
+      ? number
+      : TConfig['type'] extends 'bool'
+        ? boolean
+        : TConfig['type'] extends 'datetime'
+          ? Date | string
+          : TConfig['type'] extends 'duration'
+            ? string
+            : TConfig['type'] extends 'array'
+              ? unknown[]
+              : TConfig['type'] extends 'object'
+                ? Record<string, unknown>
+                : TConfig['type'] extends 'record'
+                  ? string
+                  : TConfig['type'] extends 'null'
+                    ? null
+                    : unknown;
 /** Extract ColumnConfig from a ColumnBuilder's build() return type */
-type BuilderColumnConfig<T extends ColumnBuilder> = ReturnType<T['build']> extends {
+type BuilderColumnConfig<T extends ColumnBuilder> =
+  ReturnType<T['build']> extends {
     config: infer C extends ColumnConfig;
-} ? C : never;
+  }
+    ? C
+    : never;
 /** Build typed record from TableDefinition columns */
 export type InferTypedRecord<TDef extends TableDefinition> = TDef extends {
-    _columns: infer TCols extends Record<string, ColumnBuilder>;
-} ? {
-    [K in keyof TCols as K extends string ? K extends `${string}.*${string}` ? never : K : K]: TCols[K] extends {
+  _columns: infer TCols extends Record<string, ColumnBuilder>;
+}
+  ? {
+      [K in keyof TCols as K extends string
+        ? K extends `${string}.*${string}`
+          ? never
+          : K
+        : K]: TCols[K] extends {
         _optional: true;
-    } ? ColumnType<BuilderColumnConfig<TCols[K]>> | undefined : ColumnType<BuilderColumnConfig<TCols[K]>>;
-} & {
-    id: string;
-} : {
-    [K in TDef['columns'][number] as K['name'] extends `${string}.*${string}` ? never : K['name']]: K extends {
+      }
+        ? ColumnType<BuilderColumnConfig<TCols[K]>> | undefined
+        : ColumnType<BuilderColumnConfig<TCols[K]>>;
+    } & {
+      id: string;
+    }
+  : {
+      [K in TDef['columns'][number] as K['name'] extends `${string}.*${string}`
+        ? never
+        : K['name']]: K extends {
         config: infer C extends ColumnConfig;
-    } ? C['optional'] extends true ? ColumnType<C> | undefined : ColumnType<C> : unknown;
-} & {
-    id: string;
-};
+      }
+        ? C['optional'] extends true
+          ? ColumnType<C> | undefined
+          : ColumnType<C>
+        : unknown;
+    } & {
+      id: string;
+    };
 /**
  * Infer edge input fields from a relation table definition.
  * Omits 'id' since edge IDs are auto-generated by SurrealDB.
  * Use for typed RelateBuilder.set() and .data() parameters.
  */
 export type InferRelateInput<TDef extends TableDefinition> = TDef extends {
-    _columns: infer TCols extends Record<string, ColumnBuilder>;
-} ? Omit<{
-    [K in keyof TCols as K extends string ? K extends `${string}.*${string}` ? never : K : K]: TCols[K] extends {
-        _optional: true;
-    } ? ColumnType<BuilderColumnConfig<TCols[K]>> | undefined : ColumnType<BuilderColumnConfig<TCols[K]>>;
-}, never> : Record<string, unknown>;
+  _columns: infer TCols extends Record<string, ColumnBuilder>;
+}
+  ? Omit<
+      {
+        [K in keyof TCols as K extends string
+          ? K extends `${string}.*${string}`
+            ? never
+            : K
+          : K]: TCols[K] extends {
+          _optional: true;
+        }
+          ? ColumnType<BuilderColumnConfig<TCols[K]>> | undefined
+          : ColumnType<BuilderColumnConfig<TCols[K]>>;
+      },
+      never
+    >
+  : Record<string, unknown>;
 /**
  * Infer relate result type from an edge table definition.
  * Extends InferTypedRecord with SurrealDB's standard 'in' and 'out' relation fields.
  */
-export type InferRelateResult<TDef extends TableDefinition> = InferTypedRecord<TDef> & {
+export type InferRelateResult<TDef extends TableDefinition> =
+  InferTypedRecord<TDef> & {
     in: string;
     out: string;
-};
+  };
 /** Check if table config is a relation table */
-export declare function isRelationTable(config: TableConfig): config is RelationTableConfig;
-export {};
+export declare function isRelationTable(
+  config: TableConfig,
+): config is RelationTableConfig;
 //# sourceMappingURL=types.d.ts.map

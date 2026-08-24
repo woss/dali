@@ -9,7 +9,10 @@ import type { ConditionOp, SerializedCondition } from './conditions.js';
 import type { ConditionNode } from './where-builder.js';
 
 /** Combine two condition trees with AND */
-export function andTrees(a: ConditionNode | null, b: ConditionNode): ConditionNode {
+export function andTrees(
+  a: ConditionNode | null,
+  b: ConditionNode,
+): ConditionNode {
   if (!a) return b;
   return {
     type: 'and',
@@ -18,7 +21,9 @@ export function andTrees(a: ConditionNode | null, b: ConditionNode): ConditionNo
 }
 
 /** Convert a SerializedCondition to a special raw condition node */
-export function serializedConditionToNode(condition: SerializedCondition): ConditionNode {
+export function serializedConditionToNode(
+  condition: SerializedCondition,
+): ConditionNode {
   // Store serialized condition as a special node for later SQL generation
   return {
     type: 'condition',
@@ -62,11 +67,16 @@ export function serializeCondition(
         node.value !== null &&
         (node.value as Record<string, unknown>).__subquery
       ) {
-        const info = node.value as { sql: string; params: Record<string, unknown> };
+        const info = node.value as {
+          sql: string;
+          params: Record<string, unknown>;
+        };
         let subSQL = info.sql;
         const newParams: Record<string, unknown> = {};
         // Remap subquery param names to avoid collisions with main query
-        const sortedKeys = Object.keys(info.params).sort((a, b) => b.length - a.length);
+        const sortedKeys = Object.keys(info.params).sort(
+          (a, b) => b.length - a.length,
+        );
         for (const key of sortedKeys) {
           const newName = nextParam(info.params[key]);
           subSQL = subSQL.replaceAll(`$${key}`, `$${newName}`);
@@ -75,7 +85,8 @@ export function serializeCondition(
       }
 
       // Standard condition
-      if (node.op === ('isNone' as ConditionOp)) return { sql: `${node.field} = NONE`, params: {} };
+      if (node.op === ('isNone' as ConditionOp))
+        return { sql: `${node.field} = NONE`, params: {} };
       if (node.op === ('isNotNull' as ConditionOp))
         return { sql: `${node.field} != NONE`, params: {} };
 

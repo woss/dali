@@ -5,10 +5,18 @@
  * Extracted from diff.ts to keep files under 500 lines.
  */
 
-import { SurrealQLGenerator } from '../core/generator.js';
-import { isRaw, quoteString, serializePermissionsFragment } from '../../core/surql.js';
+import {
+  isRaw,
+  quoteString,
+  serializePermissionsFragment,
+} from '../../core/surql.js';
 import type { ColumnDefinition } from '../../sdk/schema/column/types.js';
-import type { IndexDefinition, TableDefinition, TablePermissions } from '../../sdk/table.js';
+import type {
+  IndexDefinition,
+  TableDefinition,
+  TablePermissions,
+} from '../../sdk/table.js';
+import { SurrealQLGenerator } from '../core/generator.js';
 import type {
   CreateDatabaseStatement,
   CreateNamespaceStatement,
@@ -39,7 +47,11 @@ function formatDefaultForSql(value: unknown): string {
   if (typeof value === 'number') return String(value);
   if (typeof value === 'string') {
     const normalized = value.trim().toLowerCase();
-    if (normalized === 'now' || normalized === 'now()' || normalized === 'time::now()') {
+    if (
+      normalized === 'now' ||
+      normalized === 'now()' ||
+      normalized === 'time::now()'
+    ) {
       return 'time::now()';
     }
     // Single-quote strings for SurrealQL, escape internal single quotes
@@ -64,7 +76,9 @@ export function serializePermissions(perms: {
 /**
  * Order statements following Drizzle's pattern
  */
-export function orderStatements(statements: SurrealStatement[]): SurrealStatement[] {
+export function orderStatements(
+  statements: SurrealStatement[],
+): SurrealStatement[] {
   const order: Array<SurrealStatement['type']> = [
     'create_namespace',
     'drop_namespace',
@@ -137,9 +151,16 @@ export function statementToSql(stmt: SurrealStatement): string {
     case 'drop_index':
       return generator.generateRemoveIndex(stmt.name, stmt.table);
     case 'alter_table_permissions':
-      return generator.generateAlterTablePermissions(stmt.table, stmt.permissions);
+      return generator.generateAlterTablePermissions(
+        stmt.table,
+        stmt.permissions,
+      );
     case 'alter_field_permissions':
-      return generator.generateAlterFieldPermissions(stmt.table, stmt.field, stmt.permissions);
+      return generator.generateAlterFieldPermissions(
+        stmt.table,
+        stmt.field,
+        stmt.permissions,
+      );
     case 'create_relation': {
       // Relations are defined as tables with TYPE RELATION
       const inStr = Array.isArray(stmt.in) ? stmt.in.join(', ') : stmt.in;
@@ -213,12 +234,14 @@ function generateCreateTable(stmt: CreateTableStatement): string {
     }
     // Use option<T> syntax for optional fields (SurrealDB syntax)
     // FLEXIBLE only pairs with plain TYPE object, not option<object>
-    if (col.optional && !(col.flex && col.kind === 'object')) line += ` TYPE option<${typeStr}>`;
+    if (col.optional && !(col.flex && col.kind === 'object'))
+      line += ` TYPE option<${typeStr}>`;
     else line += ` TYPE ${typeStr}`;
     // FLEXIBLE must be specified after TYPE in SurrealDB
     if (col.flex) line += ' FLEXIBLE';
     if (col.readonly) line += ' READONLY';
-    if (col.default !== undefined) line += ` DEFAULT ${formatDefaultForSql(col.default)}`;
+    if (col.default !== undefined)
+      line += ` DEFAULT ${formatDefaultForSql(col.default)}`;
     if (col.assert) line += ` ASSERT ${col.assert}`;
     if (col.permissions) {
       const permsStr = serializePermissions(col.permissions);
@@ -259,7 +282,9 @@ function generateAlterColumn(stmt: AlterColumnStatement): string {
     const baseType = stmt.before?.type;
     if (baseType) {
       const isRecord = baseType === 'record' && stmt.before?.recordTable;
-      const targetType = isRecord ? `record<${stmt.before!.recordTable}>` : baseType;
+      const targetType = isRecord
+        ? `record<${stmt.before!.recordTable}>`
+        : baseType;
       parts.push(`TYPE option<${targetType}>`);
     }
     // else: skip — can't express optional toggle without knowing the type
@@ -285,7 +310,12 @@ function generateCreateIndex(idx: SurrealIndex): string {
 
 // Export the function that's used in diffTable for fallback permissions
 export function getDefaultPermissions(): TablePermissions {
-  return { select: 'WHERE true', create: 'WHERE true', update: 'WHERE true', delete: 'WHERE true' };
+  return {
+    select: 'WHERE true',
+    create: 'WHERE true',
+    update: 'WHERE true',
+    delete: 'WHERE true',
+  };
 }
 
 // =============================================================================

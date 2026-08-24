@@ -4,6 +4,7 @@
  * Centralized type mapping utilities for DDL operations.
  */
 import type { SurrealColumnType } from '../../sdk/schema/column/types.js';
+
 export type { SurrealColumnType };
 export declare const SURREALDB_TYPE_MAP: Record<string, string>;
 /**
@@ -39,10 +40,10 @@ export declare function getSurrealQLType(type: string): string;
  * - Union types: `'T | U'` → returns first type, logs warning
  */
 export declare function parseKind(kind: string): {
-    type: SurrealColumnType;
-    recordTable?: string;
-    recordTables?: string[];
-    size?: number;
-    value?: string;
+  type: SurrealColumnType;
+  recordTable?: string;
+  recordTables?: string[];
+  size?: number;
+  value?: string;
 };
 //# sourceMappingURL=types.d.ts.map

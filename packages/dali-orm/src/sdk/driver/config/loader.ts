@@ -54,7 +54,12 @@ function detectFormat(filePath: string): ConfigFileFormat {
   const normalizedExt = ext === '.jsonc' ? '.json' : ext;
 
   return {
-    type: normalizedExt === '.ts' ? 'typescript' : ext === '.json' ? 'json' : 'jsonc',
+    type:
+      normalizedExt === '.ts'
+        ? 'typescript'
+        : ext === '.json'
+          ? 'json'
+          : 'jsonc',
     path: filePath,
     exists: existsSync(filePath),
   };
@@ -259,7 +264,9 @@ async function loadTypeScriptConfig(filePath: string): Promise<OrmConfig> {
  * console.log(result.config.url);
  * ```
  */
-export async function loadConfig(options: LoadConfigOptions = {}): Promise<LoadConfigResult> {
+export async function loadConfig(
+  options: LoadConfigOptions = {},
+): Promise<LoadConfigResult> {
   const filePath = findConfigFile(options);
 
   // Fail fast: no config file found
@@ -294,8 +301,12 @@ export async function loadConfig(options: LoadConfigOptions = {}): Promise<LoadC
   const validation = validateConfig(rawConfig);
 
   if (!validation.valid) {
-    const errorMessages = validation.errors.map((e) => `${e.path}: ${e.message}`).join('; ');
-    throw new Error(`Config validation failed in ${filePath}: ${errorMessages}`);
+    const errorMessages = validation.errors
+      .map((e) => `${e.path}: ${e.message}`)
+      .join('; ');
+    throw new Error(
+      `Config validation failed in ${filePath}: ${errorMessages}`,
+    );
   }
 
   // Parse into validated config
@@ -321,7 +332,9 @@ export async function loadConfig(options: LoadConfigOptions = {}): Promise<LoadC
  * @returns Load result with validated config
  * @throws Error if file not found, validation fails, or file is TypeScript
  */
-export function loadConfigSync(options: LoadConfigOptions = {}): LoadConfigResult {
+export function loadConfigSync(
+  options: LoadConfigOptions = {},
+): LoadConfigResult {
   const filePath = findConfigFile(options);
 
   // Fail fast: no config file found
@@ -358,8 +371,12 @@ export function loadConfigSync(options: LoadConfigOptions = {}): LoadConfigResul
   const validation = validateConfig(rawConfig);
 
   if (!validation.valid) {
-    const errorMessages = validation.errors.map((e) => `${e.path}: ${e.message}`).join('; ');
-    throw new Error(`Config validation failed in ${filePath}: ${errorMessages}`);
+    const errorMessages = validation.errors
+      .map((e) => `${e.path}: ${e.message}`)
+      .join('; ');
+    throw new Error(
+      `Config validation failed in ${filePath}: ${errorMessages}`,
+    );
   }
 
   // Parse into validated config
@@ -398,7 +415,9 @@ export function getCachedConfig(): LoadConfigResult | null {
 /**
  * Check if a config file exists
  */
-export function configFileExists(options: Partial<LoadConfigOptions> = {}): boolean {
+export function configFileExists(
+  options: Partial<LoadConfigOptions> = {},
+): boolean {
   const filePath = findConfigFile(options);
   return filePath !== null && existsSync(filePath);
 }
@@ -426,7 +445,9 @@ export async function loadConfigOptions(
  * @param options - Loader options
  * @returns Validated config
  */
-export function loadConfigOptionsSync(options: LoadConfigOptions = {}): ValidatedOrmConfig {
+export function loadConfigOptionsSync(
+  options: LoadConfigOptions = {},
+): ValidatedOrmConfig {
   const result = loadConfigSync(options);
   return result.config;
 }

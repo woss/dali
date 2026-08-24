@@ -5,10 +5,10 @@
  * Builds a ConditionNode tree via a chainable fluent API.
  */
 
-import type { ConditionOp } from './conditions.js';
-import type { ColumnRef } from './types.js';
 import type { SqlExpr } from '../sdk/functions/sql.js';
+import type { ConditionOp } from './conditions.js';
 import type { SelectBuilder } from './select.js';
+import type { ColumnRef } from './types.js';
 
 // ============================================================================
 // ConditionNode
@@ -37,8 +37,17 @@ export class WhereBuilder {
     value?: unknown,
   ): void {
     const fieldName =
-      typeof field === 'string' ? field : 'name' in field ? field.name : String(field);
-    this.root.children?.push({ type: 'condition', field: fieldName, op, value });
+      typeof field === 'string'
+        ? field
+        : 'name' in field
+          ? field.name
+          : String(field);
+    this.root.children?.push({
+      type: 'condition',
+      field: fieldName,
+      op,
+      value,
+    });
   }
 
   eq<K extends string, T>(field: ColumnRef<K, T>, value: T): this;
@@ -137,8 +146,16 @@ export class WhereBuilder {
   isNull(field: SqlExpr): this;
   isNull(field: string | ColumnRef | SqlExpr): this {
     const fieldName =
-      typeof field === 'string' ? field : 'name' in field ? field.name : String(field);
-    this.root.children?.push({ type: 'condition', field: fieldName, op: 'isNone' as ConditionOp });
+      typeof field === 'string'
+        ? field
+        : 'name' in field
+          ? field.name
+          : String(field);
+    this.root.children?.push({
+      type: 'condition',
+      field: fieldName,
+      op: 'isNone' as ConditionOp,
+    });
     return this;
   }
 
@@ -148,7 +165,11 @@ export class WhereBuilder {
   isNotNull(field: SqlExpr): this;
   isNotNull(field: string | ColumnRef | SqlExpr): this {
     const fieldName =
-      typeof field === 'string' ? field : 'name' in field ? field.name : String(field);
+      typeof field === 'string'
+        ? field
+        : 'name' in field
+          ? field.name
+          : String(field);
     this.root.children?.push({
       type: 'condition',
       field: fieldName,
@@ -172,16 +193,28 @@ export class WhereBuilder {
     valuesOrSubquery: unknown[] | SelectBuilder<any, any>,
   ): this {
     // Duck-type check: SelectBuilder has toSQL()
-    if (valuesOrSubquery && typeof valuesOrSubquery === 'object' && 'toSQL' in valuesOrSubquery) {
+    if (
+      valuesOrSubquery &&
+      typeof valuesOrSubquery === 'object' &&
+      'toSQL' in valuesOrSubquery
+    ) {
       const fieldName =
-        typeof field === 'string' ? field : 'name' in field ? field.name : String(field);
+        typeof field === 'string'
+          ? field
+          : 'name' in field
+            ? field.name
+            : String(field);
       const subResult = (valuesOrSubquery as SelectBuilder<any, any>).toSQL();
       // Store both SQL and params — serializer will remap param names
       this.root.children?.push({
         type: 'condition',
         field: fieldName,
         op: 'IN' as ConditionOp,
-        value: { __subquery: true, sql: `(${subResult.sql})`, params: subResult.params },
+        value: {
+          __subquery: true,
+          sql: `(${subResult.sql})`,
+          params: subResult.params,
+        },
       });
       return this;
     }
@@ -193,7 +226,9 @@ export class WhereBuilder {
   and(...conditions: ConditionNode[]): this;
   and(...args: unknown[]): this {
     if (args.length === 1 && typeof args[0] === 'function') {
-      const sub = (args[0] as (w: WhereBuilder) => WhereBuilder)(new WhereBuilder());
+      const sub = (args[0] as (w: WhereBuilder) => WhereBuilder)(
+        new WhereBuilder(),
+      );
       this.root.children?.push(sub.build());
     } else {
       this.root.children?.push(...(args as ConditionNode[]));
@@ -206,7 +241,9 @@ export class WhereBuilder {
   or(...args: unknown[]): this {
     const orNode: ConditionNode = { type: 'or', children: [] };
     if (args.length === 1 && typeof args[0] === 'function') {
-      const sub = (args[0] as (w: WhereBuilder) => WhereBuilder)(new WhereBuilder());
+      const sub = (args[0] as (w: WhereBuilder) => WhereBuilder)(
+        new WhereBuilder(),
+      );
       orNode.children?.push(sub.build());
     } else {
       orNode.children?.push(...(args as ConditionNode[]));

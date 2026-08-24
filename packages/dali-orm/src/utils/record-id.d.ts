@@ -14,5 +14,8 @@
  * @returns Colon-qualified record ID in the format `tableName:key`
  * @throws {Error} If `recordId` or `tableName` is empty/missing, or if `recordId` contains an angle-bracket character `<` that isn't the proper `⟨`
  */
-export declare function resolveRecordId(recordId: string, tableName: string): string;
+export declare function resolveRecordId(
+  recordId: string,
+  tableName: string,
+): string;
 //# sourceMappingURL=record-id.d.ts.map

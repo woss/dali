@@ -6,14 +6,18 @@
  * Falls back to native driver.select() for simple unfiltered queries.
  */
 
-import type { SurrealDriver } from '../sdk/driver/types.js';
 import type { DaliORM } from '../sdk/dali-orm.js';
+import type { SurrealDriver } from '../sdk/driver/types.js';
 import type { SqlExpr } from '../sdk/functions/sql.js';
 import type { TableDefinition } from '../sdk/table.js';
 import type { SerializedCondition } from './conditions.js';
+import {
+  andTrees,
+  serializeCondition,
+  serializedConditionToNode,
+} from './serializer.js';
 import type { ColumnRef, InferSelection, InferSelectResult } from './types.js';
-import { WhereBuilder, type ConditionNode } from './where-builder.js';
-import { andTrees, serializedConditionToNode, serializeCondition } from './serializer.js';
+import { type ConditionNode, WhereBuilder } from './where-builder.js';
 
 // ============================================================================
 // Types
@@ -23,11 +27,14 @@ type Direction = 'ASC' | 'DESC';
 type GraphDirection = 'out' | 'in';
 
 /** Column name from a TableDefinition — for field-level autocomplete */
-type FieldNameOf<TDef extends TableDefinition> = TDef['columns'][number]['name'] & string;
+type FieldNameOf<TDef extends TableDefinition> =
+  TDef['columns'][number]['name'] & string;
 
 /** Record-type field name from a TableDefinition — for FETCH autocomplete */
 type RecordFieldNameOf<TDef extends TableDefinition> = keyof {
-  [K in TDef['columns'][number] as K['config']['type'] extends 'record' ? K['name'] : never]: true;
+  [K in TDef['columns'][number] as K['config']['type'] extends 'record'
+    ? K['name']
+    : never]: true;
 } &
   string;
 
@@ -43,7 +50,10 @@ interface GraphTraversal {
 // SelectBuilder
 // ============================================================================
 
-export class SelectBuilder<TDef extends TableDefinition, TResult = InferSelectResult<TDef>> {
+export class SelectBuilder<
+  TDef extends TableDefinition,
+  TResult = InferSelectResult<TDef>,
+> {
   private readonly driver: SurrealDriver;
   private readonly tableDef: TDef;
   private _fields: string[] = ['*'];
@@ -71,7 +81,8 @@ export class SelectBuilder<TDef extends TableDefinition, TResult = InferSelectRe
 
   constructor(orm: DaliORM, tableDef: TDef) {
     if (!orm) throw new Error('DaliORM instance is required');
-    if (!tableDef?.name) throw new Error('Table definition with name is required');
+    if (!tableDef?.name)
+      throw new Error('Table definition with name is required');
 
     this.driver = orm.getDriver();
     this.tableDef = tableDef;
@@ -83,9 +94,13 @@ export class SelectBuilder<TDef extends TableDefinition, TResult = InferSelectRe
   fields<K extends keyof TResult>(
     ...names: (K | SqlExpr)[]
   ): SelectBuilder<TDef, Pick<TResult, K | (keyof TResult & 'id')>> {
-    if (names.length === 0) throw new Error('At least one field name is required');
+    if (names.length === 0)
+      throw new Error('At least one field name is required');
     this._fields = names.map((n) => String(n));
-    return this as unknown as SelectBuilder<TDef, Pick<TResult, K | (keyof TResult & 'id')>>;
+    return this as unknown as SelectBuilder<
+      TDef,
+      Pick<TResult, K | (keyof TResult & 'id')>
+    >;
   }
 
   /**
@@ -113,7 +128,10 @@ export class SelectBuilder<TDef extends TableDefinition, TResult = InferSelectRe
     const names = Object.values(selection).map((ref) => ref.name);
     if (names.length === 0) throw new Error('At least one column is required');
     this._fields = names;
-    return this as unknown as SelectBuilder<TDef, InferSelection<TSelection> & { id: string }>;
+    return this as unknown as SelectBuilder<
+      TDef,
+      InferSelection<TSelection> & { id: string }
+    >;
   }
 
   // ==================== WHERE Clause ====================
@@ -127,7 +145,12 @@ export class SelectBuilder<TDef extends TableDefinition, TResult = InferSelectRe
   where(fn: (w: WhereBuilder) => WhereBuilder): this;
   where(condition: SerializedCondition): this;
   where(rawClause: string): this;
-  where(fnOrCondition: ((w: WhereBuilder) => WhereBuilder) | SerializedCondition | string): this {
+  where(
+    fnOrCondition:
+      | ((w: WhereBuilder) => WhereBuilder)
+      | SerializedCondition
+      | string,
+  ): this {
     if (typeof fnOrCondition === 'function') {
       const builder = fnOrCondition(new WhereBuilder());
       const node = builder.build();
@@ -157,7 +180,8 @@ export class SelectBuilder<TDef extends TableDefinition, TResult = InferSelectRe
   orderBy(field: string, direction?: Direction): this;
   /** Add ORDER BY clause */
   orderBy(field: string, direction: Direction = 'ASC'): this {
-    if (!field || typeof field !== 'string') throw new Error('Field name is required for orderBy');
+    if (!field || typeof field !== 'string')
+      throw new Error('Field name is required for orderBy');
     this.orderByClauses.push({ field, direction });
     return this;
   }
@@ -190,7 +214,8 @@ export class SelectBuilder<TDef extends TableDefinition, TResult = InferSelectRe
   fetch(...tables: string[]): this;
   /** Add FETCH clauses for eager loading related tables */
   fetch(...tables: string[]): this {
-    if (tables.length === 0) throw new Error('At least one table name is required for fetch');
+    if (tables.length === 0)
+      throw new Error('At least one table name is required for fetch');
     this.fetchTables.push(...tables);
     return this;
   }
@@ -208,7 +233,12 @@ export class SelectBuilder<TDef extends TableDefinition, TResult = InferSelectRe
     alias: string,
     options: { depth?: { min: number; max?: number } },
   ): this;
-  traverse(direction: GraphDirection, edge: string, target: string, alias: string): this;
+  traverse(
+    direction: GraphDirection,
+    edge: string,
+    target: string,
+    alias: string,
+  ): this;
   traverse(
     direction: GraphDirection,
     edge: string,
@@ -223,8 +253,10 @@ export class SelectBuilder<TDef extends TableDefinition, TResult = InferSelectRe
     aliasOrOptions?: string | { depth?: { min: number; max?: number } },
     maybeOptions?: { depth?: { min: number; max?: number } },
   ): this {
-    if (!edge || typeof edge !== 'string') throw new Error('Edge name is required for traverse');
-    if (!targetOrAlias) throw new Error('Target or alias is required for traverse');
+    if (!edge || typeof edge !== 'string')
+      throw new Error('Edge name is required for traverse');
+    if (!targetOrAlias)
+      throw new Error('Target or alias is required for traverse');
 
     let target = '';
     let actualAlias = '';
@@ -244,7 +276,13 @@ export class SelectBuilder<TDef extends TableDefinition, TResult = InferSelectRe
       actualAlias = targetOrAlias;
     }
 
-    this.graphTraversals.push({ direction, edge, target, alias: actualAlias, depth });
+    this.graphTraversals.push({
+      direction,
+      edge,
+      target,
+      alias: actualAlias,
+      depth,
+    });
     return this;
   }
 
@@ -256,7 +294,8 @@ export class SelectBuilder<TDef extends TableDefinition, TResult = InferSelectRe
   groupBy(...fieldNames: string[]): this;
   /** Add GROUP BY clause */
   groupBy(...fieldNames: string[]): this {
-    if (fieldNames.length === 0) throw new Error('At least one field is required for groupBy');
+    if (fieldNames.length === 0)
+      throw new Error('At least one field is required for groupBy');
     this.groupByFields = fieldNames;
     return this;
   }
@@ -265,7 +304,8 @@ export class SelectBuilder<TDef extends TableDefinition, TResult = InferSelectRe
 
   /** Add TIMEOUT clause */
   timeout(duration: string): this {
-    if (!duration || typeof duration !== 'string') throw new Error('Duration string is required');
+    if (!duration || typeof duration !== 'string')
+      throw new Error('Duration string is required');
     this.timeoutValue = duration;
     return this;
   }
@@ -282,7 +322,8 @@ export class SelectBuilder<TDef extends TableDefinition, TResult = InferSelectRe
 
   /** Add OMIT clause to exclude fields from results */
   omit(...fields: string[]): this {
-    if (fields.length === 0) throw new Error('At least one field name is required for Omit');
+    if (fields.length === 0)
+      throw new Error('At least one field name is required for Omit');
     this.omitFields = fields;
     return this;
   }
@@ -291,7 +332,8 @@ export class SelectBuilder<TDef extends TableDefinition, TResult = InferSelectRe
 
   /** Add SPLIT clause to split array fields into separate records */
   split(...fields: string[]): this {
-    if (fields.length === 0) throw new Error('At least one field is required for Split');
+    if (fields.length === 0)
+      throw new Error('At least one field is required for Split');
     this.splitFields = fields;
     return this;
   }
@@ -306,7 +348,8 @@ export class SelectBuilder<TDef extends TableDefinition, TResult = InferSelectRe
 
   /** Use WITH INDEX hint for specific indexes */
   withIndex(...names: string[]): this {
-    if (names.length === 0) throw new Error('At least one index name is required');
+    if (names.length === 0)
+      throw new Error('At least one index name is required');
     this.indexHint = { type: 'index', names };
     return this;
   }
@@ -414,7 +457,8 @@ export class SelectBuilder<TDef extends TableDefinition, TResult = InferSelectRe
    */
   with(ctes: Record<string, SelectBuilder<any, any>>): this {
     const entries = Object.entries(ctes);
-    if (entries.length === 0) throw new Error('At least one CTE definition is required');
+    if (entries.length === 0)
+      throw new Error('At least one CTE definition is required');
     this._cteQueries = entries.map(([name, query]) => ({ name, query }));
     return this;
   }
@@ -459,8 +503,10 @@ export class SelectBuilder<TDef extends TableDefinition, TResult = InferSelectRe
     if (this._cteQueries && this._cteQueries.length > 0) {
       const cteParts: string[] = [];
       for (let i = 0; i < this._cteQueries.length; i++) {
-        const cte: { name: string; query: SelectBuilder<any, any> } = this._cteQueries[i];
-        const childSQL: { sql: string; params: Record<string, unknown> } = cte.query.toSQL();
+        const cte: { name: string; query: SelectBuilder<any, any> } =
+          this._cteQueries[i];
+        const childSQL: { sql: string; params: Record<string, unknown> } =
+          cte.query.toSQL();
         const prefix = `c${i}_`;
         let remappedSQL = childSQL.sql;
         // Sort keys longest-first so c0_p10 replaced before c0_p1
@@ -495,7 +541,10 @@ export class SelectBuilder<TDef extends TableDefinition, TResult = InferSelectRe
 
     // WHERE
     if (this.whereTree) {
-      const { sql: whereSql, params: whereParams } = serializeCondition(this.whereTree, nextParam);
+      const { sql: whereSql, params: whereParams } = serializeCondition(
+        this.whereTree,
+        nextParam,
+      );
       if (whereSql) {
         sql += ` WHERE ${whereSql}`;
         Object.assign(params, whereParams);
@@ -568,7 +617,9 @@ export class SelectBuilder<TDef extends TableDefinition, TResult = InferSelectRe
       let remappedSQL = childSQL.sql;
       const remappedParams: Record<string, unknown> = {};
       // Sort keys longest-first so $p10 is replaced before $p1
-      const sortedKeys = Object.keys(childSQL.params).sort((a, b) => b.length - a.length);
+      const sortedKeys = Object.keys(childSQL.params).sort(
+        (a, b) => b.length - a.length,
+      );
       for (const key of sortedKeys) {
         const newKey = `${prefix}${key}`;
         remappedParams[newKey] = childSQL.params[key];

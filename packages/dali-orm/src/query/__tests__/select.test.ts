@@ -1,25 +1,25 @@
+import type { DaliORM } from '../../sdk/dali-orm.js';
+import type { EmbeddedDriver } from '../../sdk/driver/embedded-driver.js';
 import {
   afterEach,
   beforeEach,
+  columnRef,
+  createTestDriver,
+  datetime,
+  defineRelationTable,
+  defineTable,
+  defineTables,
   describe,
   expect,
-  it,
-  createTestDriver,
-  users,
-  posts,
-  defineTables,
-  setupTestDb,
-  defineTable,
-  defineRelationTable,
-  string,
   int,
-  datetime,
+  it,
+  posts,
   record,
   select,
-  columnRef,
+  setupTestDb,
+  string,
+  users,
 } from './test-utils.js';
-import type { EmbeddedDriver } from '../../sdk/driver/embedded-driver.js';
-import type { DaliORM } from '../../sdk/dali-orm.js';
 
 let driver: EmbeddedDriver;
 let orm: DaliORM;
@@ -41,8 +41,12 @@ afterEach(async () => {
 
 describe('SelectBuilder - Basic Operations', () => {
   it('select all records returns all created users', async () => {
-    await driver.query("CREATE user:alice SET name = 'Alice', email = 'alice@test.com', age = 25");
-    await driver.query("CREATE user:bob SET name = 'Bob', email = 'bob@test.com', age = 30");
+    await driver.query(
+      "CREATE user:alice SET name = 'Alice', email = 'alice@test.com', age = 25",
+    );
+    await driver.query(
+      "CREATE user:bob SET name = 'Bob', email = 'bob@test.com', age = 30",
+    );
     await driver.query(
       "CREATE user:charlie SET name = 'Charlie', email = 'charlie@test.com', age = 35",
     );
@@ -64,7 +68,9 @@ describe('SelectBuilder - Basic Operations', () => {
   });
 
   it('select uses native driver.select() for simple queries', async () => {
-    await driver.query("CREATE user:alice SET name = 'Alice', email = 'alice@test.com', age = 25");
+    await driver.query(
+      "CREATE user:alice SET name = 'Alice', email = 'alice@test.com', age = 25",
+    );
 
     // Simple select (no where, order, limit, etc.) should use native driver
     const results = await select(orm, users).execute();
@@ -125,7 +131,9 @@ describe('SelectBuilder - WHERE Clause', () => {
 
   it('where with OR', async () => {
     // Use raw SQL for OR condition since WhereBuilder wraps in AND
-    const results = await select(orm, users).where("name = 'Alice' OR name = 'Bob'").execute();
+    const results = await select(orm, users)
+      .where("name = 'Alice' OR name = 'Bob'")
+      .execute();
 
     expect(results).toHaveLength(2);
     const names = results.map((r) => (r as Record<string, unknown>).name);
@@ -154,7 +162,9 @@ describe('SelectBuilder - WHERE Clause', () => {
   });
 
   it('where with isNull', async () => {
-    await driver.query("CREATE user:eve SET name = 'Eve', email = 'eve@test.com', age = NONE");
+    await driver.query(
+      "CREATE user:eve SET name = 'Eve', email = 'eve@test.com', age = NONE",
+    );
 
     const results = await select(orm, users)
       .where((w) => w.isNull('age'))
@@ -187,11 +197,21 @@ describe('SelectBuilder - WHERE Clause', () => {
 
 describe('SelectBuilder - ORDER BY, LIMIT, START', () => {
   beforeEach(async () => {
-    await driver.query("CREATE user:1 SET name = 'User1', email = 'user1@test.com', age = 20");
-    await driver.query("CREATE user:2 SET name = 'User2', email = 'user2@test.com', age = 30");
-    await driver.query("CREATE user:3 SET name = 'User3', email = 'user3@test.com', age = 40");
-    await driver.query("CREATE user:4 SET name = 'User4', email = 'user4@test.com', age = 50");
-    await driver.query("CREATE user:5 SET name = 'User5', email = 'user5@test.com', age = 60");
+    await driver.query(
+      "CREATE user:1 SET name = 'User1', email = 'user1@test.com', age = 20",
+    );
+    await driver.query(
+      "CREATE user:2 SET name = 'User2', email = 'user2@test.com', age = 30",
+    );
+    await driver.query(
+      "CREATE user:3 SET name = 'User3', email = 'user3@test.com', age = 40",
+    );
+    await driver.query(
+      "CREATE user:4 SET name = 'User4', email = 'user4@test.com', age = 50",
+    );
+    await driver.query(
+      "CREATE user:5 SET name = 'User5', email = 'user5@test.com', age = 60",
+    );
   });
 
   it('orderBy single field ASC', async () => {
@@ -217,7 +237,11 @@ describe('SelectBuilder - ORDER BY, LIMIT, START', () => {
   });
 
   it('start + limit (pagination)', async () => {
-    const results = await select(orm, users).orderBy('age', 'ASC').start(2).limit(2).execute();
+    const results = await select(orm, users)
+      .orderBy('age', 'ASC')
+      .start(2)
+      .limit(2)
+      .execute();
 
     expect(results).toHaveLength(2);
     const names = results.map((r) => (r as Record<string, unknown>).name);
@@ -226,7 +250,10 @@ describe('SelectBuilder - ORDER BY, LIMIT, START', () => {
   });
 
   it('combined orderBy + limit', async () => {
-    const results = await select(orm, users).orderBy('age', 'DESC').limit(2).execute();
+    const results = await select(orm, users)
+      .orderBy('age', 'DESC')
+      .limit(2)
+      .execute();
 
     expect(results).toHaveLength(2);
     const ages = results.map((r) => (r as Record<string, unknown>).age);
@@ -241,7 +268,9 @@ describe('SelectBuilder - ORDER BY, LIMIT, START', () => {
 
 describe('SelectBuilder - Field Selection', () => {
   it('fields selects specific columns', async () => {
-    await driver.query("CREATE user:alice SET name = 'Alice', email = 'alice@test.com', age = 25");
+    await driver.query(
+      "CREATE user:alice SET name = 'Alice', email = 'alice@test.com', age = 25",
+    );
 
     const results = await select(orm, users).fields('name', 'age').execute();
 
@@ -274,7 +303,9 @@ describe('SelectBuilder - Graph Traversal', () => {
   });
 
   it('traverse outgoing', async () => {
-    const results = await select(orm, users).traverse('out', 'wrote', 'post', 'posts').execute();
+    const results = await select(orm, users)
+      .traverse('out', 'wrote', 'post', 'posts')
+      .execute();
 
     expect(results).toHaveLength(1);
     const user = results[0] as Record<string, unknown>;
@@ -284,7 +315,9 @@ describe('SelectBuilder - Graph Traversal', () => {
   });
 
   it('traverse incoming', async () => {
-    const results = await select(orm, posts).traverse('in', 'wrote', 'user', 'authors').execute();
+    const results = await select(orm, posts)
+      .traverse('in', 'wrote', 'user', 'authors')
+      .execute();
 
     expect(results.length).toBeGreaterThan(0);
   });
@@ -320,7 +353,9 @@ describe('SelectBuilder - Graph Traversal', () => {
   });
 
   it('traverse without depth still works', () => {
-    const result = select(orm, users).traverse('out', 'wrote', 'post', 'posts').toSQL();
+    const result = select(orm, users)
+      .traverse('out', 'wrote', 'post', 'posts')
+      .toSQL();
     expect(result.sql).toContain('->wrote->post.* AS posts');
     expect(result.sql).not.toContain('{');
   });
@@ -334,7 +369,9 @@ describe('SelectBuilder - FETCH', () => {
   it('fetch related tables', async () => {
     // Create user and post with record link using authorId
     await driver.query("CREATE user:alice SET name = 'Alice'");
-    await driver.query("CREATE post:1 SET title = 'Post 1', authorId = 'user:alice'");
+    await driver.query(
+      "CREATE post:1 SET title = 'Post 1', authorId = 'user:alice'",
+    );
 
     const results = await select(orm, posts).fetch('authorId').execute();
 
@@ -348,8 +385,12 @@ describe('SelectBuilder - FETCH', () => {
 
 describe('SelectBuilder - GROUP BY', () => {
   it('groupBy with count', async () => {
-    await driver.query("CREATE post:1 SET title = 'Post 1', authorId = 'alice'");
-    await driver.query("CREATE post:2 SET title = 'Post 2', authorId = 'alice'");
+    await driver.query(
+      "CREATE post:1 SET title = 'Post 1', authorId = 'alice'",
+    );
+    await driver.query(
+      "CREATE post:2 SET title = 'Post 2', authorId = 'alice'",
+    );
     await driver.query("CREATE post:3 SET title = 'Post 3', authorId = 'bob'");
 
     const results = await select(orm, posts)
@@ -382,7 +423,9 @@ describe('SelectBuilder - TIMEOUT', () => {
 describe('DX: Typed field selection', () => {
   it('should accept typed field names with autocomplete', async () => {
     const { driver: isolatedDriver, cleanup } = await setupTestDb();
-    const isolatedOrm = { getDriver: () => isolatedDriver } as unknown as DaliORM;
+    const isolatedOrm = {
+      getDriver: () => isolatedDriver,
+    } as unknown as DaliORM;
     try {
       // Create the table and insert data
       await isolatedDriver.query(`
@@ -402,7 +445,9 @@ describe('DX: Typed field selection', () => {
       });
 
       // Typed fields - should only accept 'name' | 'email' | 'age' | 'id'
-      const result = await select(isolatedOrm, userTable).fields('name', 'email').execute();
+      const result = await select(isolatedOrm, userTable)
+        .fields('name', 'email')
+        .execute();
 
       expect(result).toHaveLength(1);
       expect(result[0]).toHaveProperty('name', 'Alice');
@@ -414,14 +459,18 @@ describe('DX: Typed field selection', () => {
 
   it('should narrow return type with fields selection', async () => {
     const { driver: isolatedDriver, cleanup } = await setupTestDb();
-    const isolatedOrm = { getDriver: () => isolatedDriver } as unknown as DaliORM;
+    const isolatedOrm = {
+      getDriver: () => isolatedDriver,
+    } as unknown as DaliORM;
     try {
       await isolatedDriver.query(`
         DEFINE TABLE user SCHEMAFULL;
         DEFINE FIELD name ON user TYPE string;
         DEFINE FIELD email ON user TYPE string;
       `);
-      await isolatedDriver.query("CREATE user:1 SET name = 'Alice', email = 'alice@test.com';");
+      await isolatedDriver.query(
+        "CREATE user:1 SET name = 'Alice', email = 'alice@test.com';",
+      );
 
       const userTable = defineTable('user', {
         name: string('name'),
@@ -429,7 +478,9 @@ describe('DX: Typed field selection', () => {
       });
 
       // Should only return selected fields (SurrealDB omits id when selecting specific fields)
-      const result = await select(isolatedOrm, userTable).fields('name').execute();
+      const result = await select(isolatedOrm, userTable)
+        .fields('name')
+        .execute();
 
       expect(result).toHaveLength(1);
       expect(result[0]).toHaveProperty('name', 'Alice');
@@ -442,7 +493,9 @@ describe('DX: Typed field selection', () => {
 
   it('should validate fields rejects empty args', async () => {
     const { driver: isolatedDriver, cleanup } = await setupTestDb();
-    const isolatedOrm = { getDriver: () => isolatedDriver } as unknown as DaliORM;
+    const isolatedOrm = {
+      getDriver: () => isolatedDriver,
+    } as unknown as DaliORM;
     try {
       const userTable = defineTable('user', { name: string('name') });
       expect(() => select(isolatedOrm, userTable).fields()).toThrow(
@@ -457,7 +510,9 @@ describe('DX: Typed field selection', () => {
 describe('DX: Drizzle-style columns()', () => {
   it('should select using ColumnRef objects', async () => {
     const { driver: isolatedDriver, cleanup } = await setupTestDb();
-    const isolatedOrm = { getDriver: () => isolatedDriver } as unknown as DaliORM;
+    const isolatedOrm = {
+      getDriver: () => isolatedDriver,
+    } as unknown as DaliORM;
     try {
       await isolatedDriver.query(`
         DEFINE TABLE user SCHEMAFULL;
@@ -466,7 +521,10 @@ describe('DX: Drizzle-style columns()', () => {
       `);
       await isolatedDriver.query("CREATE user:1 SET name = 'Alice', age = 30;");
 
-      const userTable = defineTable('user', { name: string('name'), age: int('age') });
+      const userTable = defineTable('user', {
+        name: string('name'),
+        age: int('age'),
+      });
 
       const nameCol = columnRef<'name', string>('name', '' as string, 'user');
       const ageCol = columnRef<'age', number>('age', 0 as number, 'user');
@@ -530,7 +588,10 @@ describe('DX: Typed orderBy / groupBy / fetch', () => {
 
 describe('DX: $columns population', () => {
   it('should populate $columns from defineTable', () => {
-    const userTable = defineTable('user', { name: string('name'), age: int('age') });
+    const userTable = defineTable('user', {
+      name: string('name'),
+      age: int('age'),
+    });
     expect(userTable.$columns).toBeDefined();
     expect(userTable.$columns?.name).toBeDefined();
     expect(userTable.$columns?.name.name).toBe('name');
@@ -651,8 +712,12 @@ describe('SelectBuilder - Subquery', () => {
   });
 
   it('IN subquery in WHERE clause works with real data', async () => {
-    await driver.query("CREATE user:alice SET name = 'Alice', email = 'alice@test.com', age = 25");
-    await driver.query("CREATE user:bob SET name = 'Bob', email = 'bob@test.com', age = 30");
+    await driver.query(
+      "CREATE user:alice SET name = 'Alice', email = 'alice@test.com', age = 25",
+    );
+    await driver.query(
+      "CREATE user:bob SET name = 'Bob', email = 'bob@test.com', age = 30",
+    );
 
     // Build a subquery that returns user ids explicitly
     const sub = select(orm, users).where((w) => w.eq('name', 'Alice'));
@@ -675,7 +740,9 @@ describe('SelectBuilder - Subquery', () => {
       .where((w) => w.in('id', sub))
       .toSQL();
 
-    expect(result.sql).toContain('id IN (SELECT id FROM user WHERE active = $p0)');
+    expect(result.sql).toContain(
+      'id IN (SELECT id FROM user WHERE active = $p0)',
+    );
     expect(result.params.p0).toBe(true);
   });
 });
@@ -763,10 +830,14 @@ describe('SelectBuilder - CTE (WITH clause)', () => {
   it('with() prepends CTE prefix to SQL', () => {
     const activeQuery = select(orm, users).where((w) => w.eq('active', true));
 
-    const result = select(orm, users).with({ activeUsers: activeQuery }).toSQL();
+    const result = select(orm, users)
+      .with({ activeUsers: activeQuery })
+      .toSQL();
 
     expect(result.sql).toContain('WITH');
-    expect(result.sql).toContain('activeUsers AS (SELECT * FROM user WHERE active = $c0_p0)');
+    expect(result.sql).toContain(
+      'activeUsers AS (SELECT * FROM user WHERE active = $c0_p0)',
+    );
     expect(result.sql).toContain('SELECT * FROM user');
     expect(result.params.c0_p0).toBe(true);
   });
@@ -774,11 +845,15 @@ describe('SelectBuilder - CTE (WITH clause)', () => {
   it('with() generates correct SQL with param remapping', () => {
     const activeQuery = select(orm, users).where((w) => w.eq('active', true));
 
-    const result = select(orm, users).with({ activeUsers: activeQuery }).toSQL();
+    const result = select(orm, users)
+      .with({ activeUsers: activeQuery })
+      .toSQL();
 
     // CTE parameters are remapped with c0_ prefix
     expect(result.sql).toContain('WITH');
-    expect(result.sql).toContain('activeUsers AS (SELECT * FROM user WHERE active = $c0_p0)');
+    expect(result.sql).toContain(
+      'activeUsers AS (SELECT * FROM user WHERE active = $c0_p0)',
+    );
     expect(result.params.c0_p0).toBe(true);
     // Main query params are unaffected
     expect(result.sql).toContain('SELECT * FROM user');
@@ -830,6 +905,8 @@ describe('SelectBuilder - Advanced Error Handling', () => {
   });
 
   it('with throws when CTEs is empty', () => {
-    expect(() => select(orm, users).with({})).toThrow('At least one CTE definition is required');
+    expect(() => select(orm, users).with({})).toThrow(
+      'At least one CTE definition is required',
+    );
   });
 });

@@ -1,17 +1,17 @@
+import type { DaliORM } from '../../sdk/dali-orm.js';
+import type { EmbeddedDriver } from '../../sdk/driver/embedded-driver.js';
+import { InsertBuilder } from '../insert.js';
 import {
   afterEach,
   beforeEach,
+  createTestDriver,
+  defineTables,
   describe,
   expect,
-  it,
-  createTestDriver,
-  users,
-  defineTables,
   insert,
+  it,
+  users,
 } from './test-utils.js';
-import { InsertBuilder } from '../insert.js';
-import type { EmbeddedDriver } from '../../sdk/driver/embedded-driver.js';
-import type { DaliORM } from '../../sdk/dali-orm.js';
 
 let driver: EmbeddedDriver;
 let orm: DaliORM;
@@ -88,7 +88,9 @@ describe('InsertBuilder', () => {
   // -----------------------------------------------------------------------
 
   it('constructor throws when orm is null', () => {
-    expect(() => new InsertBuilder(null as any, users)).toThrow('DaliORM instance is required');
+    expect(() => new InsertBuilder(null as any, users)).toThrow(
+      'DaliORM instance is required',
+    );
   });
 
   it('constructor throws when orm is undefined', () => {
@@ -114,11 +116,15 @@ describe('InsertBuilder', () => {
   // -----------------------------------------------------------------------
 
   it('insert one throws on empty data via execute', async () => {
-    await expect(insert(orm, users).execute()).rejects.toThrow('Cannot insert with empty records');
+    await expect(insert(orm, users).execute()).rejects.toThrow(
+      'Cannot insert with empty records',
+    );
   });
 
   it('insert throws on null data object', () => {
-    expect(() => (insert(orm, users) as any).one(null)).toThrow('Data object is required');
+    expect(() => (insert(orm, users) as any).one(null)).toThrow(
+      'Data object is required',
+    );
   });
 
   it('insert throws on string data for one()', () => {
@@ -128,7 +134,9 @@ describe('InsertBuilder', () => {
   });
 
   it('insert throws on number data for one()', () => {
-    expect(() => (insert(orm, users) as any).one(42)).toThrow('Data object is required');
+    expect(() => (insert(orm, users) as any).one(42)).toThrow(
+      'Data object is required',
+    );
   });
 
   // -----------------------------------------------------------------------
@@ -142,9 +150,9 @@ describe('InsertBuilder', () => {
   });
 
   it('insert throws on non-array for many', () => {
-    expect(() => (insert(orm, users) as any).many('not-an-array' as any)).toThrow(
-      'Data array with at least one record is required',
-    );
+    expect(() =>
+      (insert(orm, users) as any).many('not-an-array' as any),
+    ).toThrow('Data array with at least one record is required');
   });
 
   it('insert throws on null for many', () => {
@@ -164,13 +172,15 @@ describe('InsertBuilder', () => {
   // -----------------------------------------------------------------------
 
   it('insert throws on non-array for records', () => {
-    expect(() => (insert(orm, users) as any).records(null)).toThrow('Data array is required');
+    expect(() => (insert(orm, users) as any).records(null)).toThrow(
+      'Data array is required',
+    );
   });
 
   it('insert throws on string for records', () => {
-    expect(() => (insert(orm, users) as any).records('not-an-array' as any)).toThrow(
-      'Data array is required',
-    );
+    expect(() =>
+      (insert(orm, users) as any).records('not-an-array' as any),
+    ).toThrow('Data array is required');
   });
 
   it('records() replaces previously added records via one()', async () => {
@@ -274,7 +284,11 @@ describe('InsertBuilder', () => {
     await driver.query('DEFINE FIELD metadata.nested ON user TYPE object');
     await driver.query('DEFINE FIELD metadata.nested.a ON user TYPE int');
     const results = await insert(orm, users)
-      .one({ name: 'ObjTest', email: 'obj@test.com', metadata: { key: 'val', nested: { a: 1 } } })
+      .one({
+        name: 'ObjTest',
+        email: 'obj@test.com',
+        metadata: { key: 'val', nested: { a: 1 } },
+      })
       .ignoreDuplicates()
       .execute();
     expect(results).toHaveLength(1);
@@ -285,7 +299,12 @@ describe('InsertBuilder', () => {
   it('insert with array values serializes correctly', async () => {
     await driver.query('DEFINE FIELD tags ON user TYPE array');
     const results = await insert(orm, users)
-      .one({ name: 'ArrTest', email: 'arr@test.com', tags: ['a', 'b', 'c'], active: true })
+      .one({
+        name: 'ArrTest',
+        email: 'arr@test.com',
+        tags: ['a', 'b', 'c'],
+        active: true,
+      })
       .ignoreDuplicates()
       .execute();
     expect(results).toHaveLength(1);
@@ -347,7 +366,9 @@ describe('InsertBuilder', () => {
 
   it('records() returns same builder for chaining', () => {
     const builder = insert(orm, users);
-    const result = builder.records([{ name: 'Alice', email: 'alice@test.com' }]);
+    const result = builder.records([
+      { name: 'Alice', email: 'alice@test.com' },
+    ]);
     expect(result).toBe(builder);
   });
 

@@ -66,7 +66,9 @@ describe('validateConfig', () => {
   it('returns invalid for non-object input', () => {
     const result = validateConfig('not-an-object');
     expect(result.valid).toBe(false);
-    expect(result.errors[0].message).toContain('Configuration must be an object');
+    expect(result.errors[0].message).toContain(
+      'Configuration must be an object',
+    );
   });
 
   it('returns valid for minimal config', () => {
@@ -163,7 +165,9 @@ describe('parseUrl', () => {
   });
 
   it('accepts wss:// protocol', () => {
-    expect(parseUrl('wss://secure.example.com:8000')).toBe('wss://secure.example.com:8000');
+    expect(parseUrl('wss://secure.example.com:8000')).toBe(
+      'wss://secure.example.com:8000',
+    );
   });
 
   it('accepts http:// protocol', () => {
@@ -171,7 +175,9 @@ describe('parseUrl', () => {
   });
 
   it('accepts https:// protocol', () => {
-    expect(parseUrl('https://example.com:8000')).toBe('https://example.com:8000');
+    expect(parseUrl('https://example.com:8000')).toBe(
+      'https://example.com:8000',
+    );
   });
 
   it('rejects ftp:// protocol', () => {
@@ -189,7 +195,9 @@ describe('parseUrl', () => {
 
 describe('parseAuth', () => {
   it('returns undefined for nullish input', () => {
-    expect(parseAuth(null as unknown as Parameters<typeof parseAuth>[0])).toBeUndefined();
+    expect(
+      parseAuth(null as unknown as Parameters<typeof parseAuth>[0]),
+    ).toBeUndefined();
   });
 
   it('parses root auth with username and password', () => {
@@ -248,7 +256,9 @@ describe('parseAuth', () => {
 describe('parseDriverOptions', () => {
   it('returns undefined for nullish input', () => {
     expect(
-      parseDriverOptions(null as unknown as Parameters<typeof parseDriverOptions>[0]),
+      parseDriverOptions(
+        null as unknown as Parameters<typeof parseDriverOptions>[0],
+      ),
     ).toBeUndefined();
   });
 

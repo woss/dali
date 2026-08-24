@@ -10,19 +10,23 @@ import type { SurrealStatement } from './ddl.js';
  * Serialize SurrealPermissions object to SQL string for field permissions
  */
 export declare function serializePermissions(perms: {
-    select?: string | boolean;
-    create?: string | boolean;
-    update?: string | boolean;
-    delete?: string | boolean;
+  select?: string | boolean;
+  create?: string | boolean;
+  update?: string | boolean;
+  delete?: string | boolean;
 }): string;
 /**
  * Order statements following Drizzle's pattern
  */
-export declare function orderStatements(statements: SurrealStatement[]): SurrealStatement[];
+export declare function orderStatements(
+  statements: SurrealStatement[],
+): SurrealStatement[];
 /**
  * Group statements by type
  */
-export declare function groupStatements(statements: SurrealStatement[]): Record<string, SurrealStatement[]>;
+export declare function groupStatements(
+  statements: SurrealStatement[],
+): Record<string, SurrealStatement[]>;
 /**
  * Convert statement to SQL string
  */

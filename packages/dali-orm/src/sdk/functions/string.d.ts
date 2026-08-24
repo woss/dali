@@ -6,20 +6,38 @@
  */
 import type { SqlExpr } from './sql.js';
 export declare function stringConcat(...exprs: SqlExpr[]): SqlExpr;
-export declare function stringContains(str: SqlExpr, substring: SqlExpr): SqlExpr;
+export declare function stringContains(
+  str: SqlExpr,
+  substring: SqlExpr,
+): SqlExpr;
 export declare function stringEndsWith(str: SqlExpr, suffix: SqlExpr): SqlExpr;
 export declare function stringJoin(arr: SqlExpr, separator: SqlExpr): SqlExpr;
 export declare function stringLen(str: SqlExpr): SqlExpr;
 export declare function stringLowercase(str: SqlExpr): SqlExpr;
 export declare function stringMatches(str: SqlExpr, pattern: SqlExpr): SqlExpr;
 export declare function stringRepeat(str: SqlExpr, n: SqlExpr): SqlExpr;
-export declare function stringReplace(str: SqlExpr, search: SqlExpr, replace: SqlExpr): SqlExpr;
+export declare function stringReplace(
+  str: SqlExpr,
+  search: SqlExpr,
+  replace: SqlExpr,
+): SqlExpr;
 export declare function stringReverse(str: SqlExpr): SqlExpr;
-export declare function stringSlice(str: SqlExpr, start: SqlExpr, end?: SqlExpr): SqlExpr;
+export declare function stringSlice(
+  str: SqlExpr,
+  start: SqlExpr,
+  end?: SqlExpr,
+): SqlExpr;
 export declare function stringSlug(str: SqlExpr): SqlExpr;
 export declare function stringSplit(str: SqlExpr, separator: SqlExpr): SqlExpr;
-export declare function stringStartsWith(str: SqlExpr, prefix: SqlExpr): SqlExpr;
-export declare function stringSubstring(str: SqlExpr, start: SqlExpr, length?: SqlExpr): SqlExpr;
+export declare function stringStartsWith(
+  str: SqlExpr,
+  prefix: SqlExpr,
+): SqlExpr;
+export declare function stringSubstring(
+  str: SqlExpr,
+  start: SqlExpr,
+  length?: SqlExpr,
+): SqlExpr;
 export declare function stringTrim(str: SqlExpr): SqlExpr;
 export declare function stringUppercase(str: SqlExpr): SqlExpr;
 export declare function stringWords(str: SqlExpr): SqlExpr;

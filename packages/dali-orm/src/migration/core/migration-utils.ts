@@ -7,9 +7,9 @@
 import { readdir, readFile, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { createDebug as debug } from 'obug';
-import { computeMigrationHash } from '../ddl/journal.js';
 import { MigrationError } from '../../core/errors.js';
 import type { MigrationJournalManager } from '../ddl/journal.js';
+import { computeMigrationHash } from '../ddl/journal.js';
 
 const log = debug('dali-orm:kit:runner');
 
@@ -95,7 +95,9 @@ export async function getMigrationProgress(
  *
  * Format: `{version}_{name}/migration.surql` in the migrations directory
  */
-export async function loadMigrationFiles(dir: string | undefined): Promise<MigrationFile[]> {
+export async function loadMigrationFiles(
+  dir: string | undefined,
+): Promise<MigrationFile[]> {
   // Guard: no dir means no files
   if (!dir) {
     return [];
@@ -157,7 +159,9 @@ export async function loadMigrationFiles(dir: string | undefined): Promise<Migra
   }
 
   // Sort by version
-  migrations.sort((a, b) => a.version.localeCompare(b.version, undefined, { numeric: true }));
+  migrations.sort((a, b) =>
+    a.version.localeCompare(b.version, undefined, { numeric: true }),
+  );
 
   log(
     'Loaded %d migration files: %j',
@@ -199,8 +203,14 @@ export function parseStatements(sectionContent: string): string[] {
  */
 export function findDestructiveOps(migration: MigrationFile): string[] {
   const patterns: { pattern: RegExp; description: string }[] = [
-    { pattern: /\bDROP\s+(TABLE|FIELD|INDEX|EVENT|FUNCTION|PARAM)\b/i, description: 'DROP' },
-    { pattern: /\bREMOVE\s+(TABLE|FIELD|INDEX|EVENT|FUNCTION|PARAM)\b/i, description: 'REMOVE' },
+    {
+      pattern: /\bDROP\s+(TABLE|FIELD|INDEX|EVENT|FUNCTION|PARAM)\b/i,
+      description: 'DROP',
+    },
+    {
+      pattern: /\bREMOVE\s+(TABLE|FIELD|INDEX|EVENT|FUNCTION|PARAM)\b/i,
+      description: 'REMOVE',
+    },
     { pattern: /\bDELETE\s+FROM\b/i, description: 'DELETE FROM' },
   ];
   const warnings: string[] = [];

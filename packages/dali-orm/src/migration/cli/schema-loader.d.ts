@@ -1,10 +1,10 @@
 import type { AccessConfig, FunctionConfig } from '../../sdk/schema.js';
 import type { AnalyzerDefinition, TableDefinition } from '../../sdk/table.js';
 export interface SchemaFilesResult {
-    tables: TableDefinition[];
-    access?: AccessConfig[];
-    functions?: FunctionConfig[];
-    analyzers?: AnalyzerDefinition[];
+  tables: TableDefinition[];
+  access?: AccessConfig[];
+  functions?: FunctionConfig[];
+  analyzers?: AnalyzerDefinition[];
 }
 /**
  * Load schema files from directory or file
@@ -13,17 +13,25 @@ export interface SchemaFilesResult {
  * If schemaPath is a directory, recursively finds .ts files,
  * dynamically imports them, and extracts table definitions.
  */
-export declare function loadSchemaFiles(schemaPath: string, pattern?: string): Promise<SchemaFilesResult>;
+export declare function loadSchemaFiles(
+  schemaPath: string,
+  pattern?: string,
+): Promise<SchemaFilesResult>;
 /**
  * Load schema from a single file path
  * Extracts table definitions from the module's exports
  */
-export declare function loadSchemaFromFile(filePath: string): Promise<SchemaFilesResult>;
+export declare function loadSchemaFromFile(
+  filePath: string,
+): Promise<SchemaFilesResult>;
 /**
  * Find files matching a glob-like pattern recursively
  * Supports: patterns like **\/*.ts (recursive) or *.ts (current dir only)
  */
-export declare function findMatchingFiles(dir: string, pattern: string): Promise<string[]>;
+export declare function findMatchingFiles(
+  dir: string,
+  pattern: string,
+): Promise<string[]>;
 /**
  * Type guard to check if value is a TableDefinition
  *
@@ -33,10 +41,14 @@ export declare function findMatchingFiles(dir: string, pattern: string): Promise
  *
  * The type guard needs to handle both cases and normalize the table name.
  */
-export declare function isTableDefinition(value: unknown): value is TableDefinition;
+export declare function isTableDefinition(
+  value: unknown,
+): value is TableDefinition;
 /**
  * Convert a SurrealTableInstance to a plain TableDefinition
  * This extracts the real name from $name and normalizes the structure
  */
-export declare function normalizeTableDefinition(table: unknown): TableDefinition | null;
+export declare function normalizeTableDefinition(
+  table: unknown,
+): TableDefinition | null;
 //# sourceMappingURL=schema-loader.d.ts.map

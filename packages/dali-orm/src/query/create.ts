@@ -5,12 +5,15 @@
  * Supports optional record ID and field-by-field data setting.
  */
 
-import type { SurrealDriver } from '../sdk/driver/types.js';
 import type { DaliORM } from '../sdk/dali-orm.js';
+import type { SurrealDriver } from '../sdk/driver/types.js';
 import type { TableDefinition } from '../sdk/table.js';
 import type { InferSelectResult } from './types.js';
 
-export class CreateBuilder<TDef extends TableDefinition, TResult = InferSelectResult<TDef>> {
+export class CreateBuilder<
+  TDef extends TableDefinition,
+  TResult = InferSelectResult<TDef>,
+> {
   private readonly driver: SurrealDriver;
   private readonly tableDef: TDef;
   private recordId?: string;
@@ -18,7 +21,8 @@ export class CreateBuilder<TDef extends TableDefinition, TResult = InferSelectRe
 
   constructor(orm: DaliORM, tableDef: TDef) {
     if (!orm) throw new Error('DaliORM instance is required');
-    if (!tableDef?.name) throw new Error('Table definition with name is required');
+    if (!tableDef?.name)
+      throw new Error('Table definition with name is required');
 
     this.driver = orm.getDriver();
     this.tableDef = tableDef;
@@ -26,7 +30,8 @@ export class CreateBuilder<TDef extends TableDefinition, TResult = InferSelectRe
 
   /** Set record ID (e.g., "john" → "user:john") */
   id(recordId: string): this {
-    if (!recordId || typeof recordId !== 'string') throw new Error('Record ID is required');
+    if (!recordId || typeof recordId !== 'string')
+      throw new Error('Record ID is required');
     this.recordId = recordId;
     return this;
   }
@@ -34,7 +39,8 @@ export class CreateBuilder<TDef extends TableDefinition, TResult = InferSelectRe
   /** Set a single field value */
   set(field: string, value: unknown): this;
   set(field: string, value: unknown): this {
-    if (!field || typeof field !== 'string') throw new Error('Field name is required');
+    if (!field || typeof field !== 'string')
+      throw new Error('Field name is required');
     this._data[field] = value;
     return this;
   }
@@ -42,7 +48,8 @@ export class CreateBuilder<TDef extends TableDefinition, TResult = InferSelectRe
   /** Set all data at once (replaces existing data) */
   data(obj: Record<string, unknown>): this;
   data(obj: Record<string, unknown>): this {
-    if (!obj || typeof obj !== 'object') throw new Error('Data object is required');
+    if (!obj || typeof obj !== 'object')
+      throw new Error('Data object is required');
     this._data = { ...obj };
     return this;
   }
@@ -50,10 +57,14 @@ export class CreateBuilder<TDef extends TableDefinition, TResult = InferSelectRe
   /** Execute the CREATE query */
   async execute(): Promise<TResult[]> {
     if (Object.keys(this._data).length === 0) {
-      throw new Error('Cannot create record with empty data - use .data() or .set() first');
+      throw new Error(
+        'Cannot create record with empty data - use .data() or .set() first',
+      );
     }
 
-    const table = this.recordId ? `${this.tableDef.name}:${this.recordId}` : this.tableDef.name;
+    const table = this.recordId
+      ? `${this.tableDef.name}:${this.recordId}`
+      : this.tableDef.name;
 
     return this.driver.create<TResult>(table, this._data);
   }

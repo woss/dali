@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { EmbeddedDriver } from '../../sdk/driver/embedded-driver.js';
 import type { DaliORM } from '../../sdk/dali-orm.js';
+import { EmbeddedDriver } from '../../sdk/driver/embedded-driver.js';
 import { bool, datetime, int, string } from '../../sdk/schema/column/index.js';
 import { defineTable } from '../../sdk/table.js';
 import { live } from '../live.js';
@@ -35,7 +35,9 @@ async function defineTables() {
   await driver.query('DEFINE FIELD email ON user TYPE option<string>');
   await driver.query('DEFINE FIELD age ON user TYPE option<int>');
   await driver.query('DEFINE FIELD active ON user TYPE bool DEFAULT true');
-  await driver.query('DEFINE FIELD createdAt ON user TYPE datetime DEFAULT time::now()');
+  await driver.query(
+    'DEFINE FIELD createdAt ON user TYPE datetime DEFAULT time::now()',
+  );
 }
 
 beforeEach(async () => {
@@ -55,7 +57,9 @@ afterEach(async () => {
 
 describe('LiveQueryBuilder - Construction', () => {
   it('throws without driver', () => {
-    expect(() => live(null as unknown as DaliORM, users)).toThrow('DaliORM instance is required');
+    expect(() => live(null as unknown as DaliORM, users)).toThrow(
+      'DaliORM instance is required',
+    );
   });
 
   it('throws without table definition', () => {
@@ -84,7 +88,9 @@ describe('LiveQueryBuilder - Chainable Methods', () => {
 
   it('fields throws with empty arguments', () => {
     const builder = live(orm, users);
-    expect(() => builder.fields()).toThrow('At least one field name is required');
+    expect(() => builder.fields()).toThrow(
+      'At least one field name is required',
+    );
   });
 
   it('fields returns this for chaining', () => {
@@ -94,7 +100,9 @@ describe('LiveQueryBuilder - Chainable Methods', () => {
 
   it('value throws with empty field', () => {
     const builder = live(orm, users);
-    expect(() => builder.value('' as any)).toThrow('Field name is required for value()');
+    expect(() => builder.value('' as any)).toThrow(
+      'Field name is required for value()',
+    );
   });
 
   it('value returns this for chaining', () => {
@@ -111,7 +119,9 @@ describe('LiveQueryBuilder - Chainable Methods', () => {
 
   it('fetch throws with empty arguments', () => {
     const builder = live(orm, users);
-    expect(() => builder.fetch()).toThrow('At least one field name is required for fetch');
+    expect(() => builder.fetch()).toThrow(
+      'At least one field name is required for fetch',
+    );
   });
 
   it('fetch returns this for chaining', () => {
@@ -121,7 +131,9 @@ describe('LiveQueryBuilder - Chainable Methods', () => {
 
   it('onRecord throws with empty recordId', () => {
     const builder = live(orm, users);
-    expect(() => builder.onRecord('')).toThrow('Record ID is required for onRecord');
+    expect(() => builder.onRecord('')).toThrow(
+      'Record ID is required for onRecord',
+    );
   });
 
   it('onRecord returns this for chaining', () => {

@@ -1,10 +1,12 @@
-import { describe, it, expect } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { resolveRecordId } from './record-id.js';
 
 describe('resolveRecordId', () => {
   // ─── Colon-qualified format ───────────────────────────────────────
   it('normalises colon-qualified id (memories:abc123)', () => {
-    expect(resolveRecordId('memories:abc123', 'memories')).toBe('memories:abc123');
+    expect(resolveRecordId('memories:abc123', 'memories')).toBe(
+      'memories:abc123',
+    );
   });
 
   it('overrides table prefix in colon-qualified id (users:abc123 → memories)', () => {
@@ -13,11 +15,15 @@ describe('resolveRecordId', () => {
 
   // ─── Angle-bracket format ─────────────────────────────────────────
   it('normalises Unicode angle-bracket id (memories⟨abc123⟩)', () => {
-    expect(resolveRecordId('memories⟨abc123⟩', 'memories')).toBe('memories:abc123');
+    expect(resolveRecordId('memories⟨abc123⟩', 'memories')).toBe(
+      'memories:abc123',
+    );
   });
 
   it('extracts complex key from angle-bracket id (memories⟨user:123⟩)', () => {
-    expect(resolveRecordId('memories⟨user:123⟩', 'memories')).toBe('memories:user:123');
+    expect(resolveRecordId('memories⟨user:123⟩', 'memories')).toBe(
+      'memories:user:123',
+    );
   });
 
   // ─── Bare key ─────────────────────────────────────────────────────
@@ -32,19 +38,27 @@ describe('resolveRecordId', () => {
 
   // ─── Error: empty string ──────────────────────────────────────────
   it('throws on empty recordId', () => {
-    expect(() => resolveRecordId('', 'memories')).toThrow('Record ID is required');
+    expect(() => resolveRecordId('', 'memories')).toThrow(
+      'Record ID is required',
+    );
   });
 
   it('throws on empty tableName', () => {
-    expect(() => resolveRecordId('abc123', '')).toThrow('Table name is required');
+    expect(() => resolveRecordId('abc123', '')).toThrow(
+      'Table name is required',
+    );
   });
 
   // ─── Error: ASCII angle brackets ──────────────────────────────────
   it('throws on ASCII left angle bracket', () => {
-    expect(() => resolveRecordId('table<key>', 'table')).toThrow('Invalid record ID format');
+    expect(() => resolveRecordId('table<key>', 'table')).toThrow(
+      'Invalid record ID format',
+    );
   });
 
   it('throws on ASCII right angle bracket', () => {
-    expect(() => resolveRecordId('table>key', 'table')).toThrow('Invalid record ID format');
+    expect(() => resolveRecordId('table>key', 'table')).toThrow(
+      'Invalid record ID format',
+    );
   });
 });

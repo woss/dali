@@ -256,7 +256,9 @@ describe('string', () => {
   });
 
   it('stringReplace()', () => {
-    expect(stringReplace($('s'), $('f'), $('r'))).toBe('string::replace(s, f, r)');
+    expect(stringReplace($('s'), $('f'), $('r'))).toBe(
+      'string::replace(s, f, r)',
+    );
   });
 
   it('stringReverse()', () => {

@@ -1,13 +1,13 @@
-import { describe, expect, it, vi, expectTypeOf } from 'vitest';
-import type {
-  SurrealTypeToTS,
-  InferSelectResult,
-  InferInsertData,
-  InferUpdateData,
-} from '../infer-types.js';
-import type { TableDefinition, ColumnBuilder } from '../table.js';
+import { describe, expect, expectTypeOf, it, vi } from 'vitest';
 import { DaliORM } from '../dali-orm.js';
 import type { SurrealDriver } from '../driver/types.js';
+import type {
+  InferInsertData,
+  InferSelectResult,
+  InferUpdateData,
+  SurrealTypeToTS,
+} from '../infer-types.js';
+import type { ColumnBuilder, TableDefinition } from '../table.js';
 
 // =============================================================================
 // SurrealTypeToTS type mapping — compile-time assertions
@@ -83,7 +83,9 @@ describe('SurrealTypeToTS', () => {
   });
 
   it("maps 'object' to Record<string, unknown>", () => {
-    expectTypeOf<SurrealTypeToTS<'object'>>().toEqualTypeOf<Record<string, unknown>>();
+    expectTypeOf<SurrealTypeToTS<'object'>>().toEqualTypeOf<
+      Record<string, unknown>
+    >();
   });
 
   it("maps 'tuple' to unknown[]", () => {
@@ -109,7 +111,9 @@ describe('SurrealTypeToTS', () => {
   });
 
   it("maps 'function' to (...args: unknown[]) => unknown", () => {
-    expectTypeOf<SurrealTypeToTS<'function'>>().toEqualTypeOf<(...args: unknown[]) => unknown>();
+    expectTypeOf<SurrealTypeToTS<'function'>>().toEqualTypeOf<
+      (...args: unknown[]) => unknown
+    >();
   });
 
   it("maps 'any' to unknown", () => {
@@ -213,7 +217,9 @@ describe('selectFrom', () => {
   it('delegates to driver.select with table name and returns typed results', async () => {
     const mockSelect = vi
       .fn()
-      .mockResolvedValue([{ id: 'users:1', name: 'Alice', age: 30, active: true }]);
+      .mockResolvedValue([
+        { id: 'users:1', name: 'Alice', age: 30, active: true },
+      ]);
     const mockDriver = { select: mockSelect } as unknown as SurrealDriver;
 
     // @ts-expect-error - accessing private constructor for testing
@@ -228,7 +234,9 @@ describe('selectFrom', () => {
 
     expect(mockSelect).toHaveBeenCalledOnce();
     expect(mockSelect).toHaveBeenCalledWith('users');
-    expect(result).toEqual([{ id: 'users:1', name: 'Alice', age: 30, active: true }]);
+    expect(result).toEqual([
+      { id: 'users:1', name: 'Alice', age: 30, active: true },
+    ]);
   });
 
   it('returns empty array when driver returns no records', async () => {

@@ -13,8 +13,8 @@ import {
   type DatabaseAuth,
   type NamespaceAuth,
   type RootAuth,
-  type SystemAuth,
   Surreal,
+  type SystemAuth,
 } from 'surrealdb';
 import { BaseDriver } from './base-driver.js';
 import type { ConfigAuth } from './config/types.js';
@@ -161,7 +161,9 @@ export class NodeDriver extends BaseDriver {
       const auth = this._config.auth;
       const authType = auth?.type;
       const isSystemAuth =
-        authType === 'root' || authType === 'namespace' || authType === 'database';
+        authType === 'root' ||
+        authType === 'namespace' ||
+        authType === 'database';
 
       // Build connect options with defaults
       const opts: Record<string, unknown> = {
@@ -209,7 +211,9 @@ export class NodeDriver extends BaseDriver {
     } catch (error) {
       this.connected = false;
       const message = error instanceof Error ? error.message : String(error);
-      throw new Error(`Failed to connect to SurrealDB at ${this._config.url}: ${message}`);
+      throw new Error(
+        `Failed to connect to SurrealDB at ${this._config.url}: ${message}`,
+      );
     }
   }
 
@@ -238,7 +242,9 @@ export class NodeDriver extends BaseDriver {
       throw new Error('Not connected to SurrealDB');
     }
 
-    const tokens = await this.db.signup(this.buildSigninObject(credentials) as AccessRecordAuth);
+    const tokens = await this.db.signup(
+      this.buildSigninObject(credentials) as AccessRecordAuth,
+    );
     return tokens.access;
   }
 
@@ -275,7 +281,11 @@ export class NodeDriver extends BaseDriver {
       case 'root':
         return { username: auth.username, password: auth.password };
       case 'namespace':
-        return { namespace: auth.namespace, username: auth.username, password: auth.password };
+        return {
+          namespace: auth.namespace,
+          username: auth.username,
+          password: auth.password,
+        };
       case 'database':
         return {
           namespace: auth.namespace,

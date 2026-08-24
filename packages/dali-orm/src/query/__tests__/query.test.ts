@@ -1,18 +1,18 @@
+import type { DaliORM } from '../../sdk/dali-orm.js';
 import {
+  bindTable,
+  columnRef,
+  defineTable,
   describe,
   expect,
-  it,
-  users,
-  setupTestDb,
-  defineTable,
-  string,
   int,
+  it,
   select,
-  columnRef,
+  setupTestDb,
+  string,
+  users,
   WhereBuilder,
-  bindTable,
 } from './test-utils.js';
-import type { DaliORM } from '../../sdk/dali-orm.js';
 
 // ============================================================================
 // 16. Error Handling
@@ -20,7 +20,9 @@ import type { DaliORM } from '../../sdk/dali-orm.js';
 
 describe('Error Handling', () => {
   it('select throws without driver', () => {
-    expect(() => select(null as unknown as DaliORM, users)).toThrow('DaliORM instance is required');
+    expect(() => select(null as unknown as DaliORM, users)).toThrow(
+      'DaliORM instance is required',
+    );
   });
 
   it('select throws without tableDef', () => {
@@ -31,13 +33,17 @@ describe('Error Handling', () => {
   });
 
   it('create throws without driver', () => {
-    expect(() => select(null as unknown as DaliORM, users)).toThrow('DaliORM instance is required');
+    expect(() => select(null as unknown as DaliORM, users)).toThrow(
+      'DaliORM instance is required',
+    );
   });
 
   it('insert throws without records', async () => {
     const { insert } = await import('./test-utils.js');
     const orm = { getDriver: () => ({}) } as unknown as DaliORM;
-    await expect(insert(orm, users).execute()).rejects.toThrow('Cannot insert with empty records');
+    await expect(insert(orm, users).execute()).rejects.toThrow(
+      'Cannot insert with empty records',
+    );
   });
 });
 
@@ -58,7 +64,10 @@ describe('DX: WhereBuilder ColumnRef', () => {
       await driver.query("CREATE user:1 SET name = 'Alice', age = 30;");
       await driver.query("CREATE user:2 SET name = 'Bob', age = 25;");
 
-      const userTable = defineTable('user', { name: string('name'), age: int('age') });
+      const userTable = defineTable('user', {
+        name: string('name'),
+        age: int('age'),
+      });
       const nameCol = columnRef<'name', string>('name', '' as string, 'user');
 
       const result = await select(orm, userTable)
@@ -84,7 +93,10 @@ describe('DX: WhereBuilder ColumnRef', () => {
       await driver.query("CREATE user:1 SET name = 'Alice', age = 30;");
       await driver.query("CREATE user:2 SET name = 'Bob', age = 25;");
 
-      const userTable = defineTable('user', { name: string('name'), age: int('age') });
+      const userTable = defineTable('user', {
+        name: string('name'),
+        age: int('age'),
+      });
       const ageCol = columnRef<'age', number>('age', 0 as number, 'user');
 
       const result = await select(orm, userTable)
@@ -108,7 +120,9 @@ describe('DX: WhereBuilder ColumnRef', () => {
         DEFINE FIELD email ON user TYPE option<string>;
       `);
       await driver.query("CREATE user:1 SET name = 'Alice'"); // no email = NONE
-      await driver.query("CREATE user:2 SET name = 'Bob', email = 'bob@test.com';");
+      await driver.query(
+        "CREATE user:2 SET name = 'Bob', email = 'bob@test.com';",
+      );
 
       const userTable = defineTable('user', {
         name: string('name'),
@@ -288,7 +302,10 @@ describe('DX: bindTable()', () => {
         DEFINE FIELD age ON user TYPE int;
       `);
 
-      const userTable = defineTable('user', { name: string('name'), age: int('age') });
+      const userTable = defineTable('user', {
+        name: string('name'),
+        age: int('age'),
+      });
       const bound = bindTable(userTable);
 
       // insert + select + update + delete all available

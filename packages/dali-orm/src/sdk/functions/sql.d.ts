@@ -6,7 +6,7 @@
  */
 /** Branded string representing a validated SurrealQL expression */
 export type SqlExpr = string & {
-    readonly __brand: 'SqlExpr';
+  readonly __brand: 'SqlExpr';
 };
 /** Wrap a plain string as SqlExpr */
 export declare function $(str: string): SqlExpr;
@@ -15,7 +15,10 @@ export declare function $(str: string): SqlExpr;
 export declare function as_(expr: SqlExpr, alias: string): SqlExpr;
 /** Build a raw SqlExpr from a template literal.
  * Values are embedded directly (no parameterization) — use for static fragments only. */
-export declare function expr(strings: TemplateStringsArray, ...values: unknown[]): SqlExpr;
+export declare function expr(
+  strings: TemplateStringsArray,
+  ...values: unknown[]
+): SqlExpr;
 /** Create a column reference as SqlExpr for use in function arguments */
 export declare function col(name: string): SqlExpr;
 //# sourceMappingURL=sql.d.ts.map

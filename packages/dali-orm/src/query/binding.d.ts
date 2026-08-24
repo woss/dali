@@ -33,16 +33,16 @@ import { UpdateBuilder } from './update.js';
  * that create bound query builders for the table.
  */
 export type TableBinding<TDef extends TableDefinition> = TDef & {
-    /** Create a bound SelectBuilder */
-    select(orm: DaliORM): SelectBuilder<TDef>;
-    /** Create a bound InsertBuilder */
-    insert(orm: DaliORM): InsertBuilder<TDef>;
-    /** Create a bound UpdateBuilder */
-    update(orm: DaliORM): UpdateBuilder<TDef>;
-    /** Create a bound DeleteBuilder */
-    delete(orm: DaliORM): DeleteBuilder<TDef>;
-    /** Create a bound RelateBuilder (only meaningful for relation tables) */
-    relate(orm: DaliORM): RelateBuilder<TDef>;
+  /** Create a bound SelectBuilder */
+  select(orm: DaliORM): SelectBuilder<TDef>;
+  /** Create a bound InsertBuilder */
+  insert(orm: DaliORM): InsertBuilder<TDef>;
+  /** Create a bound UpdateBuilder */
+  update(orm: DaliORM): UpdateBuilder<TDef>;
+  /** Create a bound DeleteBuilder */
+  delete(orm: DaliORM): DeleteBuilder<TDef>;
+  /** Create a bound RelateBuilder (only meaningful for relation tables) */
+  relate(orm: DaliORM): RelateBuilder<TDef>;
 };
 /**
  * Enhance a TableDefinition with builder factory methods.
@@ -53,5 +53,7 @@ export type TableBinding<TDef extends TableDefinition> = TDef & {
  * @param tableDef - The table definition to enhance
  * @returns A new object typed with builder methods
  */
-export declare function bindTable<TDef extends TableDefinition>(tableDef: TDef): TableBinding<TDef>;
+export declare function bindTable<TDef extends TableDefinition>(
+  tableDef: TDef,
+): TableBinding<TDef>;
 //# sourceMappingURL=binding.d.ts.map

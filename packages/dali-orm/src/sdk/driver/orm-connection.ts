@@ -16,7 +16,9 @@ const connectLog = log.extend('connect');
  */
 export function resolveDriverOptions(
   explicitOptions: DriverConfig | EmbeddedConfig,
-  configFromFile: { url: string; namespace: string; database: string; auth?: unknown } | undefined,
+  configFromFile:
+    | { url: string; namespace: string; database: string; auth?: unknown }
+    | undefined,
 ): DriverConfig | EmbeddedConfig {
   if (!configFromFile) return explicitOptions;
 
@@ -58,15 +60,21 @@ export async function connect(
 
   // Step 2: Create driver
   if (config.nodeDriver) {
-    const driverOptions = resolveDriverOptions(config.nodeDriver, resolvedConfig);
+    const driverOptions = resolveDriverOptions(
+      config.nodeDriver,
+      resolvedConfig,
+    );
 
     if ('auth' in driverOptions && driverOptions.auth) {
       const authValidation = validateAuthConfig(driverOptions.auth);
       if (!authValidation.valid) {
         const errorDetails =
-          authValidation.errors?.map((e) => `${e.field}: ${e.message}`).join('; ') ??
-          'Unknown validation error';
-        throw new Error(`Auth configuration validation failed: ${errorDetails}`);
+          authValidation.errors
+            ?.map((e) => `${e.field}: ${e.message}`)
+            .join('; ') ?? 'Unknown validation error';
+        throw new Error(
+          `Auth configuration validation failed: ${errorDetails}`,
+        );
       }
     }
 
@@ -76,7 +84,10 @@ export async function connect(
       reconnect: config.reconnect,
     });
   } else if (config.embeddedDriver) {
-    const driverOptions = resolveDriverOptions(config.embeddedDriver, resolvedConfig);
+    const driverOptions = resolveDriverOptions(
+      config.embeddedDriver,
+      resolvedConfig,
+    );
     driver = new EmbeddedDriver(driverOptions as EmbeddedConfig);
   } else {
     throw new Error('Must provide nodeDriver or embeddedDriver config');

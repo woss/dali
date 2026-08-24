@@ -5,8 +5,13 @@
  */
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { TestDriver, createMockDb, state, queryMock } from './driver-test-utils.js';
 import type { MockDb } from './driver-test-utils.js';
+import {
+  createMockDb,
+  queryMock,
+  state,
+  TestDriver,
+} from './driver-test-utils.js';
 
 describe('BaseDriver', () => {
   let mockDb: MockDb;
@@ -16,7 +21,9 @@ describe('BaseDriver', () => {
     vi.clearAllMocks();
     state.shouldDateTimeThrow = false;
     mockDb = createMockDb();
-    driver = new TestDriver(mockDb as unknown as Record<string, import('vitest').Mock>);
+    driver = new TestDriver(
+      mockDb as unknown as Record<string, import('vitest').Mock>,
+    );
   });
 
   // ============================================================================
@@ -46,8 +53,14 @@ describe('BaseDriver', () => {
       it('kills subscriptions, closes db, clears map when connected', async () => {
         driver.connected = true;
         const subKill = vi.fn().mockResolvedValue(undefined);
-        driver.subscriptions.set('sub1', { created: 100, liveSubscription: { kill: subKill } });
-        driver.subscriptions.set('sub2', { created: 200, liveSubscription: { kill: subKill } });
+        driver.subscriptions.set('sub1', {
+          created: 100,
+          liveSubscription: { kill: subKill },
+        });
+        driver.subscriptions.set('sub2', {
+          created: 200,
+          liveSubscription: { kill: subKill },
+        });
 
         await driver.disconnect();
 
@@ -77,7 +90,9 @@ describe('BaseDriver', () => {
 
       const result = await driver.query('SELECT * FROM user', { limit: 10 });
 
-      expect(mockDb.query).toHaveBeenCalledWith('SELECT * FROM user', { limit: 10 });
+      expect(mockDb.query).toHaveBeenCalledWith('SELECT * FROM user', {
+        limit: 10,
+      });
       expect(result).toEqual([{ id: '1', name: 'Alice' }]);
     });
 
@@ -96,7 +111,9 @@ describe('BaseDriver', () => {
         collect: vi.fn().mockRejectedValue(new Error('DB timeout')),
       });
 
-      await expect(driver.query('SELECT * FROM user')).rejects.toThrow('Query failed: DB timeout');
+      await expect(driver.query('SELECT * FROM user')).rejects.toThrow(
+        'Query failed: DB timeout',
+      );
     });
 
     it('wraps non-Error SDK errors as strings', async () => {
@@ -118,7 +135,9 @@ describe('BaseDriver', () => {
   describe('showChanges()', () => {
     it('throws if not connected', async () => {
       driver.connected = false;
-      await expect(driver.showChanges('user')).rejects.toThrow('Not connected to SurrealDB');
+      await expect(driver.showChanges('user')).rejects.toThrow(
+        'Not connected to SurrealDB',
+      );
     });
 
     it('uses default options when none provided', async () => {
@@ -138,7 +157,10 @@ describe('BaseDriver', () => {
       driver.connected = true;
       mockDb.query.mockReturnValue(queryMock([[]]));
 
-      await driver.showChanges('user', { since: '2024-01-01T00:00:00Z', limit: 50 });
+      await driver.showChanges('user', {
+        since: '2024-01-01T00:00:00Z',
+        limit: 50,
+      });
 
       expect(mockDb.query).toHaveBeenCalledWith(
         'SHOW CHANGES FOR TABLE user SINCE 2024-01-01T00:00:00Z LIMIT 50',
@@ -153,7 +175,9 @@ describe('BaseDriver', () => {
 
       await driver.showChanges('user table!');
 
-      expect(warnSpy).toHaveBeenCalledWith('Table name contains invalid characters, sanitized');
+      expect(warnSpy).toHaveBeenCalledWith(
+        'Table name contains invalid characters, sanitized',
+      );
       expect(mockDb.query).toHaveBeenCalledWith(
         'SHOW CHANGES FOR TABLE usertable SINCE 0 LIMIT 10',
         undefined,
@@ -181,13 +205,18 @@ describe('BaseDriver', () => {
     describe('use()', () => {
       it('throws if not connected', async () => {
         driver.connected = false;
-        await expect(driver.use('ns', 'db')).rejects.toThrow('Not connected to SurrealDB');
+        await expect(driver.use('ns', 'db')).rejects.toThrow(
+          'Not connected to SurrealDB',
+        );
       });
 
       it('switches namespace and database', async () => {
         driver.connected = true;
         await driver.use('my_ns', 'my_db');
-        expect(mockDb.use).toHaveBeenCalledWith({ namespace: 'my_ns', database: 'my_db' });
+        expect(mockDb.use).toHaveBeenCalledWith({
+          namespace: 'my_ns',
+          database: 'my_db',
+        });
       });
     });
 
@@ -203,13 +232,17 @@ describe('BaseDriver', () => {
     describe('auth()', () => {
       it('throws if not connected', async () => {
         driver.connected = false;
-        await expect(driver.auth()).rejects.toThrow('Not connected to SurrealDB');
+        await expect(driver.auth()).rejects.toThrow(
+          'Not connected to SurrealDB',
+        );
       });
 
       it('returns auth data when present', async () => {
         driver.connected = true;
         // .collect() returns [data], where data is the first (only) result set
-        mockDb.query.mockReturnValue(queryMock([{ id: 'user:1', name: 'Alice' }]));
+        mockDb.query.mockReturnValue(
+          queryMock([{ id: 'user:1', name: 'Alice' }]),
+        );
 
         const result = await driver.auth();
 

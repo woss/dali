@@ -107,14 +107,20 @@ export function arrayShuffle(arr: SqlExpr): SqlExpr {
   return `array::shuffle(${arr})` as SqlExpr;
 }
 
-export function arraySlice(arr: SqlExpr, start: SqlExpr, end?: SqlExpr): SqlExpr {
+export function arraySlice(
+  arr: SqlExpr,
+  start: SqlExpr,
+  end?: SqlExpr,
+): SqlExpr {
   return end
     ? (`array::slice(${arr}, ${start}, ${end})` as SqlExpr)
     : (`array::slice(${arr}, ${start})` as SqlExpr);
 }
 
 export function arraySort(arr: SqlExpr, order?: SqlExpr): SqlExpr {
-  return order ? (`array::sort(${arr}, ${order})` as SqlExpr) : (`array::sort(${arr})` as SqlExpr);
+  return order
+    ? (`array::sort(${arr}, ${order})` as SqlExpr)
+    : (`array::sort(${arr})` as SqlExpr);
 }
 
 export function arrayStringJoin(arr: SqlExpr, separator: SqlExpr): SqlExpr {

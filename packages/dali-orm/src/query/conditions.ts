@@ -106,7 +106,9 @@ export function isNotNull(field: string): SerializedCondition {
 /**
  * Combine multiple conditions with AND
  */
-export function allConditions(...conditions: SerializedCondition[]): SerializedCondition {
+export function allConditions(
+  ...conditions: SerializedCondition[]
+): SerializedCondition {
   if (conditions.length === 0) return { sql: '', params: {} };
   if (conditions.length === 1) return conditions[0];
 
@@ -121,7 +123,9 @@ export function allConditions(...conditions: SerializedCondition[]): SerializedC
 /**
  * Combine multiple conditions with OR
  */
-export function anyConditions(...conditions: SerializedCondition[]): SerializedCondition {
+export function anyConditions(
+  ...conditions: SerializedCondition[]
+): SerializedCondition {
   if (conditions.length === 0) return { sql: '', params: {} };
   if (conditions.length === 1) return conditions[0];
 
@@ -136,7 +140,9 @@ export function anyConditions(...conditions: SerializedCondition[]): SerializedC
 /**
  * Wrap a condition with NOT
  */
-export function negateCondition(condition: SerializedCondition): SerializedCondition {
+export function negateCondition(
+  condition: SerializedCondition,
+): SerializedCondition {
   return { sql: `NOT (${condition.sql})`, params: condition.params };
 }
 
@@ -177,7 +183,9 @@ export function cast(type: string, expr: string | number): string {
 /**
  * Check if a value is a valid SerializedCondition
  */
-export function isSerializedCondition(value: unknown): value is SerializedCondition {
+export function isSerializedCondition(
+  value: unknown,
+): value is SerializedCondition {
   return (
     typeof value === 'object' &&
     value !== null &&

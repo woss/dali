@@ -3,20 +3,26 @@
 import * as path from 'node:path';
 import { createDebug as debug } from 'obug';
 import type { SurrealDriver } from '../sdk/driver/types.js';
+import { diffSchema } from './cli/diff.js';
+import { generateMigration, loadSchemaFiles } from './cli/generate.js';
+import {
+  migrateDeploy,
+  migrateDev,
+  migrateResume,
+  migrateSync,
+  migrateUp,
+} from './cli/migrate.js';
 import {
   createConnection,
   createConnectionWithTimeout,
   formatError,
   safeDisconnect,
 } from './cli/operations.js';
-import { diffSchema } from './cli/diff.js';
-import { generateMigration, loadSchemaFiles } from './cli/generate.js';
-import { MigrationRunner } from './core/runner.js';
-import { migrateDeploy, migrateDev, migrateResume, migrateSync, migrateUp } from './cli/migrate.js';
 import { pullSchema } from './cli/pull.js';
 import { pushSchema } from './cli/push.js';
-import { loadConfig } from './config.js';
 import type { Config } from './config.js';
+import { loadConfig } from './config.js';
+import { MigrationRunner } from './core/runner.js';
 
 const log = debug('dali-orm:kit:cli');
 
@@ -57,7 +63,10 @@ export function slugify(text: string): string {
  */
 if (!process.env.VITEST) {
   process.on('unhandledRejection', (reason) => {
-    console.error('UNHANDLED REJECTION:', reason instanceof Error ? reason.message : reason);
+    console.error(
+      'UNHANDLED REJECTION:',
+      reason instanceof Error ? reason.message : reason,
+    );
   });
   process.on('uncaughtException', (error) => {
     console.error('UNCAUGHT EXCEPTION:', error.message);
@@ -126,7 +135,11 @@ export async function main(argv?: string[]): Promise<void> {
   }
 }
 
-async function handleMigrate(args: string[], options: CLIOptions, config: Config) {
+async function handleMigrate(
+  args: string[],
+  options: CLIOptions,
+  config: Config,
+) {
   const subcommand = args[0];
   log('handleMigrate called with args:', args);
   log('subcommand:', subcommand);
@@ -181,7 +194,9 @@ async function handleMigrate(args: string[], options: CLIOptions, config: Config
       const rawName = options.name ?? args[1];
       const slugName = slugify(rawName);
       if (rawName !== slugName) {
-        console.log(`[INFO] Migration name slugified: "${rawName}" → "${slugName}"`);
+        console.log(
+          `[INFO] Migration name slugified: "${rawName}" → "${slugName}"`,
+        );
       }
       await migrateDev({
         config,
@@ -217,7 +232,10 @@ async function handleMigrate(args: string[], options: CLIOptions, config: Config
  * Print migration status to console using a connected driver.
  * Extracted to avoid duplicating status display logic.
  */
-async function printMigrationStatus(statusDriver: SurrealDriver, config: Config): Promise<void> {
+async function printMigrationStatus(
+  statusDriver: SurrealDriver,
+  config: Config,
+): Promise<void> {
   const statusRunner = new MigrationRunner(statusDriver, {
     migrationsDir: config.migrations?.dir,
     migrationsTable: config.migrations?.table ?? '__migrations',
@@ -248,7 +266,11 @@ async function printMigrationStatus(statusDriver: SurrealDriver, config: Config)
   }
 }
 
-async function handleGenerate(args: string[], options: CLIOptions, config: Config) {
+async function handleGenerate(
+  args: string[],
+  options: CLIOptions,
+  config: Config,
+) {
   // Parse positional arguments and options
   let name: string | undefined;
   let schemaPath: string | undefined;
@@ -273,7 +295,9 @@ async function handleGenerate(args: string[], options: CLIOptions, config: Confi
     console.error('Options:');
     console.error('  --name <name>       Migration name');
     console.error('  --schema <path>     Schema file or directory');
-    console.error('  --output <path>    Output directory (default: ./migrations)');
+    console.error(
+      '  --output <path>    Output directory (default: ./migrations)',
+    );
     console.error('  --version <ver>    Version number');
     console.error(
       '  --offline          Skip database connection, use snapshot comparison if available',
@@ -281,7 +305,10 @@ async function handleGenerate(args: string[], options: CLIOptions, config: Confi
     process.exit(1);
   }
 
-  log('Config loaded: %O', { ...config, auth: config.auth ? '***' : undefined });
+  log('Config loaded: %O', {
+    ...config,
+    auth: config.auth ? '***' : undefined,
+  });
   const schemaDir = schemaPath ?? config.schema?.dir ?? './schema';
   log('Schema dir: %s', schemaDir);
   log('Schema pattern: %s', config.schema?.pattern);
@@ -303,7 +330,9 @@ async function handleGenerate(args: string[], options: CLIOptions, config: Confi
 
   // Skip connection if --offline flag is set
   if (options.offline) {
-    console.log('[INFO] Running in offline mode - skipping database connection');
+    console.log(
+      '[INFO] Running in offline mode - skipping database connection',
+    );
     console.log('[INFO] Offline mode - using snapshot comparison');
   } else if (config.url || config.namespace || config.database) {
     try {
@@ -377,7 +406,11 @@ async function handlePull(args: string[], options: CLIOptions, config: Config) {
   });
 }
 
-async function handleDiff(_args: string[], options: CLIOptions, config: Config) {
+async function handleDiff(
+  _args: string[],
+  options: CLIOptions,
+  config: Config,
+) {
   const schemaDir = options.schema ?? config.schema?.dir ?? './schema';
   const schemaFiles = await loadSchemaFiles(schemaDir, config.schema?.pattern);
 
@@ -388,7 +421,11 @@ async function handleDiff(_args: string[], options: CLIOptions, config: Config) 
   });
 }
 
-async function handleQuery(args: string[], options: CLIOptions, config: Config) {
+async function handleQuery(
+  args: string[],
+  options: CLIOptions,
+  config: Config,
+) {
   const query = args[0];
   if (!query) {
     console.error('Usage: dali-orm query "<SURREALQL>" [options]');

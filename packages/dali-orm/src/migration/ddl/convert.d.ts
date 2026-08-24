@@ -9,7 +9,13 @@
  */
 import type { ColumnDefinition } from '../../sdk/schema/column/types.js';
 import type { TableDefinition } from '../../sdk/table.js';
-import type { SurrealAccess, SurrealColumn, SurrealEvent, SurrealFunction, SurrealTable } from './ddl.js';
+import type {
+  SurrealAccess,
+  SurrealColumn,
+  SurrealEvent,
+  SurrealFunction,
+  SurrealTable,
+} from './ddl.js';
 /**
  * Convert SDK ColumnDefinition to Migration SurrealColumn.
  *
@@ -17,7 +23,10 @@ import type { SurrealAccess, SurrealColumn, SurrealEvent, SurrealFunction, Surre
  * @param tableName - Table name (required for SurrealColumn.table)
  * @returns SurrealColumn ready for DDL operations
  */
-export declare function toSurrealColumn(def: ColumnDefinition, tableName: string): SurrealColumn;
+export declare function toSurrealColumn(
+  def: ColumnDefinition,
+  tableName: string,
+): SurrealColumn;
 /**
  * Convert Migration SurrealColumn back to SDK ColumnDefinition.
  *
@@ -46,17 +55,17 @@ export declare function fromSurrealTable(table: SurrealTable): TableDefinition;
  * @returns SurrealAccess ready for DDL operations
  */
 export declare function toSurrealAccess(config: {
-    name: string;
-    type: string;
-    table?: string;
-    signup?: string;
-    signin?: string;
-    identifier?: string;
-    algorithm?: string;
-    key?: string;
-    issuer?: string;
-    duration?: string;
-    tokenDuration?: string;
+  name: string;
+  type: string;
+  table?: string;
+  signup?: string;
+  signin?: string;
+  identifier?: string;
+  algorithm?: string;
+  key?: string;
+  issuer?: string;
+  duration?: string;
+  tokenDuration?: string;
 }): SurrealAccess;
 /**
  * Convert Migration SurrealAccess back to SDK-compatible access config.
@@ -65,17 +74,17 @@ export declare function toSurrealAccess(config: {
  * @returns SDK-compatible access config object
  */
 export declare function fromSurrealAccess(access: SurrealAccess): {
-    name: string;
-    type: string;
-    table?: string;
-    signup?: string;
-    signin?: string;
-    identifier?: string;
-    algorithm?: string;
-    key?: string;
-    issuer?: string;
-    duration?: string;
-    tokenDuration?: string;
+  name: string;
+  type: string;
+  table?: string;
+  signup?: string;
+  signin?: string;
+  identifier?: string;
+  algorithm?: string;
+  key?: string;
+  issuer?: string;
+  duration?: string;
+  tokenDuration?: string;
 };
 /**
  * Convert SDK EventConfig to Migration SurrealEvent.
@@ -84,14 +93,14 @@ export declare function fromSurrealAccess(access: SurrealAccess): {
  * @returns SurrealEvent ready for DDL operations
  */
 export declare function toSurrealEvent(config: {
-    name: string;
-    on: string;
-    when: string;
-    then: string[];
-    comment?: string;
-    async?: boolean;
-    retry?: number;
-    maxdepth?: number;
+  name: string;
+  on: string;
+  when: string;
+  then: string[];
+  comment?: string;
+  async?: boolean;
+  retry?: number;
+  maxdepth?: number;
 }): SurrealEvent;
 /**
  * Convert Migration SurrealEvent back to SDK-compatible event config.
@@ -100,33 +109,33 @@ export declare function toSurrealEvent(config: {
  * @returns SDK-compatible event config object
  */
 export declare function fromSurrealEvent(event: SurrealEvent): {
-    name: string;
-    on: string;
-    when: string;
-    then: string[];
-    comment?: string;
-    async?: boolean;
-    retry?: number;
-    maxdepth?: number;
+  name: string;
+  on: string;
+  when: string;
+  then: string[];
+  comment?: string;
+  async?: boolean;
+  retry?: number;
+  maxdepth?: number;
 };
 /**
  * Convert SDK FunctionConfig to Migration SurrealFunction.
  */
 export declare function toSurrealFunction(config: {
-    name: string;
-    args?: string[];
-    body: string;
-    comment?: string;
-    permissions?: string;
+  name: string;
+  args?: string[];
+  body: string;
+  comment?: string;
+  permissions?: string;
 }): SurrealFunction;
 /**
  * Convert Migration SurrealFunction back to SDK-compatible function config.
  */
 export declare function fromSurrealFunction(func: SurrealFunction): {
-    name: string;
-    args?: string[];
-    body: string;
-    comment?: string;
-    permissions?: string;
+  name: string;
+  args?: string[];
+  body: string;
+  comment?: string;
+  permissions?: string;
 };
 //# sourceMappingURL=convert.d.ts.map

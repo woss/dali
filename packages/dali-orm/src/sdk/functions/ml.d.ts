@@ -6,5 +6,9 @@
  */
 import type { SqlExpr } from './sql.js';
 export declare function mlPredict(model: SqlExpr, input: SqlExpr): SqlExpr;
-export declare function mlTrain(model: SqlExpr, type: SqlExpr, input: SqlExpr): SqlExpr;
+export declare function mlTrain(
+  model: SqlExpr,
+  type: SqlExpr,
+  input: SqlExpr,
+): SqlExpr;
 //# sourceMappingURL=ml.d.ts.map

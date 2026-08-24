@@ -7,12 +7,13 @@
  * Each test creates a unique table, defines a vector field, generates HNSW index
  * SQL via SurrealQLGenerator, executes it against the engine, then cleans up.
  */
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { EmbeddedDriver } from '../../../sdk/driver/embedded-driver.js';
-import { SurrealQLGenerator } from '../generator.js';
+
 import * as fs from 'node:fs/promises';
 import os from 'node:os';
 import * as path from 'node:path';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { EmbeddedDriver } from '../../../sdk/driver/embedded-driver.js';
+import { SurrealQLGenerator } from '../generator.js';
 
 // ============================================================================
 // Helpers
@@ -401,7 +402,10 @@ describe('generateIndexDefinition non-HNSW (integration)', () => {
     await driver.query(`DEFINE TABLE ${tn} SCHEMAFULL`);
     await driver.query(`DEFINE FIELD email ON TABLE ${tn} TYPE string`);
 
-    const sql = gen.generateIndexDefinition({ name: 'idx_email', fields: ['email'] }, tn);
+    const sql = gen.generateIndexDefinition(
+      { name: 'idx_email', fields: ['email'] },
+      tn,
+    );
     await expect(driver.query(sql)).resolves.toBeDefined();
 
     await driver.query(`REMOVE TABLE ${tn}`);
@@ -427,7 +431,12 @@ describe('generateIndexDefinition non-HNSW (integration)', () => {
     await driver.query(`DEFINE FIELD body ON TABLE ${tn} TYPE string`);
 
     const sql = gen.generateIndexDefinition(
-      { name: 'idx_body', fields: ['body'], type: 'fulltext', analyzer: 'keyword' },
+      {
+        name: 'idx_body',
+        fields: ['body'],
+        type: 'fulltext',
+        analyzer: 'keyword',
+      },
       tn,
     );
     await expect(driver.query(sql)).resolves.toBeDefined();
@@ -468,7 +477,9 @@ describe('generateAccessDefinition (integration)', () => {
     });
     await expect(driver.query(sql)).resolves.toBeDefined();
 
-    await driver.query('REMOVE ACCESS IF EXISTS test_record_access ON DATABASE');
+    await driver.query(
+      'REMOVE ACCESS IF EXISTS test_record_access ON DATABASE',
+    );
     await driver.query(`REMOVE TABLE ${userTbl}`);
   });
 

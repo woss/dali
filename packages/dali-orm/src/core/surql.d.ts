@@ -27,10 +27,10 @@
  * manually — use {@link raw} or the {@link surql} template tag.
  */
 export interface RawSurql {
-    /** Brand discriminator — always `true` for raw fragments. */
-    readonly __surqlRaw: true;
-    /** The raw SurrealQL source text. */
-    readonly sql: string;
+  /** Brand discriminator — always `true` for raw fragments. */
+  readonly __surqlRaw: true;
+  /** The raw SurrealQL source text. */
+  readonly sql: string;
 }
 /**
  * Escape a SurrealQL identifier.
@@ -156,7 +156,10 @@ export declare function formatDefault(v: unknown): string;
  * const q     = surql`name = ${'Alice'}`   // → name = 'Alice'
  * ```
  */
-export declare function surql(strings: TemplateStringsArray, ...values: unknown[]): RawSurql;
+export declare function surql(
+  strings: TemplateStringsArray,
+  ...values: unknown[]
+): RawSurql;
 /**
  * Serialize a permissions object into a SurrealQL `PERMISSIONS` clause.
  *
@@ -181,9 +184,9 @@ export declare function surql(strings: TemplateStringsArray, ...values: unknown[
  * ```
  */
 export declare function serializePermissionsFragment(perms: {
-    select?: string | boolean;
-    create?: string | boolean;
-    update?: string | boolean;
-    delete?: string | boolean;
+  select?: string | boolean;
+  create?: string | boolean;
+  update?: string | boolean;
+  delete?: string | boolean;
 }): string;
 //# sourceMappingURL=surql.d.ts.map

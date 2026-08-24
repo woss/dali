@@ -104,6 +104,12 @@ import {
   sequenceNext,
   sequencePeek,
   sequenceSet,
+  sessionExpiry,
+  sessionId,
+  sessionOrigin,
+  sessionSc,
+  sessionToken,
+  sessionUser,
   setAdd,
   setDifference,
   setIntersect,
@@ -113,12 +119,6 @@ import {
   setRemove,
   setSort,
   setUnion,
-  sessionExpiry,
-  sessionId,
-  sessionOrigin,
-  sessionSc,
-  sessionToken,
-  sessionUser,
   valueArrays,
   valueBooleans,
   valueDatetimes,
@@ -162,7 +162,9 @@ describe('array', () => {
   });
 
   it('arrayDifference()', () => {
-    expect(arrayDifference($('arr1'), $('arr2'))).toBe('array::difference(arr1, arr2)');
+    expect(arrayDifference($('arr1'), $('arr2'))).toBe(
+      'array::difference(arr1, arr2)',
+    );
   });
 
   it('arrayDistinct()', () => {
@@ -170,11 +172,15 @@ describe('array', () => {
   });
 
   it('arrayFilter()', () => {
-    expect(arrayFilter($('arr'), $('predicate'))).toBe('array::filter(arr, predicate)');
+    expect(arrayFilter($('arr'), $('predicate'))).toBe(
+      'array::filter(arr, predicate)',
+    );
   });
 
   it('arrayFind()', () => {
-    expect(arrayFind($('arr'), $('predicate'))).toBe('array::find(arr, predicate)');
+    expect(arrayFind($('arr'), $('predicate'))).toBe(
+      'array::find(arr, predicate)',
+    );
   });
 
   it('arrayFirst()', () => {
@@ -190,7 +196,9 @@ describe('array', () => {
   });
 
   it('arrayIntersect()', () => {
-    expect(arrayIntersect($('arr1'), $('arr2'))).toBe('array::intersect(arr1, arr2)');
+    expect(arrayIntersect($('arr1'), $('arr2'))).toBe(
+      'array::intersect(arr1, arr2)',
+    );
   });
 
   it('arrayIsEmpty()', () => {
@@ -250,7 +258,9 @@ describe('array', () => {
   });
 
   it('arraySlice() with end', () => {
-    expect(arraySlice($('arr'), $('1'), $('3'))).toBe('array::slice(arr, 1, 3)');
+    expect(arraySlice($('arr'), $('1'), $('3'))).toBe(
+      'array::slice(arr, 1, 3)',
+    );
   });
 
   it('arraySort() without order', () => {
@@ -262,7 +272,9 @@ describe('array', () => {
   });
 
   it('arrayStringJoin()', () => {
-    expect(arrayStringJoin($('arr'), $('sep'))).toBe('array::string_join(arr, sep)');
+    expect(arrayStringJoin($('arr'), $('sep'))).toBe(
+      'array::string_join(arr, sep)',
+    );
   });
 
   it('arraySum()', () => {
@@ -379,7 +391,9 @@ describe('object', () => {
   });
 
   it('objectExtend()', () => {
-    expect(objectExtend($('obj'), $('other'))).toBe('object::extend(obj, other)');
+    expect(objectExtend($('obj'), $('other'))).toBe(
+      'object::extend(obj, other)',
+    );
   });
 
   it('objectFromEntries()', () => {
@@ -403,7 +417,9 @@ describe('object', () => {
   });
 
   it('objectRemove() with multiple keys', () => {
-    expect(objectRemove($('obj'), $('k1'), $('k2'))).toBe('object::remove(obj, k1, k2)');
+    expect(objectRemove($('obj'), $('k1'), $('k2'))).toBe(
+      'object::remove(obj, k1, k2)',
+    );
   });
 
   it('objectValues()', () => {
@@ -418,11 +434,15 @@ describe('set', () => {
   });
 
   it('setDifference()', () => {
-    expect(setDifference($('set1'), $('set2'))).toBe('set::difference(set1, set2)');
+    expect(setDifference($('set1'), $('set2'))).toBe(
+      'set::difference(set1, set2)',
+    );
   });
 
   it('setIntersect()', () => {
-    expect(setIntersect($('set1'), $('set2'))).toBe('set::intersect(set1, set2)');
+    expect(setIntersect($('set1'), $('set2'))).toBe(
+      'set::intersect(set1, set2)',
+    );
   });
 
   it('setIsEmpty()', () => {
@@ -477,7 +497,9 @@ describe('vector', () => {
   });
 
   it('vectorMultiply()', () => {
-    expect(vectorMultiply($('v'), $('scalar'))).toBe('vector::multiply(v, scalar)');
+    expect(vectorMultiply($('v'), $('scalar'))).toBe(
+      'vector::multiply(v, scalar)',
+    );
   });
 
   it('vectorNormalize()', () => {
@@ -485,7 +507,9 @@ describe('vector', () => {
   });
 
   it('vectorSimilarity()', () => {
-    expect(vectorSimilarity($('v1'), $('v2'))).toBe('vector::similarity(v1, v2)');
+    expect(vectorSimilarity($('v1'), $('v2'))).toBe(
+      'vector::similarity(v1, v2)',
+    );
   });
 });
 
@@ -611,11 +635,15 @@ describe('duration', () => {
 // --- encoding ---
 describe('encoding', () => {
   it('encodingBase64Encode()', () => {
-    expect(encodingBase64Encode($('data'))).toBe('encoding::base64::encode(data)');
+    expect(encodingBase64Encode($('data'))).toBe(
+      'encoding::base64::encode(data)',
+    );
   });
 
   it('encodingBase64Decode()', () => {
-    expect(encodingBase64Decode($('data'))).toBe('encoding::base64::decode(data)');
+    expect(encodingBase64Decode($('data'))).toBe(
+      'encoding::base64::decode(data)',
+    );
   });
 });
 
@@ -653,14 +681,18 @@ describe('ml', () => {
   });
 
   it('mlTrain()', () => {
-    expect(mlTrain($('model'), $('type'), $('input'))).toBe('ml::train(model, type, input)');
+    expect(mlTrain($('model'), $('type'), $('input'))).toBe(
+      'ml::train(model, type, input)',
+    );
   });
 });
 
 // --- http ---
 describe('http', () => {
   it('httpGet() without headers', () => {
-    expect(httpGet($('"http://example.com"'))).toBe('http::get("http://example.com")');
+    expect(httpGet($('"http://example.com"'))).toBe(
+      'http::get("http://example.com")',
+    );
   });
 
   it('httpGet() with headers', () => {
@@ -670,7 +702,9 @@ describe('http', () => {
   });
 
   it('httpHead()', () => {
-    expect(httpHead($('"http://example.com"'))).toBe('http::head("http://example.com")');
+    expect(httpHead($('"http://example.com"'))).toBe(
+      'http::head("http://example.com")',
+    );
   });
 
   it('httpPost() without headers', () => {
@@ -680,9 +714,9 @@ describe('http', () => {
   });
 
   it('httpPost() with headers', () => {
-    expect(httpPost($('"http://example.com"'), $('data'), $('{"Auth": "token"}'))).toBe(
-      'http::post("http://example.com", data, {"Auth": "token"})',
-    );
+    expect(
+      httpPost($('"http://example.com"'), $('data'), $('{"Auth": "token"}')),
+    ).toBe('http::post("http://example.com", data, {"Auth": "token"})');
   });
 
   it('httpPatch()', () => {
@@ -698,7 +732,9 @@ describe('http', () => {
   });
 
   it('httpDelete() without headers', () => {
-    expect(httpDelete($('"http://example.com"'))).toBe('http::delete("http://example.com")');
+    expect(httpDelete($('"http://example.com"'))).toBe(
+      'http::delete("http://example.com")',
+    );
   });
 
   it('httpDelete() with headers', () => {
@@ -781,7 +817,9 @@ describe('search', () => {
   });
 
   it('searchHighlight() with fields', () => {
-    expect(searchHighlight($('excerpt'), $('"title"'))).toBe('search::highlight(excerpt, "title")');
+    expect(searchHighlight($('excerpt'), $('"title"'))).toBe(
+      'search::highlight(excerpt, "title")',
+    );
   });
 
   it('searchScore()', () => {

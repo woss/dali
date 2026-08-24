@@ -7,21 +7,29 @@
 import { createHash } from 'node:crypto';
 import { access, readFile } from 'node:fs/promises';
 import { createDebug as debug } from 'obug';
-import type { SurrealDriver } from '../../sdk/driver/types.js';
-import { computeMigrationHash, MigrationJournalManager } from '../ddl/journal.js';
 import { MigrationError } from '../../core/errors.js';
-import { getMigrationProgress, loadMigrationFiles, findDestructiveOps } from './migration-utils.js';
+import type { SurrealDriver } from '../../sdk/driver/types.js';
+import {
+  computeMigrationHash,
+  MigrationJournalManager,
+} from '../ddl/journal.js';
 import type {
   MigrationFile,
+  MigrationProgress,
   MigrationResult,
   MigrationStatus,
-  MigrationProgress,
 } from './migration-utils.js';
+import {
+  findDestructiveOps,
+  getMigrationProgress,
+  loadMigrationFiles,
+} from './migration-utils.js';
+
 export type {
   MigrationFile,
+  MigrationProgress,
   MigrationResult,
   MigrationStatus,
-  MigrationProgress,
 } from './migration-utils.js';
 
 const log = debug('dali-orm:kit:runner');
@@ -140,7 +148,9 @@ export class MigrationRunner {
     );
 
     // Filter by target version
-    const toApply = targetVersion ? pending.filter((f) => f.version <= targetVersion) : pending;
+    const toApply = targetVersion
+      ? pending.filter((f) => f.version <= targetVersion)
+      : pending;
     log('Migrations to apply this run: %d', toApply.length);
 
     for (const migration of toApply) {
@@ -178,7 +188,10 @@ export class MigrationRunner {
     // Get applied from DB (__migrations table) - handle missing table gracefully
     let appliedRecords: { name: string; applied_at: string }[] = [];
     try {
-      const dbResult = await this.driver.query<{ name: string; applied_at: string }>(
+      const dbResult = await this.driver.query<{
+        name: string;
+        applied_at: string;
+      }>(
         `SELECT name, applied_at FROM ${this.migrationsTable} ORDER BY applied_at`,
       );
       appliedRecords = dbResult;
@@ -207,7 +220,8 @@ export class MigrationRunner {
     // Current = last applied
     const current =
       applied.length > 0
-        ? (files.find((f) => f.name === applied[applied.length - 1].name)?.version ?? null)
+        ? (files.find((f) => f.name === applied[applied.length - 1].name)
+            ?.version ?? null)
         : null;
 
     return { applied, pending, current };
@@ -216,7 +230,9 @@ export class MigrationRunner {
   /**
    * Apply a single migration with resumable per-statement tracking
    */
-  private async applyMigration(migration: MigrationFile): Promise<MigrationResult> {
+  private async applyMigration(
+    migration: MigrationFile,
+  ): Promise<MigrationResult> {
     log('Applying migration: %s', migration.name);
 
     // Check for partial migration and resume if needed
@@ -252,7 +268,9 @@ export class MigrationRunner {
 
     // Recalculate idx after potential removal
     const nextIdx =
-      journal.entries.length > 0 ? Math.max(...journal.entries.map((e) => e.idx)) + 1 : 1;
+      journal.entries.length > 0
+        ? Math.max(...journal.entries.map((e) => e.idx)) + 1
+        : 1;
 
     journal.entries.push({
       idx: nextIdx,
@@ -285,9 +303,17 @@ export class MigrationRunner {
         // All statements succeeded — record in DB within the same transaction
         const insertResult = await tx.query<{ applied_at: string }>(
           `INSERT INTO ${this.migrationsTable} (version, name, applied_at, checksum) VALUES ($version, $name, time::now(), $checksum) RETURN applied_at`,
-          { version: migration.version, name: migration.name, checksum: migration.checksum },
+          {
+            version: migration.version,
+            name: migration.name,
+            checksum: migration.checksum,
+          },
         );
-        if (insertResult && insertResult.length > 0 && insertResult[0]?.applied_at) {
+        if (
+          insertResult &&
+          insertResult.length > 0 &&
+          insertResult[0]?.applied_at
+        ) {
           appliedAt =
             typeof insertResult[0].applied_at === 'string'
               ? insertResult[0].applied_at
@@ -300,7 +326,9 @@ export class MigrationRunner {
       if (appliedAt) {
         try {
           const j = await this.journal.read();
-          const e = j.entries.find((en: { tag: string }) => en.tag === migration.name);
+          const e = j.entries.find(
+            (en: { tag: string }) => en.tag === migration.name,
+          );
           if (e) {
             e.when = appliedAt;
             await this.journal.write(j);
@@ -332,7 +360,11 @@ export class MigrationRunner {
         warnings: warnings.length > 0 ? warnings : undefined,
       };
     } catch (error) {
-      log('Migration failed for: %s — %s', migration.name, (error as Error).message);
+      log(
+        'Migration failed for: %s — %s',
+        migration.name,
+        (error as Error).message,
+      );
       // Journal stays at all-false breakpoints (SQL was rolled back)
       // Migration will show as partial on next run, resume will retry from scratch
       throw error;
@@ -357,20 +389,29 @@ export class MigrationRunner {
       // Resume the first partial migration
       migrationFile = files.find((f) => partialTags.includes(f.name));
       if (!migrationFile) {
-        throw new MigrationError('Migration file not found for partial migration');
+        throw new MigrationError(
+          'Migration file not found for partial migration',
+        );
       }
     }
 
     // Get last successful statement index
-    const lastSuccessfulIdx = await this.journal.getLastSuccessfulStatementIdx(migrationFile.name);
+    const lastSuccessfulIdx = await this.journal.getLastSuccessfulStatementIdx(
+      migrationFile.name,
+    );
 
     if (lastSuccessfulIdx === -1) {
       // Check if journal entry exists (partial with all-false breakpoints vs no entry)
       const hasEntry = await this.journal.isApplied(migrationFile.name);
       if (!hasEntry) {
-        throw new MigrationError(`No journal entry found for migration: ${migrationFile.name}`);
+        throw new MigrationError(
+          `No journal entry found for migration: ${migrationFile.name}`,
+        );
       }
-      log('No statements succeeded yet for migration: %s, retrying from start', migrationFile.name);
+      log(
+        'No statements succeeded yet for migration: %s, retrying from start',
+        migrationFile.name,
+      );
     }
 
     // Verify checksum matches before resuming
@@ -378,7 +419,9 @@ export class MigrationRunner {
     const currentFile = files.find((f) => f.name === migrationFile.name);
 
     if (!currentFile) {
-      throw new MigrationError(`Migration file not found: ${migrationFile.name}`);
+      throw new MigrationError(
+        `Migration file not found: ${migrationFile.name}`,
+      );
     }
 
     if (currentFile.checksum !== migrationFile.checksum) {
@@ -406,12 +449,21 @@ export class MigrationRunner {
 
         breakpoints[i] = true;
         try {
-          await this.journal.updateBreakpoints(migrationFile.name, [...breakpoints]);
+          await this.journal.updateBreakpoints(migrationFile.name, [
+            ...breakpoints,
+          ]);
         } catch (journalError) {
-          log('Failed to update resume checkpoints (non-fatal): %O', journalError);
+          log(
+            'Failed to update resume checkpoints (non-fatal): %O',
+            journalError,
+          );
           // Non-fatal: SQL already succeeded, breakpoints corrected on next update
         }
-        log('Resumed statement %d completed for: %s', i + 1, migrationFile.name);
+        log(
+          'Resumed statement %d completed for: %s',
+          i + 1,
+          migrationFile.name,
+        );
 
         currentIdx = i + 1;
       }
@@ -429,7 +481,10 @@ export class MigrationRunner {
       // Then mark journal complete (cache follows reality)
       const finalBreakpoints = migrationFile.up.map(() => true);
       try {
-        await this.journal.updateBreakpoints(migrationFile.name, finalBreakpoints);
+        await this.journal.updateBreakpoints(
+          migrationFile.name,
+          finalBreakpoints,
+        );
       } catch (journalError) {
         log('Failed to mark resume migration complete: %O', journalError);
         throw new MigrationError(
@@ -440,7 +495,11 @@ export class MigrationRunner {
       log('Migration fully applied after resume: %s', migrationFile.name);
       return { applied: [migrationFile.name], skipped: [] };
     } catch (error) {
-      log('Resume failed at statement %d: %s', currentIdx, (error as Error).message);
+      log(
+        'Resume failed at statement %d: %s',
+        currentIdx,
+        (error as Error).message,
+      );
 
       try {
         await this.journal.updateBreakpoints(migrationFile.name, breakpoints);
@@ -481,7 +540,9 @@ export class MigrationRunner {
       const totalStatements = migrationFile.up.length;
       if (totalStatements === 0) continue;
 
-      const lastIdx = await this.journal.getLastSuccessfulStatementIdx(entry.tag);
+      const lastIdx = await this.journal.getLastSuccessfulStatementIdx(
+        entry.tag,
+      );
       const appliedStatements = lastIdx === -1 ? 0 : lastIdx + 1;
 
       if (appliedStatements < totalStatements) {
@@ -495,7 +556,9 @@ export class MigrationRunner {
   /**
    * Get progress for a specific migration
    */
-  async getMigrationProgress(migrationName: string): Promise<MigrationProgress | null> {
+  async getMigrationProgress(
+    migrationName: string,
+  ): Promise<MigrationProgress | null> {
     const files = await loadMigrationFiles(this.config.migrationsDir);
     return getMigrationProgress(this.journal, files, migrationName);
   }
@@ -537,7 +600,9 @@ export class MigrationRunner {
       name: string;
       checksum: string;
       applied_at: string;
-    }>(`SELECT name, checksum, applied_at FROM ${this.migrationsTable} ORDER BY applied_at`);
+    }>(
+      `SELECT name, checksum, applied_at FROM ${this.migrationsTable} ORDER BY applied_at`,
+    );
 
     const journal = await this.journal.read();
     const migrationFiles = await loadMigrationFiles(this.config.migrationsDir);
@@ -558,9 +623,15 @@ export class MigrationRunner {
         merged.push(existing);
       } else {
         // New entry — use DB `applied_at`
-        const hash = record.checksum || createHash('sha256').update(record.name).digest('hex');
-        const migrationFile = migrationFiles.find((f) => f.name === record.name);
-        const breakpoints = migrationFile ? migrationFile.up.map(() => true) : [true];
+        const hash =
+          record.checksum ||
+          createHash('sha256').update(record.name).digest('hex');
+        const migrationFile = migrationFiles.find(
+          (f) => f.name === record.name,
+        );
+        const breakpoints = migrationFile
+          ? migrationFile.up.map(() => true)
+          : [true];
         merged.push({
           idx: merged.length + 1,
           when: typeof record.applied_at === 'string' ? record.applied_at : '',
@@ -599,6 +670,9 @@ export class MigrationRunner {
 /**
  * Create migration runner
  */
-export function createRunner(driver: SurrealDriver, config?: RunnerConfig): MigrationRunner {
+export function createRunner(
+  driver: SurrealDriver,
+  config?: RunnerConfig,
+): MigrationRunner {
   return new MigrationRunner(driver, config);
 }

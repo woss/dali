@@ -4,8 +4,8 @@
  * that repeat across all CLI command files.
  */
 import { connect } from '../../sdk/driver/orm-connection.js';
-import type { Config } from '../config.js';
 import type { SurrealDriver } from '../../sdk/driver/types.js';
+import type { Config } from '../config.js';
 
 // ============================================================================
 // Connection helpers
@@ -51,7 +51,10 @@ export async function createConnectionWithTimeout(
   timeoutMs = 5000,
 ): Promise<SurrealDriver> {
   const timeout = new Promise<never>((_, reject) => {
-    setTimeout(() => reject(new Error(`Connection timeout (${timeoutMs / 1000}s)`)), timeoutMs);
+    setTimeout(
+      () => reject(new Error(`Connection timeout (${timeoutMs / 1000}s)`)),
+      timeoutMs,
+    );
   });
   return Promise.race([createConnection(config), timeout]);
 }
@@ -117,7 +120,11 @@ function extractNames(grouped: GroupedMap, category: string): string[] {
 }
 
 /** Print an "Added X (N):" block with + items */
-export function printAddedSection(grouped: GroupedMap, category: string, label: string): void {
+export function printAddedSection(
+  grouped: GroupedMap,
+  category: string,
+  label: string,
+): void {
   const names = extractNames(grouped, category);
   if (names.length > 0) {
     console.log(`Added ${label} (${names.length}):`);
@@ -129,7 +136,11 @@ export function printAddedSection(grouped: GroupedMap, category: string, label: 
 }
 
 /** Print a "Removed X (N):" block with - items */
-export function printRemovedSection(grouped: GroupedMap, category: string, label: string): void {
+export function printRemovedSection(
+  grouped: GroupedMap,
+  category: string,
+  label: string,
+): void {
   const names = extractNames(grouped, category);
   if (names.length > 0) {
     console.log(`Removed ${label} (${names.length}):`);

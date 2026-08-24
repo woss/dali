@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { SurrealQLGenerator } from '../core/generator.js';
 import { fromSurrealFunction, toSurrealFunction } from '../ddl/convert.js';
-import { createEmptyDdl, type SurrealDbDDL, type SurrealFunction } from '../ddl/ddl.js';
+import {
+  createEmptyDdl,
+  type SurrealDbDDL,
+  type SurrealFunction,
+} from '../ddl/ddl.js';
 import { ddlDiff } from '../ddl/diff.js';
 
 const generator = new SurrealQLGenerator();
@@ -15,10 +19,14 @@ function createDdlWithFunctions(funcs: SurrealFunction[]): SurrealDbDDL {
 describe('function DDL diff', () => {
   it('detects new function definition', async () => {
     const current = createDdlWithFunctions([]);
-    const target = createDdlWithFunctions([{ name: 'fn::hello', body: 'RETURN "hello"' }]);
+    const target = createDdlWithFunctions([
+      { name: 'fn::hello', body: 'RETURN "hello"' },
+    ]);
 
     const result = await ddlDiff(current, target);
-    const createStmts = result.statements.filter((s) => s.type === 'create_function');
+    const createStmts = result.statements.filter(
+      (s) => s.type === 'create_function',
+    );
     expect(createStmts).toHaveLength(1);
     if (createStmts[0].type === 'create_function') {
       expect(createStmts[0].function.name).toBe('fn::hello');
@@ -39,17 +47,27 @@ describe('function DDL diff', () => {
     ]);
 
     const result = await ddlDiff(current, target);
-    const createStmts = result.statements.filter((s) => s.type === 'create_function');
+    const createStmts = result.statements.filter(
+      (s) => s.type === 'create_function',
+    );
     expect(createStmts).toHaveLength(3);
   });
 
   it('detects changed function (drop + recreate)', async () => {
-    const current = createDdlWithFunctions([{ name: 'fn::hello', body: 'RETURN "hello"' }]);
-    const target = createDdlWithFunctions([{ name: 'fn::hello', body: 'RETURN "hello world"' }]);
+    const current = createDdlWithFunctions([
+      { name: 'fn::hello', body: 'RETURN "hello"' },
+    ]);
+    const target = createDdlWithFunctions([
+      { name: 'fn::hello', body: 'RETURN "hello world"' },
+    ]);
 
     const result = await ddlDiff(current, target);
-    const dropStmts = result.statements.filter((s) => s.type === 'drop_function');
-    const createStmts = result.statements.filter((s) => s.type === 'create_function');
+    const dropStmts = result.statements.filter(
+      (s) => s.type === 'drop_function',
+    );
+    const createStmts = result.statements.filter(
+      (s) => s.type === 'create_function',
+    );
     expect(dropStmts).toHaveLength(1);
     expect(createStmts).toHaveLength(1);
     if (dropStmts[0].type === 'drop_function') {
@@ -62,12 +80,20 @@ describe('function DDL diff', () => {
       { name: 'fn::greet', args: ['$name'], body: 'RETURN "Hello, " + $name' },
     ]);
     const target = createDdlWithFunctions([
-      { name: 'fn::greet', args: ['$first', '$last'], body: 'RETURN "Hello, " + $name' },
+      {
+        name: 'fn::greet',
+        args: ['$first', '$last'],
+        body: 'RETURN "Hello, " + $name',
+      },
     ]);
 
     const result = await ddlDiff(current, target);
-    const dropStmts = result.statements.filter((s) => s.type === 'drop_function');
-    const createStmts = result.statements.filter((s) => s.type === 'create_function');
+    const dropStmts = result.statements.filter(
+      (s) => s.type === 'drop_function',
+    );
+    const createStmts = result.statements.filter(
+      (s) => s.type === 'create_function',
+    );
     expect(dropStmts).toHaveLength(1);
     expect(createStmts).toHaveLength(1);
   });
@@ -91,8 +117,12 @@ describe('function DDL diff', () => {
     ]);
 
     const result = await ddlDiff(current, target);
-    const dropStmts = result.statements.filter((s) => s.type === 'drop_function');
-    const createStmts = result.statements.filter((s) => s.type === 'create_function');
+    const dropStmts = result.statements.filter(
+      (s) => s.type === 'drop_function',
+    );
+    const createStmts = result.statements.filter(
+      (s) => s.type === 'create_function',
+    );
     expect(dropStmts).toHaveLength(1);
     expect(createStmts).toHaveLength(1);
   });
@@ -106,8 +136,12 @@ describe('function DDL diff', () => {
     const target = createDdlWithFunctions([func]);
 
     const result = await ddlDiff(current, target);
-    const createStmts = result.statements.filter((s) => s.type === 'create_function');
-    const dropStmts = result.statements.filter((s) => s.type === 'drop_function');
+    const createStmts = result.statements.filter(
+      (s) => s.type === 'create_function',
+    );
+    const dropStmts = result.statements.filter(
+      (s) => s.type === 'drop_function',
+    );
     expect(createStmts).toHaveLength(0);
     expect(dropStmts).toHaveLength(0);
   });
@@ -117,30 +151,42 @@ describe('function DDL diff', () => {
     const target = createDdlWithFunctions([]);
 
     const result = await ddlDiff(current, target);
-    const createStmts = result.statements.filter((s) => s.type === 'create_function');
-    const dropStmts = result.statements.filter((s) => s.type === 'drop_function');
+    const createStmts = result.statements.filter(
+      (s) => s.type === 'create_function',
+    );
+    const dropStmts = result.statements.filter(
+      (s) => s.type === 'drop_function',
+    );
     expect(createStmts).toHaveLength(0);
     expect(dropStmts).toHaveLength(0);
   });
 
   it('does NOT detect removal of functions (safety-first)', async () => {
-    const current = createDdlWithFunctions([{ name: 'fn::hello', body: 'RETURN "hello"' }]);
+    const current = createDdlWithFunctions([
+      { name: 'fn::hello', body: 'RETURN "hello"' },
+    ]);
     const target = createDdlWithFunctions([]);
 
     const result = await ddlDiff(current, target);
-    const dropStmts = result.statements.filter((s) => s.type === 'drop_function');
+    const dropStmts = result.statements.filter(
+      (s) => s.type === 'drop_function',
+    );
     expect(dropStmts).toHaveLength(0);
   });
 
   it('detects only new functions when mixing existing and new', async () => {
-    const current = createDdlWithFunctions([{ name: 'fn::existing', body: 'RETURN "existing"' }]);
+    const current = createDdlWithFunctions([
+      { name: 'fn::existing', body: 'RETURN "existing"' },
+    ]);
     const target = createDdlWithFunctions([
       { name: 'fn::existing', body: 'RETURN "existing"' },
       { name: 'fn::new', body: 'RETURN "new"' },
     ]);
 
     const result = await ddlDiff(current, target);
-    const createStmts = result.statements.filter((s) => s.type === 'create_function');
+    const createStmts = result.statements.filter(
+      (s) => s.type === 'create_function',
+    );
     expect(createStmts).toHaveLength(1);
     if (createStmts[0].type === 'create_function') {
       expect(createStmts[0].function.name).toBe('fn::new');
@@ -154,7 +200,9 @@ describe('function SQL generation', () => {
       name: 'fn::hello',
       body: 'RETURN "hello"',
     });
-    expect(sql).toBe('DEFINE FUNCTION IF NOT EXISTS fn::hello { RETURN "hello" }');
+    expect(sql).toBe(
+      'DEFINE FUNCTION IF NOT EXISTS fn::hello { RETURN "hello" }',
+    );
   });
 
   it('generates DEFINE FUNCTION SQL with args', () => {
@@ -223,23 +271,33 @@ describe('function SQL generation', () => {
 describe('function statementToSql', () => {
   it('converts create_function statement to SQL', async () => {
     const current = createDdlWithFunctions([]);
-    const target = createDdlWithFunctions([{ name: 'fn::hello', body: 'RETURN "hello"' }]);
+    const target = createDdlWithFunctions([
+      { name: 'fn::hello', body: 'RETURN "hello"' },
+    ]);
 
     const result = await ddlDiff(current, target);
     expect(result.sqlStatements.length).toBeGreaterThan(0);
 
-    const funcSql = result.sqlStatements.find((s) => s.includes('DEFINE FUNCTION'));
+    const funcSql = result.sqlStatements.find((s) =>
+      s.includes('DEFINE FUNCTION'),
+    );
     expect(funcSql).toBeDefined();
     expect(funcSql).toContain('DEFINE FUNCTION IF NOT EXISTS fn::hello');
     expect(funcSql).toContain('{ RETURN "hello" }');
   });
 
   it('converts drop_function statement to SQL', async () => {
-    const current = createDdlWithFunctions([{ name: 'fn::hello', body: 'RETURN "hello"' }]);
-    const target = createDdlWithFunctions([{ name: 'fn::hello', body: 'RETURN "hello world"' }]);
+    const current = createDdlWithFunctions([
+      { name: 'fn::hello', body: 'RETURN "hello"' },
+    ]);
+    const target = createDdlWithFunctions([
+      { name: 'fn::hello', body: 'RETURN "hello world"' },
+    ]);
 
     const result = await ddlDiff(current, target);
-    const dropSql = result.sqlStatements.find((s) => s.includes('REMOVE FUNCTION'));
+    const dropSql = result.sqlStatements.find((s) =>
+      s.includes('REMOVE FUNCTION'),
+    );
     expect(dropSql).toBeDefined();
     expect(dropSql).toBe('REMOVE FUNCTION IF EXISTS fn::hello');
   });
@@ -253,8 +311,12 @@ describe('function statementToSql', () => {
     ]);
 
     const result = await ddlDiff(current, target);
-    const dropSql = result.sqlStatements.find((s) => s.includes('REMOVE FUNCTION'));
-    const createSql = result.sqlStatements.find((s) => s.includes('DEFINE FUNCTION'));
+    const dropSql = result.sqlStatements.find((s) =>
+      s.includes('REMOVE FUNCTION'),
+    );
+    const createSql = result.sqlStatements.find((s) =>
+      s.includes('DEFINE FUNCTION'),
+    );
 
     expect(dropSql).toBeDefined();
     expect(createSql).toBeDefined();
@@ -360,13 +422,17 @@ describe('function conversion', () => {
 
   it('throws for null/undefined input to toSurrealFunction', () => {
     expect(() =>
-      toSurrealFunction(null as unknown as Parameters<typeof toSurrealFunction>[0]),
+      toSurrealFunction(
+        null as unknown as Parameters<typeof toSurrealFunction>[0],
+      ),
     ).toThrow('FunctionConfig required');
   });
 
   it('throws for null/undefined input to fromSurrealFunction', () => {
     expect(() =>
-      fromSurrealFunction(null as unknown as Parameters<typeof fromSurrealFunction>[0]),
+      fromSurrealFunction(
+        null as unknown as Parameters<typeof fromSurrealFunction>[0],
+      ),
     ).toThrow('SurrealFunction required');
   });
 });

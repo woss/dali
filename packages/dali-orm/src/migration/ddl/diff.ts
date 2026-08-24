@@ -20,13 +20,13 @@ import type {
   SurrealTable,
 } from './ddl.js';
 import {
-  orderStatements,
   groupStatements,
-  statementToSql,
+  orderStatements,
   serializePermissions,
+  statementToSql,
 } from './statement-renderer.js';
 
-export { statementToSql, getDefaultPermissions } from './statement-renderer.js';
+export { getDefaultPermissions, statementToSql } from './statement-renderer.js';
 
 const log = debug('dali-orm:kit:diff');
 
@@ -109,11 +109,18 @@ export async function ddlDiff(
   dataLossOperations.push(...indexChanges.dataLossOperations);
 
   // 5. Handle relation changes
-  const relationChanges = diffRelations(ddl1.relations, ddl2.relations, tables2Map);
+  const relationChanges = diffRelations(
+    ddl1.relations,
+    ddl2.relations,
+    tables2Map,
+  );
   statements.push(...relationChanges.statements);
 
   // 6. Handle access changes
-  const accessChanges = diffAccess(ddl1.accessStructured, ddl2.accessStructured);
+  const accessChanges = diffAccess(
+    ddl1.accessStructured,
+    ddl2.accessStructured,
+  );
   statements.push(...accessChanges.statements);
 
   // X. Handle namespace changes
@@ -149,7 +156,11 @@ export async function ddlDiff(
   // Group by operation type
   const groupedStatements = groupStatements(orderedStatements);
 
-  log('Diff complete: %d statements, %d warnings', statements.length, warnings.length);
+  log(
+    'Diff complete: %d statements, %d warnings',
+    statements.length,
+    warnings.length,
+  );
 
   return {
     statements: orderedStatements,
@@ -167,7 +178,11 @@ function diffTable(
   table1: SurrealTable,
   table2: SurrealTable,
   mode: DiffMode,
-): { statements: SurrealStatement[]; warnings: string[]; dataLossOperations: string[] } {
+): {
+  statements: SurrealStatement[];
+  warnings: string[];
+  dataLossOperations: string[];
+} {
   const statements: SurrealStatement[] = [];
   const warnings: string[] = [];
   const dataLossOperations: string[] = [];
@@ -197,7 +212,9 @@ function diffTable(
 
   // Check table type change
   if (table1.type !== table2.type) {
-    warnings.push(`Table ${table1.name}: type changed from ${table1.type} to ${table2.type}`);
+    warnings.push(
+      `Table ${table1.name}: type changed from ${table1.type} to ${table2.type}`,
+    );
     dataLossOperations.push(`CHANGE TABLE TYPE ${table1.name}`);
   }
 
@@ -216,7 +233,11 @@ function diffTable(
 
     // If column exists in DB but with no kind info, it's a schemaless field - no diff needed
     if (dbColumn && !dbColumn.kind) {
-      log('Schemaless column: %s.%s (no type defined, skipping)', table2.name, name);
+      log(
+        'Schemaless column: %s.%s (no type defined, skipping)',
+        table2.name,
+        name,
+      );
       continue;
     }
 
@@ -225,7 +246,9 @@ function diffTable(
 
       // Check if adding NOT NULL without default (data loss in push mode)
       if (mode === 'push' && !col2.optional && col2.default === undefined) {
-        dataLossOperations.push(`ADD NOT NULL COLUMN ${table2.name}.${name} without default`);
+        dataLossOperations.push(
+          `ADD NOT NULL COLUMN ${table2.name}.${name} without default`,
+        );
         warnings.push(
           `Adding NOT NULL column ${table2.name}.${name} without default will fail on existing rows`,
         );
@@ -246,7 +269,9 @@ function diffTable(
 
       if (mode === 'push') {
         dataLossOperations.push(`DROP COLUMN ${table1.name}.${name}`);
-        warnings.push(`Dropping column ${table1.name}.${name} will delete data`);
+        warnings.push(
+          `Dropping column ${table1.name}.${name} will delete data`,
+        );
       }
 
       statements.push({
@@ -271,7 +296,8 @@ function diffTable(
 
   // Permission changes
   if (table1.permissions || table2.permissions) {
-    const permsChanged = JSON.stringify(table1.permissions) !== JSON.stringify(table2.permissions);
+    const permsChanged =
+      JSON.stringify(table1.permissions) !== JSON.stringify(table2.permissions);
     if (permsChanged) {
       statements.push({
         type: 'alter_table_permissions',
@@ -297,14 +323,24 @@ function diffColumn(
   col2: SurrealColumn,
   tableName: string,
   mode: DiffMode,
-): { statements: SurrealStatement[]; warnings: string[]; dataLossOperations: string[] } {
+): {
+  statements: SurrealStatement[];
+  warnings: string[];
+  dataLossOperations: string[];
+} {
   const statements: SurrealStatement[] = [];
   const warnings: string[] = [];
   const dataLossOperations: string[] = [];
 
   // Type change
   if (col1.kind !== col2.kind) {
-    log('Column type change: %s.%s: %s -> %s', tableName, col1.name, col1.kind, col2.kind);
+    log(
+      'Column type change: %s.%s: %s -> %s',
+      tableName,
+      col1.name,
+      col1.kind,
+      col2.kind,
+    );
 
     if (mode === 'push') {
       dataLossOperations.push(`CHANGE COLUMN TYPE ${tableName}.${col2.name}`);
@@ -327,9 +363,15 @@ function diffColumn(
   // Note: SurrealDB has NOT NULL (NOT OPTIONAL), so optional=false means NOT NULL
   if (col1.optional !== col2.optional) {
     // Only warn about making NOT NULL without default in push mode
-    if (mode === 'push' && col2.optional === false && col2.default === undefined) {
+    if (
+      mode === 'push' &&
+      col2.optional === false &&
+      col2.default === undefined
+    ) {
       dataLossOperations.push(`ADD NOT NULL ${tableName}.${col2.name}`);
-      warnings.push(`Making column ${tableName}.${col2.name} NOT NULL without default may fail`);
+      warnings.push(
+        `Making column ${tableName}.${col2.name} NOT NULL without default may fail`,
+      );
     }
 
     // Always create the alter statement to track the change - include kind for SQL generation
@@ -349,9 +391,21 @@ function diffColumn(
       type: 'alter_column',
       table: tableName,
       column: col2.name,
-      change: { readonly: col2.readonly, optional: col2.optional, type: col2.kind },
-      before: { readonly: col1.readonly, optional: col1.optional, type: col1.kind },
-      after: { readonly: col2.readonly, optional: col2.optional, type: col2.kind },
+      change: {
+        readonly: col2.readonly,
+        optional: col2.optional,
+        type: col2.kind,
+      },
+      before: {
+        readonly: col1.readonly,
+        optional: col1.optional,
+        type: col1.kind,
+      },
+      after: {
+        readonly: col2.readonly,
+        optional: col2.optional,
+        type: col2.kind,
+      },
     });
   }
 
@@ -364,9 +418,21 @@ function diffColumn(
       type: 'alter_column',
       table: tableName,
       column: col2.name,
-      change: { default: col2.default, optional: col2.optional, type: col2.kind } as any,
-      before: { default: col1.default, optional: col1.optional, type: col1.kind } as any,
-      after: { default: col2.default, optional: col2.optional, type: col2.kind } as any,
+      change: {
+        default: col2.default,
+        optional: col2.optional,
+        type: col2.kind,
+      } as any,
+      before: {
+        default: col1.default,
+        optional: col1.optional,
+        type: col1.kind,
+      } as any,
+      after: {
+        default: col2.default,
+        optional: col2.optional,
+        type: col2.kind,
+      } as any,
     });
   }
 
@@ -407,13 +473,21 @@ function diffIndexes(
   indexes1: SurrealIndex[] | undefined,
   indexes2: SurrealIndex[] | undefined,
   _tables2Map: Map<string, SurrealTable>,
-): { statements: SurrealStatement[]; warnings: string[]; dataLossOperations: string[] } {
+): {
+  statements: SurrealStatement[];
+  warnings: string[];
+  dataLossOperations: string[];
+} {
   const statements: SurrealStatement[] = [];
   const warnings: string[] = [];
   const dataLossOperations: string[] = [];
 
-  const idx1Map = new Map((indexes1 ?? []).map((i) => [`${i.table}:${i.name}`, i]));
-  const idx2Map = new Map((indexes2 ?? []).map((i) => [`${i.table}:${i.name}`, i]));
+  const idx1Map = new Map(
+    (indexes1 ?? []).map((i) => [`${i.table}:${i.name}`, i]),
+  );
+  const idx2Map = new Map(
+    (indexes2 ?? []).map((i) => [`${i.table}:${i.name}`, i]),
+  );
 
   // New indexes
   for (const [key, idx2] of idx2Map) {
@@ -651,8 +725,12 @@ function diffEvents(
 ): { statements: SurrealStatement[] } {
   const statements: SurrealStatement[] = [];
 
-  const evt1Map = new Map((events1 ?? []).map((e) => [`${e.what}:${e.name}`, e]));
-  const evt2Map = new Map((events2 ?? []).map((e) => [`${e.what}:${e.name}`, e]));
+  const evt1Map = new Map(
+    (events1 ?? []).map((e) => [`${e.what}:${e.name}`, e]),
+  );
+  const evt2Map = new Map(
+    (events2 ?? []).map((e) => [`${e.what}:${e.name}`, e]),
+  );
 
   // New events
   for (const [key, evt2] of evt2Map) {
@@ -748,8 +826,12 @@ function diffViews(
   const statements: SurrealStatement[] = [];
 
   // Parse views into name+query+comment pairs for comparison
-  const parseView = (sql: string): { name: string; query: string; comment?: string } => {
-    const rest = sql.replace(/^DEFINE VIEW IF NOT EXISTS /i, '').replace(/^DEFINE VIEW /i, '');
+  const parseView = (
+    sql: string,
+  ): { name: string; query: string; comment?: string } => {
+    const rest = sql
+      .replace(/^DEFINE VIEW IF NOT EXISTS /i, '')
+      .replace(/^DEFINE VIEW /i, '');
     // Split on ' AS ' to get name and query
     const idx = rest.search(/\s+AS\s+/i);
     if (idx === -1) return { name: rest.trim(), query: '' };

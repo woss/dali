@@ -8,7 +8,11 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { EmbeddedDriver } from '../../../sdk/driver/embedded-driver.js';
-import type { AccessConfig, EventConfig, FunctionConfig } from '../../../sdk/schema.js';
+import type {
+  AccessConfig,
+  EventConfig,
+  FunctionConfig,
+} from '../../../sdk/schema.js';
 import type { TableDefinition } from '../../../sdk/table.js';
 
 // Mock connect before importing pushSchema
@@ -16,8 +20,8 @@ vi.mock('../../../sdk/driver/orm-connection.js', () => ({
   connect: vi.fn(),
 }));
 
-import { pushSchema, tablesToDdl } from '../push.js';
 import type { Config } from '../../config.js';
+import { pushSchema, tablesToDdl } from '../push.js';
 
 // ============================================================================
 // Helpers
@@ -88,7 +92,13 @@ describe('tablesToDdl', () => {
     const tables: TableDefinition[] = [
       {
         name: 'follows',
-        columns: [{ name: 'created_at', tableName: 'follows', config: { type: 'datetime' } }],
+        columns: [
+          {
+            name: 'created_at',
+            tableName: 'follows',
+            config: { type: 'datetime' },
+          },
+        ],
         config: { schema: 'full', type: 'relation', in: 'user', out: 'user' },
       },
     ];
@@ -228,7 +238,9 @@ describe('tablesToDdl', () => {
     const tables: TableDefinition[] = [
       {
         name: 'user',
-        columns: [{ name: 'email', tableName: 'user', config: { type: 'string' } }],
+        columns: [
+          { name: 'email', tableName: 'user', config: { type: 'string' } },
+        ],
         config: {
           schema: 'full',
           type: 'normal',
@@ -325,7 +337,11 @@ describe('pushSchema', () => {
       {
         name: 'push_test_user',
         columns: [
-          { name: 'name', tableName: 'push_test_user', config: { type: 'string' } },
+          {
+            name: 'name',
+            tableName: 'push_test_user',
+            config: { type: 'string' },
+          },
           { name: 'age', tableName: 'push_test_user', config: { type: 'int' } },
         ],
         config: { schema: 'full', type: 'normal' },
@@ -346,7 +362,13 @@ describe('pushSchema', () => {
     const tables: TableDefinition[] = [
       {
         name: 'dry_run_table',
-        columns: [{ name: 'name', tableName: 'dry_run_table', config: { type: 'string' } }],
+        columns: [
+          {
+            name: 'name',
+            tableName: 'dry_run_table',
+            config: { type: 'string' },
+          },
+        ],
         config: { schema: 'full', type: 'normal' },
       },
     ];
@@ -370,7 +392,13 @@ describe('pushSchema', () => {
     const tables: TableDefinition[] = [
       {
         name: 'access_user',
-        columns: [{ name: 'email', tableName: 'access_user', config: { type: 'string' } }],
+        columns: [
+          {
+            name: 'email',
+            tableName: 'access_user',
+            config: { type: 'string' },
+          },
+        ],
         config: { schema: 'full', type: 'normal' },
       },
     ];
@@ -389,7 +417,11 @@ describe('pushSchema', () => {
       {
         name: 'complex_table',
         columns: [
-          { name: 'id_field', tableName: 'complex_table', config: { type: 'string' } },
+          {
+            name: 'id_field',
+            tableName: 'complex_table',
+            config: { type: 'string' },
+          },
           {
             name: 'unique_field',
             tableName: 'complex_table',
@@ -429,7 +461,13 @@ describe('pushSchema', () => {
     const tables: TableDefinition[] = [
       {
         name: 'evolving_table',
-        columns: [{ name: 'name', tableName: 'evolving_table', config: { type: 'string' } }],
+        columns: [
+          {
+            name: 'name',
+            tableName: 'evolving_table',
+            config: { type: 'string' },
+          },
+        ],
         config: { schema: 'full', type: 'normal' },
       },
     ];
@@ -444,7 +482,9 @@ describe('pushSchema', () => {
 
     const logCalls = vi.mocked(console.log).mock.calls;
     const hasOutput = logCalls.some(
-      (c) => String(c[0]).includes('up to date') || String(c[0]).includes('Schema changes'),
+      (c) =>
+        String(c[0]).includes('up to date') ||
+        String(c[0]).includes('Schema changes'),
     );
     expect(hasOutput).toBe(true);
   });
@@ -541,7 +581,13 @@ describe('tablesToDdl additional branches', () => {
     const tables: TableDefinition[] = [
       {
         name: 'protected_table',
-        columns: [{ name: 'secret', tableName: 'protected_table', config: { type: 'string' } }],
+        columns: [
+          {
+            name: 'secret',
+            tableName: 'protected_table',
+            config: { type: 'string' },
+          },
+        ],
         config: {
           schema: 'full',
           type: 'normal',
@@ -551,7 +597,10 @@ describe('tablesToDdl additional branches', () => {
     ];
 
     const ddl = tablesToDdl(tables);
-    expect(ddl.tables[0].permissions).toEqual({ select: 'NONE', create: 'NONE' });
+    expect(ddl.tables[0].permissions).toEqual({
+      select: 'NONE',
+      create: 'NONE',
+    });
   });
 
   it('handles empty access and events arrays', () => {

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
-import { createSchemaBuilder } from '../schema-builder.js';
 import type { ColumnConfig } from '../schema/column/types.js';
+import { createSchemaBuilder } from '../schema-builder.js';
 
 // =============================================================================
 // Mock obug (required by generator internals)
@@ -82,7 +82,9 @@ describe('SchemaBuilder defineTable', () => {
     const builder = createSchemaBuilder(query);
 
     const sql = builder.defineTable('events', { changefeed: '7d' }).toSQL();
-    expect(sql).toEqual(['DEFINE TABLE IF NOT EXISTS events SCHEMAFULL CHANGEFEED 7d']);
+    expect(sql).toEqual([
+      'DEFINE TABLE IF NOT EXISTS events SCHEMAFULL CHANGEFEED 7d',
+    ]);
   });
 
   it('includes PERMISSIONS when specified', () => {
@@ -111,7 +113,9 @@ describe('SchemaBuilder defineField', () => {
     const builder = createSchemaBuilder(query);
 
     const sql = builder.defineField('user', 'name', { type: 'string' }).toSQL();
-    expect(sql).toEqual(['DEFINE FIELD IF NOT EXISTS name ON TABLE user TYPE string']);
+    expect(sql).toEqual([
+      'DEFINE FIELD IF NOT EXISTS name ON TABLE user TYPE string',
+    ]);
   });
 
   it('generates optional field as option<T>', () => {
@@ -125,7 +129,9 @@ describe('SchemaBuilder defineField', () => {
       })
       .toSQL();
 
-    expect(sql).toEqual(['DEFINE FIELD IF NOT EXISTS nickname ON TABLE user TYPE option<string>']);
+    expect(sql).toEqual([
+      'DEFINE FIELD IF NOT EXISTS nickname ON TABLE user TYPE option<string>',
+    ]);
   });
 
   it('generates readonly field', () => {
@@ -205,7 +211,9 @@ describe('SchemaBuilder defineField', () => {
       })
       .toSQL();
 
-    expect(sql).toEqual(['DEFINE FIELD IF NOT EXISTS author ON TABLE post TYPE record<user>']);
+    expect(sql).toEqual([
+      'DEFINE FIELD IF NOT EXISTS author ON TABLE post TYPE record<user>',
+    ]);
   });
 
   it('generates FLEXIBLE field', () => {
@@ -219,7 +227,9 @@ describe('SchemaBuilder defineField', () => {
       })
       .toSQL();
 
-    expect(sql).toEqual(['DEFINE FIELD IF NOT EXISTS metadata ON TABLE user TYPE object FLEXIBLE']);
+    expect(sql).toEqual([
+      'DEFINE FIELD IF NOT EXISTS metadata ON TABLE user TYPE object FLEXIBLE',
+    ]);
   });
 
   it('skips empty string from generator (id field)', () => {
@@ -248,7 +258,9 @@ describe('SchemaBuilder defineIndex', () => {
       })
       .toSQL();
 
-    expect(sql).toEqual(['DEFINE INDEX user_name_idx ON TABLE user COLUMNS name']);
+    expect(sql).toEqual([
+      'DEFINE INDEX user_name_idx ON TABLE user COLUMNS name',
+    ]);
   });
 
   it('generates unique index', () => {
@@ -263,7 +275,9 @@ describe('SchemaBuilder defineIndex', () => {
       })
       .toSQL();
 
-    expect(sql).toEqual(['DEFINE INDEX user_email_unique ON TABLE user COLUMNS email UNIQUE']);
+    expect(sql).toEqual([
+      'DEFINE INDEX user_email_unique ON TABLE user COLUMNS email UNIQUE',
+    ]);
   });
 
   it('generates fulltext index', () => {
@@ -295,7 +309,9 @@ describe('SchemaBuilder defineIndex', () => {
       })
       .toSQL();
 
-    expect(sql).toEqual(['DEFINE INDEX 复合索引 ON TABLE user COLUMNS name, email']);
+    expect(sql).toEqual([
+      'DEFINE INDEX 复合索引 ON TABLE user COLUMNS name, email',
+    ]);
   });
 });
 
@@ -353,7 +369,9 @@ describe('SchemaBuilder raw', () => {
     const sql = builder
       .raw('DEFINE ANALYZER my_analyzer TOKENIZERS blank FILTERS lowercase')
       .toSQL();
-    expect(sql).toEqual(['DEFINE ANALYZER my_analyzer TOKENIZERS blank FILTERS lowercase']);
+    expect(sql).toEqual([
+      'DEFINE ANALYZER my_analyzer TOKENIZERS blank FILTERS lowercase',
+    ]);
   });
 
   it('preserves order with other statements', () => {
@@ -389,7 +407,10 @@ describe('SchemaBuilder chaining', () => {
     const result2 = builder.defineField('user', 'name', { type: 'string' });
     expect(result2).toBe(builder);
 
-    const result3 = builder.defineIndex('idx', { table: 'user', fields: ['name'] });
+    const result3 = builder.defineIndex('idx', {
+      table: 'user',
+      fields: ['name'],
+    });
     expect(result3).toBe(builder);
 
     const result4 = builder.removeTable('old');
@@ -419,7 +440,11 @@ describe('SchemaBuilder toSQL ordering', () => {
       .defineTable('user')
       .defineField('user', 'name', { type: 'string' })
       .defineField('user', 'email', { type: 'string' })
-      .defineIndex('user_email_idx', { table: 'user', fields: ['email'], type: 'unique' })
+      .defineIndex('user_email_idx', {
+        table: 'user',
+        fields: ['email'],
+        type: 'unique',
+      })
       .removeTable('legacy')
       .removeField('user', 'deprecated')
       .removeIndex('old_idx', 'user')
@@ -428,9 +453,15 @@ describe('SchemaBuilder toSQL ordering', () => {
 
     expect(sql).toHaveLength(8);
     expect(sql[0]).toBe('DEFINE TABLE IF NOT EXISTS user SCHEMAFULL');
-    expect(sql[1]).toBe('DEFINE FIELD IF NOT EXISTS name ON TABLE user TYPE string');
-    expect(sql[2]).toBe('DEFINE FIELD IF NOT EXISTS email ON TABLE user TYPE string');
-    expect(sql[3]).toBe('DEFINE INDEX user_email_idx ON TABLE user COLUMNS email UNIQUE');
+    expect(sql[1]).toBe(
+      'DEFINE FIELD IF NOT EXISTS name ON TABLE user TYPE string',
+    );
+    expect(sql[2]).toBe(
+      'DEFINE FIELD IF NOT EXISTS email ON TABLE user TYPE string',
+    );
+    expect(sql[3]).toBe(
+      'DEFINE INDEX user_email_idx ON TABLE user COLUMNS email UNIQUE',
+    );
     expect(sql[4]).toBe('REMOVE TABLE legacy');
     expect(sql[5]).toBe('REMOVE FIELD deprecated ON TABLE user');
     expect(sql[6]).toBe('REMOVE INDEX old_idx ON TABLE user');
@@ -467,10 +498,16 @@ describe('SchemaBuilder execute', () => {
     const query = createMockQuery();
     const builder = createSchemaBuilder(query);
 
-    await builder.defineTable('user').defineField('user', 'name', { type: 'string' }).execute();
+    await builder
+      .defineTable('user')
+      .defineField('user', 'name', { type: 'string' })
+      .execute();
 
     expect(query).toHaveBeenCalledTimes(2);
-    expect(query).toHaveBeenNthCalledWith(1, 'DEFINE TABLE IF NOT EXISTS user SCHEMAFULL');
+    expect(query).toHaveBeenNthCalledWith(
+      1,
+      'DEFINE TABLE IF NOT EXISTS user SCHEMAFULL',
+    );
     expect(query).toHaveBeenNthCalledWith(
       2,
       'DEFINE FIELD IF NOT EXISTS name ON TABLE user TYPE string',

@@ -21,30 +21,30 @@ import type {
 import { getSurrealQLType } from '../ddl/types.js';
 import { formatDefaultValue, validateChangefeed } from '../utils/format.js';
 import {
-  generateRemoveAccess,
-  generateNamespaceDefinition,
-  generateRemoveNamespace,
-  generateDatabaseDefinition,
-  generateRemoveDatabase,
   generateAccessDefinition,
   generateAccessMigration,
-  generateEventDefinition,
-  generateRemoveEvent,
-  generateEventMigration,
-  generateFunctionDefinition,
-  generateRemoveFunction,
-  generateFunctionMigration,
-  generateViewDefinition,
-  generateRemoveView,
-  generateViewMigration,
-  generateSequenceDefinition,
-  generateRemoveSequence,
+  generateAlterFieldDefault,
+  generateAlterFieldPermissions,
   generateAlterFieldType,
   generateAlterTablePermissions,
-  generateAlterFieldPermissions,
-  generateAlterFieldDefault,
   generateAnalyzerDefinition,
+  generateDatabaseDefinition,
+  generateEventDefinition,
+  generateEventMigration,
+  generateFunctionDefinition,
+  generateFunctionMigration,
+  generateNamespaceDefinition,
+  generateRemoveAccess,
   generateRemoveAnalyzer,
+  generateRemoveDatabase,
+  generateRemoveEvent,
+  generateRemoveFunction,
+  generateRemoveNamespace,
+  generateRemoveSequence,
+  generateRemoveView,
+  generateSequenceDefinition,
+  generateViewDefinition,
+  generateViewMigration,
 } from './generator-ddl.js';
 
 /**
@@ -73,7 +73,9 @@ export class SurrealQLGenerator {
     if (table.config.type === 'relation') {
       parts.push(`TYPE RELATION`);
       if (table.config.in) {
-        const inVal = Array.isArray(table.config.in) ? table.config.in.join(', ') : table.config.in;
+        const inVal = Array.isArray(table.config.in)
+          ? table.config.in.join(', ')
+          : table.config.in;
         parts.push(`IN ${inVal}`);
       }
       if (table.config.out) {
@@ -117,7 +119,11 @@ export class SurrealQLGenerator {
     }
 
     // Handle tuple types - emit main field + element fields as single joined statement
-    if (column.config.type === 'tuple' && column.config.size && column.config.elements) {
+    if (
+      column.config.type === 'tuple' &&
+      column.config.size &&
+      column.config.elements
+    ) {
       return this.generateTupleFieldDefinition(column, table).join('; ');
     }
 
@@ -141,7 +147,11 @@ export class SurrealQLGenerator {
     }
 
     // Handle tuple types - emit main field + element fields
-    if (column.config.type === 'tuple' && column.config.size && column.config.elements) {
+    if (
+      column.config.type === 'tuple' &&
+      column.config.size &&
+      column.config.elements
+    ) {
       return this.generateTupleFieldDefinition(column, table).join('; ');
     }
 
@@ -165,7 +175,11 @@ export class SurrealQLGenerator {
     }
 
     // Handle tuple types - emit main field + element fields
-    if (column.config.type === 'tuple' && column.config.size && column.config.elements) {
+    if (
+      column.config.type === 'tuple' &&
+      column.config.size &&
+      column.config.elements
+    ) {
       return this.generateTupleFieldDefinition(column, table);
     }
 
@@ -176,7 +190,10 @@ export class SurrealQLGenerator {
   /**
    * Generate tuple field with element sub-fields
    */
-  private generateTupleFieldDefinition(column: ColumnDefinition, tableName: string): string[] {
+  private generateTupleFieldDefinition(
+    column: ColumnDefinition,
+    tableName: string,
+  ): string[] {
     const sqls: string[] = [];
 
     // Get element type from first element or default to 'any'
@@ -219,19 +236,30 @@ export class SurrealQLGenerator {
   /**
    * Generate single (non-tuple) field definition
    */
-  private generateSingleFieldDefinition(column: ColumnDefinition, tableName: string): string {
-    const parts: string[] = [`DEFINE FIELD IF NOT EXISTS ${column.name} ON TABLE ${tableName}`];
+  private generateSingleFieldDefinition(
+    column: ColumnDefinition,
+    tableName: string,
+  ): string {
+    const parts: string[] = [
+      `DEFINE FIELD IF NOT EXISTS ${column.name} ON TABLE ${tableName}`,
+    ];
 
     // Type - use option<T> for optional columns
     const baseType = getSurrealQLType(column.config.type);
     // For record type, append the linked table name if available
     let typeStr = baseType;
-    if (baseType === 'record' && (column.config.recordTable || column.config.linksTo)) {
+    if (
+      baseType === 'record' &&
+      (column.config.recordTable || column.config.linksTo)
+    ) {
       typeStr = `record<${column.config.recordTable || column.config.linksTo}>`;
     }
 
     // FLEXIBLE only pairs with plain TYPE object, not option<object>
-    if (column.config.optional && !(column.config.flexible && baseType === 'object')) {
+    if (
+      column.config.optional &&
+      !(column.config.flexible && baseType === 'object')
+    ) {
       typeStr = `option<${typeStr}>`;
     }
     parts.push(`TYPE ${typeStr}`);
@@ -274,19 +302,30 @@ export class SurrealQLGenerator {
   /**
    * Generate single (non-tuple) field redefine statement (overwrites existing field definition)
    */
-  private generateSingleFieldRedefine(column: ColumnDefinition, tableName: string): string {
-    const parts: string[] = [`DEFINE FIELD OVERWRITE ${column.name} ON TABLE ${tableName}`];
+  private generateSingleFieldRedefine(
+    column: ColumnDefinition,
+    tableName: string,
+  ): string {
+    const parts: string[] = [
+      `DEFINE FIELD OVERWRITE ${column.name} ON TABLE ${tableName}`,
+    ];
 
     // Type - use option<T> for optional columns
     const baseType = getSurrealQLType(column.config.type);
     // For record type, append the linked table name if available
     let typeStr = baseType;
-    if (baseType === 'record' && (column.config.recordTable || column.config.linksTo)) {
+    if (
+      baseType === 'record' &&
+      (column.config.recordTable || column.config.linksTo)
+    ) {
       typeStr = `record<${column.config.recordTable || column.config.linksTo}>`;
     }
 
     // FLEXIBLE only pairs with plain TYPE object, not option<object>
-    if (column.config.optional && !(column.config.flexible && baseType === 'object')) {
+    if (
+      column.config.optional &&
+      !(column.config.flexible && baseType === 'object')
+    ) {
       typeStr = `option<${typeStr}>`;
     }
     parts.push(`TYPE ${typeStr}`);
@@ -365,7 +404,8 @@ export class SurrealQLGenerator {
           float64: 'F64',
           float: 'F64', // deprecated alias — F64 is the HNSW default
         };
-        const sqlType = VECTOR_TYPE_TO_SQL[index.vectorType] ?? index.vectorType;
+        const sqlType =
+          VECTOR_TYPE_TO_SQL[index.vectorType] ?? index.vectorType;
         parts.push(`TYPE ${sqlType}`);
       }
       if (index.distance) {
@@ -573,7 +613,11 @@ export class SurrealQLGenerator {
   /**
    * Generate DEFINE VIEW statement
    */
-  generateViewDefinition(view: { name: string; query: string; comment?: string }): string {
+  generateViewDefinition(view: {
+    name: string;
+    query: string;
+    comment?: string;
+  }): string {
     return generateViewDefinition(view);
   }
 
@@ -612,7 +656,11 @@ export class SurrealQLGenerator {
   /**
    * Generate ALTER FIELD TYPE statement
    */
-  generateAlterFieldType(tableName: string, fieldName: string, newType: string): string {
+  generateAlterFieldType(
+    tableName: string,
+    fieldName: string,
+    newType: string,
+  ): string {
     return generateAlterFieldType(tableName, fieldName, newType);
   }
 
@@ -629,7 +677,11 @@ export class SurrealQLGenerator {
   /**
    * Generate ALTER FIELD PERMISSIONS statement
    */
-  generateAlterFieldPermissions(tableName: string, fieldName: string, permissions: string): string {
+  generateAlterFieldPermissions(
+    tableName: string,
+    fieldName: string,
+    permissions: string,
+  ): string {
     return generateAlterFieldPermissions(tableName, fieldName, permissions);
   }
 
@@ -645,7 +697,12 @@ export class SurrealQLGenerator {
     defaultValue?: unknown,
     defaultRaw?: string,
   ): string {
-    return generateAlterFieldDefault(tableName, fieldName, defaultValue, defaultRaw);
+    return generateAlterFieldDefault(
+      tableName,
+      fieldName,
+      defaultValue,
+      defaultRaw,
+    );
   }
 
   /**
@@ -694,7 +751,10 @@ export class SurrealQLGenerator {
   /**
    * Generate migration from multiple tables
    */
-  generateMigration(tables: TableDefinition[], analyzers?: AnalyzerDefinition[]): string[] {
+  generateMigration(
+    tables: TableDefinition[],
+    analyzers?: AnalyzerDefinition[],
+  ): string[] {
     const statements: string[] = [];
 
     // Emit analyzers before tables

@@ -1,7 +1,15 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { createDebug as debug } from 'obug';
-import { boolean, type InferOutput, literal, object, optional, parse, string } from 'valibot';
+import {
+  boolean,
+  type InferOutput,
+  literal,
+  object,
+  optional,
+  parse,
+  string,
+} from 'valibot';
 
 const log = debug('dali-orm:kit:config');
 
@@ -64,8 +72,14 @@ export function processConfigObject(
   resolvedPath: string,
 ): Config {
   // Guard: reject empty config objects
-  if (rawConfig === null || rawConfig === undefined || typeof rawConfig !== 'object') {
-    throw new Error(`Config at ${configFilePath} must be an object, got: ${typeof rawConfig}`);
+  if (
+    rawConfig === null ||
+    rawConfig === undefined ||
+    typeof rawConfig !== 'object'
+  ) {
+    throw new Error(
+      `Config at ${configFilePath} must be an object, got: ${typeof rawConfig}`,
+    );
   }
 
   const parsed = parse(ConfigSchema, rawConfig);
@@ -112,7 +126,11 @@ export function processConfigObject(
 }
 
 export async function loadConfig(configPath?: string): Promise<Config> {
-  const defaultPaths = ['dali-orm.config.ts', 'dali-orm.config.js', '.dali-orm.js'];
+  const defaultPaths = [
+    'dali-orm.config.ts',
+    'dali-orm.config.js',
+    '.dali-orm.js',
+  ];
 
   const pathsToTry = configPath ? [configPath] : defaultPaths;
 
@@ -131,9 +149,16 @@ export async function loadConfig(configPath?: string): Promise<Config> {
         const { register } = await import('tsx/esm/api');
         const unregister = register();
         try {
-          const configModule = await import(`file://${resolvedPath}?ts=${Date.now()}`);
+          const configModule = await import(
+            `file://${resolvedPath}?ts=${Date.now()}`
+          );
           const rawConfig = configModule.default ?? configModule;
-          return processConfigObject(rawConfig, configFilePath, configDir, resolvedPath);
+          return processConfigObject(
+            rawConfig,
+            configFilePath,
+            configDir,
+            resolvedPath,
+          );
         } finally {
           (unregister as () => void)();
         }
@@ -142,7 +167,12 @@ export async function loadConfig(configPath?: string): Promise<Config> {
       const configModule = await import(`file://${resolvedPath}`);
       const rawConfig = configModule.default ?? configModule;
 
-      return processConfigObject(rawConfig, configFilePath, configDir, resolvedPath);
+      return processConfigObject(
+        rawConfig,
+        configFilePath,
+        configDir,
+        resolvedPath,
+      );
     } catch (error) {
       log('Error loading', `${configFilePath}:`, error);
     }
@@ -155,7 +185,9 @@ export async function loadConfig(configPath?: string): Promise<Config> {
   );
 }
 
-export async function createConfigFile(filePath: string = 'dali-orm.config.js'): Promise<void> {
+export async function createConfigFile(
+  filePath: string = 'dali-orm.config.js',
+): Promise<void> {
   const template = `import { defineConfig } from '@woss/dali-orm/migration/config';
 
 export default defineConfig({

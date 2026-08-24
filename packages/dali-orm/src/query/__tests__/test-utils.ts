@@ -1,7 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { EmbeddedDriver } from '../../sdk/driver/embedded-driver.js';
 import type { SurrealDriver } from '../../sdk/driver/types.js';
-import { bool, datetime, int, record, string } from '../../sdk/schema/column/index.js';
+import {
+  bool,
+  datetime,
+  int,
+  record,
+  string,
+} from '../../sdk/schema/column/index.js';
 import { defineRelationTable, defineTable } from '../../sdk/table.js';
 import {
   bindTable,
@@ -31,7 +37,10 @@ function createTestDriver(): EmbeddedDriver {
 }
 
 /** Create isolated test driver with auto-cleanup */
-async function setupTestDb(): Promise<{ driver: EmbeddedDriver; cleanup: () => Promise<void> }> {
+async function setupTestDb(): Promise<{
+  driver: EmbeddedDriver;
+  cleanup: () => Promise<void>;
+}> {
   const d = createTestDriver();
   await d.connect();
   return {
@@ -91,7 +100,9 @@ async function defineTables(driver: SurrealDriver) {
   await driver.query('DEFINE FIELD email ON user TYPE option<string>');
   await driver.query('DEFINE FIELD age ON user TYPE option<int>');
   await driver.query('DEFINE FIELD active ON user TYPE bool DEFAULT true');
-  await driver.query('DEFINE FIELD createdAt ON user TYPE datetime DEFAULT time::now()');
+  await driver.query(
+    'DEFINE FIELD createdAt ON user TYPE datetime DEFAULT time::now()',
+  );
 
   await driver.query('DEFINE TABLE post SCHEMAFULL');
   await driver.query('DEFINE FIELD title ON post TYPE string');
@@ -99,8 +110,12 @@ async function defineTables(driver: SurrealDriver) {
   await driver.query('DEFINE FIELD published ON post TYPE bool DEFAULT false');
   await driver.query('DEFINE FIELD authorId ON post TYPE option<string>');
 
-  await driver.query('DEFINE TABLE wrote TYPE RELATION IN user OUT post SCHEMAFULL');
-  await driver.query('DEFINE TABLE review TYPE RELATION IN user OUT post SCHEMAFULL');
+  await driver.query(
+    'DEFINE TABLE wrote TYPE RELATION IN user OUT post SCHEMAFULL',
+  );
+  await driver.query(
+    'DEFINE TABLE review TYPE RELATION IN user OUT post SCHEMAFULL',
+  );
   await driver.query('DEFINE FIELD rating ON review TYPE option<int>');
   await driver.query('DEFINE FIELD comment ON review TYPE option<string>');
   await driver.query(
@@ -117,36 +132,36 @@ async function defineTables(driver: SurrealDriver) {
 export {
   afterEach,
   beforeEach,
-  describe,
-  expect,
-  it,
-  EmbeddedDriver,
-  createTestDriver,
-  setupTestDb,
-  users,
-  posts,
-  wrote,
-  review,
-  wroteMultiIn,
-  wroteMultiOut,
-  wroteMultiBoth,
-  bool,
-  datetime,
-  int,
-  record,
-  string,
-  defineRelationTable,
-  defineTable,
   bindTable,
+  bool,
   columnRef,
   create,
+  createTestDriver,
+  datetime,
+  defineRelationTable,
+  defineTable,
+  defineTables,
   delete_,
+  describe,
+  EmbeddedDriver,
+  expect,
   graphPath,
   insert,
+  int,
+  it,
+  posts,
+  record,
   relate,
+  review,
   select,
+  setupTestDb,
+  string,
   update,
   upsert,
+  users,
   WhereBuilder,
-  defineTables,
+  wrote,
+  wroteMultiBoth,
+  wroteMultiIn,
+  wroteMultiOut,
 };

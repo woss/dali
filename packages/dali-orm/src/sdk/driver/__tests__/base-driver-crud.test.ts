@@ -41,15 +41,15 @@ vi.mock('surrealdb', () => {
 });
 
 import { RecordId, Table } from 'surrealdb';
+import type { MockDb } from './driver-test-utils.js';
 import {
-  TestDriver,
+  builderThenable,
   createMockDb,
   state,
-  builderThenable,
-  thenableResolve,
+  TestDriver,
   thenableReject,
+  thenableResolve,
 } from './driver-test-utils.js';
-import type { MockDb } from './driver-test-utils.js';
 
 describe('BaseDriver', () => {
   let mockDb: MockDb;
@@ -59,7 +59,9 @@ describe('BaseDriver', () => {
     vi.clearAllMocks();
     state.shouldDateTimeThrow = false;
     mockDb = createMockDb();
-    driver = new TestDriver(mockDb as unknown as Record<string, import('vitest').Mock>);
+    driver = new TestDriver(
+      mockDb as unknown as Record<string, import('vitest').Mock>,
+    );
   });
 
   // ============================================================================
@@ -69,7 +71,9 @@ describe('BaseDriver', () => {
   describe('CRUD: select()', () => {
     it('throws if not connected', async () => {
       driver.connected = false;
-      await expect(driver.select('user')).rejects.toThrow('Not connected to SurrealDB');
+      await expect(driver.select('user')).rejects.toThrow(
+        'Not connected to SurrealDB',
+      );
     });
 
     it('throws on empty table name', async () => {
@@ -79,12 +83,16 @@ describe('BaseDriver', () => {
 
     it('throws on whitespace-only table name', async () => {
       driver.connected = true;
-      await expect(driver.select('   ')).rejects.toThrow('Table name is required');
+      await expect(driver.select('   ')).rejects.toThrow(
+        'Table name is required',
+      );
     });
 
     it('selects all records from a table', async () => {
       driver.connected = true;
-      mockDb.select.mockReturnValue(thenableResolve([{ id: '1', name: 'Alice' }]));
+      mockDb.select.mockReturnValue(
+        thenableResolve([{ id: '1', name: 'Alice' }]),
+      );
 
       const result = await driver.select('user');
 
@@ -94,7 +102,9 @@ describe('BaseDriver', () => {
 
     it('selects a single record by ID', async () => {
       driver.connected = true;
-      mockDb.select.mockReturnValue(thenableResolve({ id: '1', name: 'Alice' }));
+      mockDb.select.mockReturnValue(
+        thenableResolve({ id: '1', name: 'Alice' }),
+      );
 
       const result = await driver.select('user:1');
 
@@ -115,7 +125,9 @@ describe('BaseDriver', () => {
       driver.connected = true;
       mockDb.select.mockReturnValue(thenableReject(new Error('not found')));
 
-      await expect(driver.select('user')).rejects.toThrow('Select failed: not found');
+      await expect(driver.select('user')).rejects.toThrow(
+        'Select failed: not found',
+      );
     });
   });
 
@@ -133,17 +145,23 @@ describe('BaseDriver', () => {
 
     it('throws on empty table name', async () => {
       driver.connected = true;
-      await expect(driver.create('', {})).rejects.toThrow('Table name is required for create');
+      await expect(driver.create('', {})).rejects.toThrow(
+        'Table name is required for create',
+      );
     });
 
     it('throws on null data', async () => {
       driver.connected = true;
-      await expect(driver.create('user', null)).rejects.toThrow('Data is required for create');
+      await expect(driver.create('user', null)).rejects.toThrow(
+        'Data is required for create',
+      );
     });
 
     it('throws on undefined data', async () => {
       driver.connected = true;
-      await expect(driver.create('user', undefined)).rejects.toThrow('Data is required for create');
+      await expect(driver.create('user', undefined)).rejects.toThrow(
+        'Data is required for create',
+      );
     });
 
     it('creates a record in a table (no record ID)', async () => {
@@ -221,12 +239,16 @@ describe('BaseDriver', () => {
 
     it('throws on empty table name', async () => {
       driver.connected = true;
-      await expect(driver.insert('', {})).rejects.toThrow('Table name is required for insert');
+      await expect(driver.insert('', {})).rejects.toThrow(
+        'Table name is required for insert',
+      );
     });
 
     it('throws on null data', async () => {
       driver.connected = true;
-      await expect(driver.insert('user', null)).rejects.toThrow('Data is required for insert');
+      await expect(driver.insert('user', null)).rejects.toThrow(
+        'Data is required for insert',
+      );
     });
 
     it('wraps single object in array before passing to SDK', async () => {
@@ -235,15 +257,22 @@ describe('BaseDriver', () => {
 
       const result = await driver.insert('user', { name: 'Alice' });
 
-      expect(mockDb.insert).toHaveBeenCalledWith(expect.any(Table), [{ name: 'Alice' }]);
+      expect(mockDb.insert).toHaveBeenCalledWith(expect.any(Table), [
+        { name: 'Alice' },
+      ]);
       expect(result).toEqual([{ id: '1' }]);
     });
 
     it('passes array data through directly', async () => {
       driver.connected = true;
-      mockDb.insert.mockReturnValue(thenableResolve([{ id: '1' }, { id: '2' }]));
+      mockDb.insert.mockReturnValue(
+        thenableResolve([{ id: '1' }, { id: '2' }]),
+      );
 
-      const result = await driver.insert('user', [{ name: 'Alice' }, { name: 'Bob' }]);
+      const result = await driver.insert('user', [
+        { name: 'Alice' },
+        { name: 'Bob' },
+      ]);
 
       expect(mockDb.insert).toHaveBeenCalledWith(expect.any(Table), [
         { name: 'Alice' },
@@ -276,12 +305,16 @@ describe('BaseDriver', () => {
 
     it('throws on empty table name', async () => {
       driver.connected = true;
-      await expect(driver.update('', {})).rejects.toThrow('Table name is required for update');
+      await expect(driver.update('', {})).rejects.toThrow(
+        'Table name is required for update',
+      );
     });
 
     it('throws on null data', async () => {
       driver.connected = true;
-      await expect(driver.update('user', null)).rejects.toThrow('Data is required for update');
+      await expect(driver.update('user', null)).rejects.toThrow(
+        'Data is required for update',
+      );
     });
 
     it('updates by table name (no record ID)', async () => {
@@ -337,12 +370,16 @@ describe('BaseDriver', () => {
   describe('CRUD: delete()', () => {
     it('throws if not connected', async () => {
       driver.connected = false;
-      await expect(driver.delete('user')).rejects.toThrow('Not connected to SurrealDB');
+      await expect(driver.delete('user')).rejects.toThrow(
+        'Not connected to SurrealDB',
+      );
     });
 
     it('throws on empty table name', async () => {
       driver.connected = true;
-      await expect(driver.delete('')).rejects.toThrow('Table name is required for delete');
+      await expect(driver.delete('')).rejects.toThrow(
+        'Table name is required for delete',
+      );
     });
 
     it('deletes all records in a table', async () => {
@@ -378,7 +415,9 @@ describe('BaseDriver', () => {
       driver.connected = true;
       mockDb.delete.mockReturnValue(thenableReject(new Error('not found')));
 
-      await expect(driver.delete('user')).rejects.toThrow('Delete failed: not found');
+      await expect(driver.delete('user')).rejects.toThrow(
+        'Delete failed: not found',
+      );
     });
   });
 
@@ -396,12 +435,16 @@ describe('BaseDriver', () => {
 
     it('throws on empty table name', async () => {
       driver.connected = true;
-      await expect(driver.upsert('', {})).rejects.toThrow('Table name is required for upsert');
+      await expect(driver.upsert('', {})).rejects.toThrow(
+        'Table name is required for upsert',
+      );
     });
 
     it('throws on null data', async () => {
       driver.connected = true;
-      await expect(driver.upsert('user:1', null)).rejects.toThrow('Data is required for upsert');
+      await expect(driver.upsert('user:1', null)).rejects.toThrow(
+        'Data is required for upsert',
+      );
     });
 
     it('upserts by record ID with merge', async () => {
@@ -450,9 +493,9 @@ describe('BaseDriver', () => {
 
     it('throws on empty table name', async () => {
       driver.connected = true;
-      await expect(driver.upsertWhere('', 'email = "a@b.com"', {})).rejects.toThrow(
-        'Table name is required for upsertWhere',
-      );
+      await expect(
+        driver.upsertWhere('', 'email = "a@b.com"', {}),
+      ).rejects.toThrow('Table name is required for upsertWhere');
     });
 
     it('throws on empty where clause', async () => {
@@ -464,9 +507,9 @@ describe('BaseDriver', () => {
 
     it('throws on null data', async () => {
       driver.connected = true;
-      await expect(driver.upsertWhere('user', 'email = "a@b.com"', null)).rejects.toThrow(
-        'Data is required for upsertWhere',
-      );
+      await expect(
+        driver.upsertWhere('user', 'email = "a@b.com"', null),
+      ).rejects.toThrow('Data is required for upsertWhere');
     });
 
     it('upserts with table, where clause, and merge', async () => {
@@ -474,7 +517,9 @@ describe('BaseDriver', () => {
       const builder = builderThenable({ id: '1' });
       mockDb.upsert.mockReturnValue(builder);
 
-      const result = await driver.upsertWhere('user', 'email = "a@b.com"', { name: 'Alice' });
+      const result = await driver.upsertWhere('user', 'email = "a@b.com"', {
+        name: 'Alice',
+      });
 
       expect(mockDb.upsert).toHaveBeenCalledWith(expect.any(Table));
       expect(builder.where).toHaveBeenCalledWith('email = "a@b.com"');
@@ -507,7 +552,9 @@ describe('BaseDriver', () => {
         })),
       });
 
-      const result = await driver.upsertWhere('user', 'email = "a@b.com"', { name: 'Alice' });
+      const result = await driver.upsertWhere('user', 'email = "a@b.com"', {
+        name: 'Alice',
+      });
 
       expect(result).toEqual([{ id: '1' }]);
     });
@@ -520,9 +567,9 @@ describe('BaseDriver', () => {
   describe('CRUD: relate()', () => {
     it('throws if not connected', async () => {
       driver.connected = false;
-      await expect(driver.relate('user:1', 'follows', 'user:2')).rejects.toThrow(
-        'Not connected to SurrealDB',
-      );
+      await expect(
+        driver.relate('user:1', 'follows', 'user:2'),
+      ).rejects.toThrow('Not connected to SurrealDB');
     });
 
     it('throws on empty from', async () => {
@@ -577,9 +624,13 @@ describe('BaseDriver', () => {
 
     it('relates with data', async () => {
       driver.connected = true;
-      mockDb.relate.mockReturnValue(thenableResolve({ id: 'follows:abc', since: '2024' }));
+      mockDb.relate.mockReturnValue(
+        thenableResolve({ id: 'follows:abc', since: '2024' }),
+      );
 
-      const result = await driver.relate('user:1', 'follows', 'user:2', { since: '2024' });
+      const result = await driver.relate('user:1', 'follows', 'user:2', {
+        since: '2024',
+      });
 
       expect(mockDb.relate).toHaveBeenCalledWith(
         expect.any(RecordId),
@@ -592,11 +643,13 @@ describe('BaseDriver', () => {
 
     it('wraps SDK errors', async () => {
       driver.connected = true;
-      mockDb.relate.mockReturnValue(thenableReject(new Error('invalid relation')));
-
-      await expect(driver.relate('user:1', 'follows', 'user:2')).rejects.toThrow(
-        'Relate failed: invalid relation',
+      mockDb.relate.mockReturnValue(
+        thenableReject(new Error('invalid relation')),
       );
+
+      await expect(
+        driver.relate('user:1', 'follows', 'user:2'),
+      ).rejects.toThrow('Relate failed: invalid relation');
     });
   });
 });

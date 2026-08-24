@@ -80,7 +80,9 @@ describe('Shadow DB (integration)', () => {
       };
       const shadow = { namespace: 'prod_ns', database: 'prod_db' };
 
-      await expect(connectToShadow(config, shadow)).rejects.toThrow('cannot match target');
+      await expect(connectToShadow(config, shadow)).rejects.toThrow(
+        'cannot match target',
+      );
     });
   });
 
@@ -119,7 +121,9 @@ describe('Shadow DB (integration)', () => {
       await driver.connect();
 
       try {
-        await createMigrationFile(tmpDir, 'bad_sql', ['DEFINE TABLE bad ALSO SCHEMAFULL INVALID']);
+        await createMigrationFile(tmpDir, 'bad_sql', [
+          'DEFINE TABLE bad ALSO SCHEMAFULL INVALID',
+        ]);
 
         const result = await validateWithShadow(driver, {
           migrationsDir: tmpDir,
@@ -169,7 +173,9 @@ describe('Shadow DB (integration)', () => {
 
         await new Promise((r) => setTimeout(r, 10));
 
-        await createMigrationFile(tmpDir, 'second', ['DEFINE FIELD email ON user TYPE string']);
+        await createMigrationFile(tmpDir, 'second', [
+          'DEFINE FIELD email ON user TYPE string',
+        ]);
 
         const result = await validateWithShadow(driver, {
           migrationsDir: tmpDir,
@@ -196,7 +202,9 @@ describe('Shadow DB (integration)', () => {
 
         await new Promise((r) => setTimeout(r, 10));
 
-        await createMigrationFile(tmpDir, 'second_bad', ['DEFINE FIELD invalid STUFF']);
+        await createMigrationFile(tmpDir, 'second_bad', [
+          'DEFINE FIELD invalid STUFF',
+        ]);
 
         const result = await validateWithShadow(driver, {
           migrationsDir: tmpDir,
@@ -228,7 +236,9 @@ describe('Shadow DB (integration)', () => {
         });
 
         // Verify migration was recorded
-        const records = await driver.query<{ name: string }>('SELECT name FROM shadow_migrations');
+        const records = await driver.query<{ name: string }>(
+          'SELECT name FROM shadow_migrations',
+        );
         expect(records).toHaveLength(1);
         expect(records[0].name).toBe('init');
       } finally {

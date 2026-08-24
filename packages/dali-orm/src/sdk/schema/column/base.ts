@@ -1,4 +1,8 @@
-import type { ColumnConfig, ColumnDefinition, SurrealColumnType } from './types.js';
+import type {
+  ColumnConfig,
+  ColumnDefinition,
+  SurrealColumnType,
+} from './types.js';
 
 /**
  * Base class for all column builders.

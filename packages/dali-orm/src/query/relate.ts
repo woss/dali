@@ -5,8 +5,8 @@
  * GraphPath provides chainable graph traversal building.
  */
 
-import type { SurrealDriver } from '../sdk/driver/types.js';
 import type { DaliORM } from '../sdk/dali-orm.js';
+import type { SurrealDriver } from '../sdk/driver/types.js';
 import type { TableDefinition } from '../sdk/table.js';
 import type { InferRelateInput, InferRelateResult } from './types.js';
 
@@ -27,13 +27,15 @@ export class GraphPath {
 
   /** Start an outgoing traversal: out('wrote') */
   out(edge: string): GraphPathContinuation {
-    if (!edge || typeof edge !== 'string') throw new Error('Edge name is required');
+    if (!edge || typeof edge !== 'string')
+      throw new Error('Edge name is required');
     return new GraphPathContinuation(this, 'out', edge);
   }
 
   /** Start an incoming traversal: in('authored') */
   in(edge: string): GraphPathContinuation {
-    if (!edge || typeof edge !== 'string') throw new Error('Edge name is required');
+    if (!edge || typeof edge !== 'string')
+      throw new Error('Edge name is required');
     return new GraphPathContinuation(this, 'in', edge);
   }
 
@@ -83,14 +85,16 @@ export class GraphPathContinuation {
   /** Set depth range for this traversal step */
   depth(min: number, max?: number): GraphPathContinuation {
     if (min < 0) throw new Error('Depth min must be >= 0');
-    if (max !== undefined && max < min) throw new Error('Depth max must be >= min');
+    if (max !== undefined && max < min)
+      throw new Error('Depth max must be >= min');
     this._depth = { min, max };
     return this;
   }
 
   /** Complete the traversal with target table */
   to(table: string): GraphPath {
-    if (!table || typeof table !== 'string') throw new Error('Table name is required');
+    if (!table || typeof table !== 'string')
+      throw new Error('Table name is required');
     return this.graphPath.addStep({
       direction: this.direction,
       edge: this.edge,
@@ -101,7 +105,8 @@ export class GraphPathContinuation {
 
   /** Complete the traversal with an alias (target inferred from alias) */
   alias(name: string): GraphPath {
-    if (!name || typeof name !== 'string') throw new Error('Alias name is required');
+    if (!name || typeof name !== 'string')
+      throw new Error('Alias name is required');
     return this.graphPath.addStep({
       direction: this.direction,
       edge: this.edge,
@@ -198,7 +203,8 @@ export class RelateBuilder<
 
   constructor(orm: DaliORM, edgeDef: TEdgeDef) {
     if (!orm) throw new Error('DaliORM instance is required');
-    if (!edgeDef?.name) throw new Error('Edge table definition with name is required');
+    if (!edgeDef?.name)
+      throw new Error('Edge table definition with name is required');
 
     this.driver = orm.getDriver();
     this.edgeDef = edgeDef;
@@ -209,7 +215,8 @@ export class RelateBuilder<
    * Maps to SurrealDB's IN field (left side of `->`).
    */
   from(recordId: string): this {
-    if (!recordId || typeof recordId !== 'string') throw new Error('Source record ID is required');
+    if (!recordId || typeof recordId !== 'string')
+      throw new Error('Source record ID is required');
     this._from = recordId;
     return this;
   }
@@ -219,7 +226,8 @@ export class RelateBuilder<
    * Maps to SurrealDB's OUT field (right side of `->`).
    */
   to(recordId: string): this {
-    if (!recordId || typeof recordId !== 'string') throw new Error('Target record ID is required');
+    if (!recordId || typeof recordId !== 'string')
+      throw new Error('Target record ID is required');
     this._to = recordId;
     return this;
   }
@@ -232,7 +240,8 @@ export class RelateBuilder<
   /** Set a single field value on the edge (untyped fallback) */
   set(field: string, value: unknown): this;
   set(field: string, value: unknown): this {
-    if (!field || typeof field !== 'string') throw new Error('Field name is required');
+    if (!field || typeof field !== 'string')
+      throw new Error('Field name is required');
     (this._data as Record<string, unknown>)[field] = value;
     return this;
   }
@@ -241,18 +250,28 @@ export class RelateBuilder<
   data(obj: Partial<InferRelateInput<TEdgeDef>>): this;
   /** Set all edge data at once (untyped fallback) */
   data(obj: Record<string, unknown>): this;
-  data(obj: Partial<InferRelateInput<TEdgeDef>> | Record<string, unknown>): this {
-    if (!obj || typeof obj !== 'object') throw new Error('Data object is required');
+  data(
+    obj: Partial<InferRelateInput<TEdgeDef>> | Record<string, unknown>,
+  ): this {
+    if (!obj || typeof obj !== 'object')
+      throw new Error('Data object is required');
     this._data = { ...obj } as Partial<InferRelateInput<TEdgeDef>>;
     return this;
   }
 
   /** Execute the RELATE query */
   async execute(): Promise<TResult[]> {
-    if (!this._from) throw new Error('Source record is required - use .from() to set it');
-    if (!this._to) throw new Error('Target record is required - use .to() to set it');
+    if (!this._from)
+      throw new Error('Source record is required - use .from() to set it');
+    if (!this._to)
+      throw new Error('Target record is required - use .to() to set it');
 
-    return this.driver.relate<TResult>(this._from, this.edgeDef.name, this._to, this._data);
+    return this.driver.relate<TResult>(
+      this._from,
+      this.edgeDef.name,
+      this._to,
+      this._data,
+    );
   }
 }
 

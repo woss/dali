@@ -9,11 +9,22 @@
  * - SurrealDB embedded returns RecordId objects for `id` fields, not plain strings
  * - Operations on non-existent tables throw; tables are auto-created on first INSERT
  */
-import { afterEach, beforeEach, describe, expect, it, expectTypeOf } from 'vitest';
+import {
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  expectTypeOf,
+  it,
+} from 'vitest';
 import { DaliORM } from '../dali-orm.js';
+import type {
+  InferInsertData,
+  InferSelectResult,
+  InferUpdateData,
+} from '../infer-types.js';
+import { bool, int, string } from '../schema/column/index.js';
 import { defineTable } from '../table.js';
-import { string, int, bool } from '../schema/column/index.js';
-import type { InferSelectResult, InferInsertData, InferUpdateData } from '../infer-types.js';
 
 // =============================================================================
 // Test table definition

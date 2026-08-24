@@ -1,7 +1,16 @@
-import { array, boolean, literal, number, object, optional, string, union } from 'valibot';
+import {
+  array,
+  boolean,
+  literal,
+  number,
+  object,
+  optional,
+  string,
+  union,
+} from 'valibot';
+import { SurrealQLGenerator } from '../migration/core/generator.js';
 import type { SurrealSequence } from '../migration/ddl/ddl.js';
 import type { TableDefinition } from './table.js';
-import { SurrealQLGenerator } from '../migration/core/generator.js';
 
 // =============================================================================
 // ACCESS DEFINITION
@@ -76,7 +85,10 @@ export function generateSignupFromTable(table: TableDefinition): string {
     // this is a bit of a heuristic to identify password fields - looking for common names like 'password', 'pass', 'password_hash'
     const passwordCol =
       table.columns.find(
-        (c) => c.name === 'password_hash' || c.name === 'pass' || c.name === 'password',
+        (c) =>
+          c.name === 'password_hash' ||
+          c.name === 'pass' ||
+          c.name === 'password',
       )?.name ?? 'password';
     if (col.name === passwordCol) {
       return `${passwordCol} = crypto::argon2::generate($${passwordCol})`;
@@ -89,7 +101,10 @@ export function generateSignupFromTable(table: TableDefinition): string {
 /**
  * Generate SIGNUP SQL from table
  */
-export function generateSignupFromSQL(tableName: string, table: TableDefinition): string {
+export function generateSignupFromSQL(
+  tableName: string,
+  table: TableDefinition,
+): string {
   const setClause = generateSignupFromTable(table);
   return `CREATE ${tableName} SET ${setClause}`;
 }
@@ -108,7 +123,10 @@ export function generateSigninFromSQL(
 
   const passwordCol =
     table.columns.find(
-      (c) => c.name === 'password_hash' || c.name === 'pass' || c.name === 'password',
+      (c) =>
+        c.name === 'password_hash' ||
+        c.name === 'pass' ||
+        c.name === 'password',
     )?.name ?? 'password';
 
   const explicitIdentifier = identifier;
@@ -117,12 +135,18 @@ export function generateSigninFromSQL(
   }
 
   const authColumn = table.columns.find(
-    (col) => col.name === 'identifier' || col.name === 'email' || col.name === 'username',
+    (col) =>
+      col.name === 'identifier' ||
+      col.name === 'email' ||
+      col.name === 'username',
   );
 
-  const identifierCol = authColumn?.name ?? table.columns[0]?.name ?? 'identifier';
+  const identifierCol =
+    authColumn?.name ?? table.columns[0]?.name ?? 'identifier';
   if (!identifierCol) {
-    throw new Error(`Table '${tableName}' has no columns for signin identifier`);
+    throw new Error(
+      `Table '${tableName}' has no columns for signin identifier`,
+    );
   }
 
   return `SELECT * FROM ${tableName} WHERE ${identifierCol} = $${identifierCol} AND crypto::argon2::compare(${passwordCol}, $${passwordCol})`;
@@ -139,7 +163,9 @@ export function accessToSQL(
     throw new Error('AccessConfig is required');
   }
 
-  const parts = [`DEFINE ACCESS ${config.name} ON DATABASE TYPE ${config.type}`];
+  const parts = [
+    `DEFINE ACCESS ${config.name} ON DATABASE TYPE ${config.type}`,
+  ];
 
   let signup = config.signup;
   if (!signup && config.table && tables) {
@@ -164,7 +190,8 @@ export function accessToSQL(
   if (config.issuer) parts.push(`ISSUER ${config.issuer}`);
   if (config.duration || config.tokenDuration) {
     const durationParts = [];
-    if (config.tokenDuration) durationParts.push(`FOR TOKEN ${config.tokenDuration}`);
+    if (config.tokenDuration)
+      durationParts.push(`FOR TOKEN ${config.tokenDuration}`);
     if (config.duration) durationParts.push(`FOR SESSION ${config.duration}`);
     parts.push(`DURATION ${durationParts.join(', ')}`);
   }
@@ -267,7 +294,8 @@ export function eventToSQL(config: EventConfig): string {
   if (!config.name) throw new Error('Event name is required');
   if (!config.on) throw new Error('Event table (on) is required');
   if (!config.when) throw new Error('Event condition (when) is required');
-  if (!config.then || config.then.length === 0) throw new Error('Event action (then) is required');
+  if (!config.then || config.then.length === 0)
+    throw new Error('Event action (then) is required');
 
   const parts = [
     `DEFINE EVENT IF NOT EXISTS ${config.name} ON TABLE ${config.on} WHEN (${config.when}) THEN { ${config.then.join('; ')} }`,
@@ -410,7 +438,9 @@ export function defineEvent(name: string) {
       if (!when) throw new Error('WHEN condition is required (use .when())');
       const then = config.then;
       if (!then || then.length === 0) {
-        throw new Error('At least one THEN statement is required (use .then())');
+        throw new Error(
+          'At least one THEN statement is required (use .then())',
+        );
       }
       return {
         name,

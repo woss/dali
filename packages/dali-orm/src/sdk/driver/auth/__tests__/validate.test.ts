@@ -42,10 +42,18 @@ describe('validateAuthConfig', () => {
   });
 
   it('validates root auth with username and password', () => {
-    const result = validateAuthConfig({ type: 'root', username: 'admin', password: 'secret' });
+    const result = validateAuthConfig({
+      type: 'root',
+      username: 'admin',
+      password: 'secret',
+    });
 
     expect(result.valid).toBe(true);
-    expect(result.data).toEqual({ type: 'root', username: 'admin', password: 'secret' });
+    expect(result.data).toEqual({
+      type: 'root',
+      username: 'admin',
+      password: 'secret',
+    });
   });
 
   it('validates namespace auth with namespace field', () => {
@@ -176,7 +184,11 @@ describe('validateAuthConfig', () => {
   });
 
   it('returns invalid for non-string username (number)', () => {
-    const result = validateAuthConfig({ type: 'root', username: 123, password: 'secret' });
+    const result = validateAuthConfig({
+      type: 'root',
+      username: 123,
+      password: 'secret',
+    });
 
     expect(result.valid).toBe(false);
   });
@@ -236,7 +248,9 @@ describe('determineAuthType', () => {
   });
 
   it('prefers explicit type over field inference', () => {
-    expect(determineAuthType({ type: 'root', access: 'my_access' })).toBe('root');
+    expect(determineAuthType({ type: 'root', access: 'my_access' })).toBe(
+      'root',
+    );
   });
 
   it('returns type as string even if passed as non-string', () => {
@@ -269,7 +283,11 @@ describe('normalizeConfig', () => {
   });
 
   it('adds inferred type when type is missing', () => {
-    const result = normalizeConfig({ username: 'admin', password: 'secret', namespace: 'prod' });
+    const result = normalizeConfig({
+      username: 'admin',
+      password: 'secret',
+      namespace: 'prod',
+    });
 
     expect(result.type).toBe('namespace');
     expect(result.username).toBe('admin');
@@ -327,11 +345,15 @@ describe('convertValibotErrors', () => {
 
     expect(result).toHaveLength(1);
     expect(result[0].field).toBe('config');
-    expect(result[0].message).toBe('Some generic validation error without path info');
+    expect(result[0].message).toBe(
+      'Some generic validation error without path info',
+    );
   });
 
   it('extracts field from valibot error with case-insensitive path', () => {
-    const error = new Error('Validation failed:  At Path "PASSWORD" — Expected "string".');
+    const error = new Error(
+      'Validation failed:  At Path "PASSWORD" — Expected "string".',
+    );
 
     const result = convertValibotErrors(error);
 
@@ -356,7 +378,9 @@ describe('AuthConfigSchema', () => {
   });
 
   it('rejects config missing required field', () => {
-    expect(() => parse(AuthConfigSchema, { type: 'root', username: 'admin' })).toThrow();
+    expect(() =>
+      parse(AuthConfigSchema, { type: 'root', username: 'admin' }),
+    ).toThrow();
   });
 
   it('validates record auth with variables', () => {

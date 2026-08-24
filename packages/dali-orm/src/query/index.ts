@@ -14,19 +14,15 @@ export type { DaliORM } from '../sdk/dali-orm.js';
 // Binding
 export type { TableBinding } from './binding.js';
 export { bindTable } from './binding.js';
-
-// Model
-export { Model, createModel } from './model.js';
-
 // Conditions
 export {
   allConditions,
   and,
   anyConditions,
   buildCondition,
-  cast,
+  type Condition,
   type ConditionOp,
-  graphFieldPath,
+  cast,
   contains,
   containsAll,
   containsAny,
@@ -37,6 +33,7 @@ export {
   eeq,
   eq,
   expr,
+  graphFieldPath,
   gt,
   gte,
   inside,
@@ -53,24 +50,61 @@ export {
   outside,
   raw,
   type SerializedCondition,
-  type Condition,
 } from './conditions.js';
 // Create
 export { CreateBuilder, create } from './create.js';
 // Delete
 export { DeleteBuilder, delete_ } from './delete.js';
-
-// Serializer (shared condition serialization utilities)
-export { andTrees, serializeCondition, serializedConditionToNode } from './serializer.js';
-
 // Insert
 export { InsertBuilder, insert } from './insert.js';
 // Live
 export { LiveQueryBuilder, LiveSubscription, live } from './live.js';
+// Model
+export { createModel, Model } from './model.js';
 // Relate + GraphPath
-export { GraphPath, GraphPathContinuation, graphPath, RelateBuilder, relate } from './relate.js';
+export {
+  GraphPath,
+  GraphPathContinuation,
+  graphPath,
+  RelateBuilder,
+  relate,
+} from './relate.js';
 // Select
 export { SelectBuilder, select, WhereBuilder } from './select.js';
+// Serializer (shared condition serialization utilities)
+export {
+  andTrees,
+  serializeCondition,
+  serializedConditionToNode,
+} from './serializer.js';
+// Statements
+export {
+  BeginBuilder,
+  beginTransaction,
+  CancelBuilder,
+  CommitBuilder,
+  cancelTransaction,
+  commitTransaction,
+  DefineParamBuilder,
+  defineParam,
+  InfoBuilder,
+  type InfoScope,
+  info,
+  KillBuilder,
+  kill,
+  LetBuilder,
+  let_,
+  RebuildIndexBuilder,
+  ReturnBuilder,
+  rebuildIndex,
+  return_,
+  ShowChangesBuilder,
+  showChanges,
+  ThrowBuilder,
+  throw_,
+  UseBuilder,
+  use,
+} from './statements.js';
 // Types
 export type {
   ColumnRef,
@@ -87,34 +121,6 @@ export type {
   WithGraphAliases,
 } from './types.js';
 export { columnRef, isRelationTable } from './types.js';
-// Statements
-export {
-  BeginBuilder,
-  beginTransaction,
-  CancelBuilder,
-  cancelTransaction,
-  CommitBuilder,
-  commitTransaction,
-  DefineParamBuilder,
-  defineParam,
-  InfoBuilder,
-  info,
-  type InfoScope,
-  KillBuilder,
-  kill,
-  LetBuilder,
-  let_,
-  RebuildIndexBuilder,
-  rebuildIndex,
-  ReturnBuilder,
-  return_,
-  ShowChangesBuilder,
-  showChanges,
-  ThrowBuilder,
-  throw_,
-  UseBuilder,
-  use,
-} from './statements.js';
 
 // Update
 export { UpdateBuilder, update } from './update.js';

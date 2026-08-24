@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createSchemaBuilder } from '../schema-builder.js';
 
 // =============================================================================
@@ -45,14 +45,18 @@ describe('SchemaBuilder adversarial — empty inputs', () => {
     const query = createMockQuery();
     const builder = createSchemaBuilder(query);
     const sql = builder.defineField('user', '', { type: 'string' }).toSQL();
-    expect(sql).toEqual(['DEFINE FIELD IF NOT EXISTS  ON TABLE user TYPE string']);
+    expect(sql).toEqual([
+      'DEFINE FIELD IF NOT EXISTS  ON TABLE user TYPE string',
+    ]);
   });
 
   it('removeTable with empty string throws', () => {
     const query = createMockQuery();
     const builder = createSchemaBuilder(query);
     // removeTable enqueues at call time; the generator.generateRemoveTable throws immediately
-    expect(() => builder.removeTable('')).toThrow('Table name is required for REMOVE TABLE');
+    expect(() => builder.removeTable('')).toThrow(
+      'Table name is required for REMOVE TABLE',
+    );
   });
 
   it('removeField with empty table throws', () => {
@@ -82,7 +86,9 @@ describe('SchemaBuilder adversarial — empty inputs', () => {
   it('removeIndex with empty table throws', () => {
     const query = createMockQuery();
     const builder = createSchemaBuilder(query);
-    expect(() => builder.removeIndex('idx', '')).toThrow('Table name is required for REMOVE INDEX');
+    expect(() => builder.removeIndex('idx', '')).toThrow(
+      'Table name is required for REMOVE INDEX',
+    );
   });
 });
 
@@ -184,7 +190,9 @@ describe('SchemaBuilder adversarial — toSQL() behavior', () => {
     const sql = builder.toSQL();
     expect(sql).toHaveLength(2);
     expect(sql[0]).toBe('DEFINE TABLE IF NOT EXISTS user SCHEMAFULL');
-    expect(sql[1]).toBe('DEFINE FIELD IF NOT EXISTS name ON TABLE user TYPE string');
+    expect(sql[1]).toBe(
+      'DEFINE FIELD IF NOT EXISTS name ON TABLE user TYPE string',
+    );
   });
 });
 
@@ -244,7 +252,10 @@ describe('SchemaBuilder adversarial — execute() with queryFn errors', () => {
     query.mockRejectedValueOnce(new Error('DB error'));
     const builder = createSchemaBuilder(query);
 
-    builder.defineTable('user').defineField('user', 'name', { type: 'string' }).defineTable('post');
+    builder
+      .defineTable('user')
+      .defineField('user', 'name', { type: 'string' })
+      .defineTable('post');
 
     await expect(builder.execute()).rejects.toThrow('DB error');
     // Failed on first, so only 1 call
@@ -268,13 +279,17 @@ describe('SchemaBuilder adversarial — unicode and special characters', () => {
     const query = createMockQuery();
     const builder = createSchemaBuilder(query);
     const sql = builder.defineField('user', '名前', { type: 'string' }).toSQL();
-    expect(sql).toEqual(['DEFINE FIELD IF NOT EXISTS 名前 ON TABLE user TYPE string']);
+    expect(sql).toEqual([
+      'DEFINE FIELD IF NOT EXISTS 名前 ON TABLE user TYPE string',
+    ]);
   });
 
   it('defineField with emoji in default value', () => {
     const query = createMockQuery();
     const builder = createSchemaBuilder(query);
-    const sql = builder.defineField('user', 'avatar', { type: 'string', default: '🎨' }).toSQL();
+    const sql = builder
+      .defineField('user', 'avatar', { type: 'string', default: '🎨' })
+      .toSQL();
     expect(sql).toEqual([
       "DEFINE FIELD IF NOT EXISTS avatar ON TABLE user TYPE string DEFAULT '🎨'",
     ]);
@@ -283,7 +298,9 @@ describe('SchemaBuilder adversarial — unicode and special characters', () => {
   it('raw() with unicode SQL', () => {
     const query = createMockQuery();
     const builder = createSchemaBuilder(query);
-    const sql = builder.raw('DEFINE FUNCTION über::func() { RETURN true; }').toSQL();
+    const sql = builder
+      .raw('DEFINE FUNCTION über::func() { RETURN true; }')
+      .toSQL();
     expect(sql).toEqual(['DEFINE FUNCTION über::func() { RETURN true; }']);
   });
 });
@@ -306,9 +323,13 @@ describe('SchemaBuilder adversarial — scale', () => {
     const sql = ref.toSQL();
     expect(sql).toHaveLength(100);
     expect(sql[0]).toBe('DEFINE TABLE IF NOT EXISTS table_0 SCHEMAFULL');
-    expect(sql[1]).toBe('DEFINE FIELD IF NOT EXISTS field_0 ON TABLE table_0 TYPE string');
+    expect(sql[1]).toBe(
+      'DEFINE FIELD IF NOT EXISTS field_0 ON TABLE table_0 TYPE string',
+    );
     expect(sql[98]).toBe('DEFINE TABLE IF NOT EXISTS table_49 SCHEMAFULL');
-    expect(sql[99]).toBe('DEFINE FIELD IF NOT EXISTS field_49 ON TABLE table_49 TYPE string');
+    expect(sql[99]).toBe(
+      'DEFINE FIELD IF NOT EXISTS field_49 ON TABLE table_49 TYPE string',
+    );
   });
 
   it('handles 100 raw statements', () => {
@@ -335,7 +356,9 @@ describe('SchemaBuilder adversarial — defineIndex edge cases', () => {
   it('defineIndex with single-element fields array', () => {
     const query = createMockQuery();
     const builder = createSchemaBuilder(query);
-    const sql = builder.defineIndex('idx', { table: 'user', fields: ['email'] }).toSQL();
+    const sql = builder
+      .defineIndex('idx', { table: 'user', fields: ['email'] })
+      .toSQL();
     expect(sql).toEqual(['DEFINE INDEX idx ON TABLE user COLUMNS email']);
   });
 
@@ -348,7 +371,9 @@ describe('SchemaBuilder adversarial — defineIndex edge cases', () => {
         fields: ['a', 'b', 'c', 'd', 'e'],
       })
       .toSQL();
-    expect(sql).toEqual(['DEFINE INDEX idx ON TABLE user COLUMNS a, b, c, d, e']);
+    expect(sql).toEqual([
+      'DEFINE INDEX idx ON TABLE user COLUMNS a, b, c, d, e',
+    ]);
   });
 });
 
@@ -407,7 +432,9 @@ describe('SchemaBuilder adversarial — defineTable config edge cases', () => {
         out: 'b',
       })
       .toSQL();
-    expect(sql).toEqual(['DEFINE TABLE IF NOT EXISTS e SCHEMAFULL TYPE RELATION IN a OUT b']);
+    expect(sql).toEqual([
+      'DEFINE TABLE IF NOT EXISTS e SCHEMAFULL TYPE RELATION IN a OUT b',
+    ]);
   });
 });
 
@@ -424,8 +451,12 @@ describe('SchemaBuilder adversarial — builder isolation', () => {
     builder1.defineTable('user');
     builder2.defineTable('post');
 
-    expect(builder1.toSQL()).toEqual(['DEFINE TABLE IF NOT EXISTS user SCHEMAFULL']);
-    expect(builder2.toSQL()).toEqual(['DEFINE TABLE IF NOT EXISTS post SCHEMAFULL']);
+    expect(builder1.toSQL()).toEqual([
+      'DEFINE TABLE IF NOT EXISTS user SCHEMAFULL',
+    ]);
+    expect(builder2.toSQL()).toEqual([
+      'DEFINE TABLE IF NOT EXISTS post SCHEMAFULL',
+    ]);
   });
 
   it('two builders with separate query functions', async () => {
@@ -441,9 +472,13 @@ describe('SchemaBuilder adversarial — builder isolation', () => {
     await builder2.execute();
 
     expect(query1).toHaveBeenCalledTimes(1);
-    expect(query1).toHaveBeenCalledWith('DEFINE TABLE IF NOT EXISTS user SCHEMAFULL');
+    expect(query1).toHaveBeenCalledWith(
+      'DEFINE TABLE IF NOT EXISTS user SCHEMAFULL',
+    );
     expect(query2).toHaveBeenCalledTimes(1);
-    expect(query2).toHaveBeenCalledWith('DEFINE TABLE IF NOT EXISTS post SCHEMAFULL');
+    expect(query2).toHaveBeenCalledWith(
+      'DEFINE TABLE IF NOT EXISTS post SCHEMAFULL',
+    );
   });
 });
 
@@ -456,41 +491,57 @@ describe('SchemaBuilder adversarial — defineField exotic types', () => {
     const query = createMockQuery();
     const builder = createSchemaBuilder(query);
     const sql = builder.defineField('user', 'tags', { type: 'array' }).toSQL();
-    expect(sql).toEqual(['DEFINE FIELD IF NOT EXISTS tags ON TABLE user TYPE array']);
+    expect(sql).toEqual([
+      'DEFINE FIELD IF NOT EXISTS tags ON TABLE user TYPE array',
+    ]);
   });
 
   it('bool type', () => {
     const query = createMockQuery();
     const builder = createSchemaBuilder(query);
     const sql = builder.defineField('user', 'active', { type: 'bool' }).toSQL();
-    expect(sql).toEqual(['DEFINE FIELD IF NOT EXISTS active ON TABLE user TYPE bool']);
+    expect(sql).toEqual([
+      'DEFINE FIELD IF NOT EXISTS active ON TABLE user TYPE bool',
+    ]);
   });
 
   it('decimal type', () => {
     const query = createMockQuery();
     const builder = createSchemaBuilder(query);
-    const sql = builder.defineField('user', 'balance', { type: 'decimal' }).toSQL();
-    expect(sql).toEqual(['DEFINE FIELD IF NOT EXISTS balance ON TABLE user TYPE decimal']);
+    const sql = builder
+      .defineField('user', 'balance', { type: 'decimal' })
+      .toSQL();
+    expect(sql).toEqual([
+      'DEFINE FIELD IF NOT EXISTS balance ON TABLE user TYPE decimal',
+    ]);
   });
 
   it('duration type', () => {
     const query = createMockQuery();
     const builder = createSchemaBuilder(query);
-    const sql = builder.defineField('event', 'ttl', { type: 'duration' }).toSQL();
-    expect(sql).toEqual(['DEFINE FIELD IF NOT EXISTS ttl ON TABLE event TYPE duration']);
+    const sql = builder
+      .defineField('event', 'ttl', { type: 'duration' })
+      .toSQL();
+    expect(sql).toEqual([
+      'DEFINE FIELD IF NOT EXISTS ttl ON TABLE event TYPE duration',
+    ]);
   });
 
   it('bytes type', () => {
     const query = createMockQuery();
     const builder = createSchemaBuilder(query);
     const sql = builder.defineField('blob', 'data', { type: 'bytes' }).toSQL();
-    expect(sql).toEqual(['DEFINE FIELD IF NOT EXISTS data ON TABLE blob TYPE bytes']);
+    expect(sql).toEqual([
+      'DEFINE FIELD IF NOT EXISTS data ON TABLE blob TYPE bytes',
+    ]);
   });
 
   it('uuid type', () => {
     const query = createMockQuery();
     const builder = createSchemaBuilder(query);
     const sql = builder.defineField('user', 'uid', { type: 'uuid' }).toSQL();
-    expect(sql).toEqual(['DEFINE FIELD IF NOT EXISTS uid ON TABLE user TYPE uuid']);
+    expect(sql).toEqual([
+      'DEFINE FIELD IF NOT EXISTS uid ON TABLE user TYPE uuid',
+    ]);
   });
 });

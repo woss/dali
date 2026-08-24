@@ -11,9 +11,9 @@
 import { join } from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { SurrealDriver } from '../../../sdk/driver/types.js';
+import { computeMigrationHash } from '../../ddl/journal.js';
 import type { MigrationFile } from '../runner.js';
 import { createRunner, MigrationRunner } from '../runner.js';
-import { computeMigrationHash } from '../../ddl/journal.js';
 
 // ---------------------------------------------------------------------------
 // Hoisted: mock fs functions as PLAIN functions (not vi.fn) so clearAllMocks
@@ -25,60 +25,62 @@ import { computeMigrationHash } from '../../ddl/journal.js';
 // but path.join(dir, entry) produces 'migrations/001_init' (no ./ prefix).
 // We handle this by registering both forms where needed.
 // ---------------------------------------------------------------------------
-const { mockStat, mockReaddir, mockReadFile, mockDirs, mockFiles } = vi.hoisted(() => {
-  const files = new Map<string, string>();
-  const dirs = new Set<string>();
+const { mockStat, mockReaddir, mockReadFile, mockDirs, mockFiles } = vi.hoisted(
+  () => {
+    const files = new Map<string, string>();
+    const dirs = new Set<string>();
 
-  const stat = async (path: string) => {
-    if (dirs.has(path)) return { isDirectory: () => true };
-    if (files.has(path)) return { isDirectory: () => false };
-    const err = new Error(`ENOENT: ${path}`) as NodeJS.ErrnoException;
-    err.code = 'ENOENT';
-    throw err;
-  };
+    const stat = async (path: string) => {
+      if (dirs.has(path)) return { isDirectory: () => true };
+      if (files.has(path)) return { isDirectory: () => false };
+      const err = new Error(`ENOENT: ${path}`) as NodeJS.ErrnoException;
+      err.code = 'ENOENT';
+      throw err;
+    };
 
-  const readdir = async (path: string) => {
-    const prefix = path.endsWith('/') ? path : `${path}/`;
-    // Also try the normalized prefix (path.join strips ./)
-    const normalizedPrefix = prefix.startsWith('./') ? prefix.slice(2) : null;
+    const readdir = async (path: string) => {
+      const prefix = path.endsWith('/') ? path : `${path}/`;
+      // Also try the normalized prefix (path.join strips ./)
+      const normalizedPrefix = prefix.startsWith('./') ? prefix.slice(2) : null;
 
-    const entries = new Set<string>();
-    for (const key of dirs) {
-      checkKey(key);
-    }
-    for (const key of files.keys()) {
-      checkKey(key);
-    }
-    function checkKey(key: string) {
-      if (key.startsWith(prefix)) {
-        const rest = key.slice(prefix.length);
-        const slash = rest.indexOf('/');
-        entries.add(slash === -1 ? rest : rest.slice(0, slash));
-      } else if (normalizedPrefix && key.startsWith(normalizedPrefix)) {
-        const rest = key.slice(normalizedPrefix.length);
-        const slash = rest.indexOf('/');
-        entries.add(slash === -1 ? rest : rest.slice(0, slash));
+      const entries = new Set<string>();
+      for (const key of dirs) {
+        checkKey(key);
       }
-    }
-    return Array.from(entries);
-  };
+      for (const key of files.keys()) {
+        checkKey(key);
+      }
+      function checkKey(key: string) {
+        if (key.startsWith(prefix)) {
+          const rest = key.slice(prefix.length);
+          const slash = rest.indexOf('/');
+          entries.add(slash === -1 ? rest : rest.slice(0, slash));
+        } else if (normalizedPrefix && key.startsWith(normalizedPrefix)) {
+          const rest = key.slice(normalizedPrefix.length);
+          const slash = rest.indexOf('/');
+          entries.add(slash === -1 ? rest : rest.slice(0, slash));
+        }
+      }
+      return Array.from(entries);
+    };
 
-  const readFile = async (path: string) => {
-    const content = files.get(path);
-    if (content !== undefined) return content;
-    const err = new Error(`ENOENT: ${path}`) as NodeJS.ErrnoException;
-    err.code = 'ENOENT';
-    throw err;
-  };
+    const readFile = async (path: string) => {
+      const content = files.get(path);
+      if (content !== undefined) return content;
+      const err = new Error(`ENOENT: ${path}`) as NodeJS.ErrnoException;
+      err.code = 'ENOENT';
+      throw err;
+    };
 
-  return {
-    mockStat: stat as unknown as ReturnType<typeof vi.fn>,
-    mockReaddir: readdir as unknown as ReturnType<typeof vi.fn>,
-    mockReadFile: readFile as unknown as ReturnType<typeof vi.fn>,
-    mockDirs: dirs,
-    mockFiles: files,
-  };
-});
+    return {
+      mockStat: stat as unknown as ReturnType<typeof vi.fn>,
+      mockReaddir: readdir as unknown as ReturnType<typeof vi.fn>,
+      mockReadFile: readFile as unknown as ReturnType<typeof vi.fn>,
+      mockDirs: dirs,
+      mockFiles: files,
+    };
+  },
+);
 
 const mockJournal = vi.hoisted(() => ({
   getAppliedMigrations: vi.fn(),
@@ -152,10 +154,12 @@ function createMockDriver(): SurrealDriver & {
   return {
     query: vi.fn().mockResolvedValue([]),
     txQuery,
-    transaction: vi.fn().mockImplementation(async (fn: (tx: any) => Promise<any>) => {
-      const tx = { query: txQuery };
-      return fn(tx);
-    }),
+    transaction: vi
+      .fn()
+      .mockImplementation(async (fn: (tx: any) => Promise<any>) => {
+        const tx = { query: txQuery };
+        return fn(tx);
+      }),
   } as unknown as SurrealDriver & {
     query: ReturnType<typeof vi.fn>;
     txQuery: ReturnType<typeof vi.fn>;
@@ -198,7 +202,9 @@ function defaultBeforeEach() {
   // Default journal behaviors
   mockJournal.getAppliedMigrations.mockResolvedValue([]);
   mockJournal.getPartialMigration.mockResolvedValue(null);
-  mockJournal.read.mockImplementation(() => Promise.resolve(journalWithEntries()));
+  mockJournal.read.mockImplementation(() =>
+    Promise.resolve(journalWithEntries()),
+  );
   mockJournal.write.mockResolvedValue(undefined);
   mockJournal.updateBreakpoints.mockResolvedValue({
     idx: 1,
@@ -266,20 +272,32 @@ describe('MigrationRunner', () => {
       const runner = new MigrationRunner(driver);
       await runner.init();
       expect(driver.query).toHaveBeenCalledTimes(1);
-      const sql = (driver.query as unknown as ReturnType<typeof vi.fn>).mock.calls[0][0] as string;
+      const sql = (driver.query as unknown as ReturnType<typeof vi.fn>).mock
+        .calls[0][0] as string;
       expect(sql).toContain('DEFINE TABLE IF NOT EXISTS __migrations');
-      expect(sql).toContain('DEFINE FIELD IF NOT EXISTS version ON __migrations');
+      expect(sql).toContain(
+        'DEFINE FIELD IF NOT EXISTS version ON __migrations',
+      );
       expect(sql).toContain('DEFINE FIELD IF NOT EXISTS name ON __migrations');
-      expect(sql).toContain('DEFINE FIELD IF NOT EXISTS applied_at ON __migrations');
-      expect(sql).toContain('DEFINE FIELD IF NOT EXISTS checksum ON __migrations');
-      expect(sql).toContain('DEFINE INDEX IF NOT EXISTS idx_checksum ON __migrations');
+      expect(sql).toContain(
+        'DEFINE FIELD IF NOT EXISTS applied_at ON __migrations',
+      );
+      expect(sql).toContain(
+        'DEFINE FIELD IF NOT EXISTS checksum ON __migrations',
+      );
+      expect(sql).toContain(
+        'DEFINE INDEX IF NOT EXISTS idx_checksum ON __migrations',
+      );
     });
 
     it('uses custom migrations table name', async () => {
       const driver = createMockDriver();
-      const runner = new MigrationRunner(driver, { migrationsTable: 'my_migrations' });
+      const runner = new MigrationRunner(driver, {
+        migrationsTable: 'my_migrations',
+      });
       await runner.init();
-      const sql = (driver.query as unknown as ReturnType<typeof vi.fn>).mock.calls[0][0] as string;
+      const sql = (driver.query as unknown as ReturnType<typeof vi.fn>).mock
+        .calls[0][0] as string;
       expect(sql).toContain('DEFINE TABLE IF NOT EXISTS my_migrations');
       expect(sql).toContain('ON my_migrations');
     });
@@ -415,7 +433,12 @@ describe('MigrationRunner', () => {
     it('parses UP section and returns empty down', async () => {
       const driver = createMockDriver();
       const runner = new MigrationRunner(driver, { migrationsDir });
-      addMigrationDir('001', 'init', ['STEP ONE', 'STEP TWO'], ['DOWN ONE', 'DOWN TWO']);
+      addMigrationDir(
+        '001',
+        'init',
+        ['STEP ONE', 'STEP TWO'],
+        ['DOWN ONE', 'DOWN TWO'],
+      );
 
       const files = await runner.getMigrationFiles();
 
@@ -443,7 +466,10 @@ describe('MigrationRunner', () => {
       const dirPath = `${migrationsDir}/001_init`;
       mockDirs.add(migrationsDir);
       mockDirs.add(dirPath);
-      mockFiles.set(`${dirPath}/migration.surql`, '-- just a comment\nSELECT 1;');
+      mockFiles.set(
+        `${dirPath}/migration.surql`,
+        '-- just a comment\nSELECT 1;',
+      );
 
       const files = await runner.getMigrationFiles();
 
@@ -520,9 +546,9 @@ describe('MigrationRunner', () => {
     it('skips already-applied from DB', async () => {
       const driver = createMockDriver();
       // First query (getDbAppliedMigrations) returns [{ name: 'init' }]
-      (driver.query as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce([
-        { name: 'init' },
-      ]);
+      (
+        driver.query as unknown as ReturnType<typeof vi.fn>
+      ).mockResolvedValueOnce([{ name: 'init' }]);
       const runner = new MigrationRunner(driver, { migrationsDir });
       addMigrationDir('001', 'init');
       addMigrationDir('002', 'add_bar');
@@ -534,7 +560,9 @@ describe('MigrationRunner', () => {
 
     it('reports journal out-of-sync warning', async () => {
       const driver = createMockDriver();
-      (driver.query as unknown as ReturnType<typeof vi.fn>).mockResolvedValue([]);
+      (driver.query as unknown as ReturnType<typeof vi.fn>).mockResolvedValue(
+        [],
+      );
       mockJournal.getAppliedMigrations.mockResolvedValue(['init']);
 
       const runner = new MigrationRunner(driver, { migrationsDir });
@@ -564,7 +592,9 @@ describe('MigrationRunner', () => {
       const result = await runner.up();
 
       expect(result.applied).toEqual(['init']);
-      expect(mockJournal.getLastSuccessfulStatementIdx).toHaveBeenCalledWith('init');
+      expect(mockJournal.getLastSuccessfulStatementIdx).toHaveBeenCalledWith(
+        'init',
+      );
     });
 
     it('records migration in DB and finalizes journal after all statements', async () => {
@@ -583,17 +613,24 @@ describe('MigrationRunner', () => {
       // Should INSERT into __migrations table (via tx.query within transaction)
       const txCalls = driver.txQuery.mock.calls;
       const insertCall = txCalls.find(
-        (call: string[]) => call[0] && (call[0] as string).startsWith('INSERT INTO __migrations'),
+        (call: string[]) =>
+          call[0] && (call[0] as string).startsWith('INSERT INTO __migrations'),
       );
       expect(insertCall).toBeTruthy();
-      expect(insertCall?.[1]).toEqual({ version: '001', name: 'init', checksum: 'mock-hash' });
+      expect(insertCall?.[1]).toEqual({
+        version: '001',
+        name: 'init',
+        checksum: 'mock-hash',
+      });
 
       // Final breakpoints should be all true
       expect(mockJournal.updateBreakpoints).toHaveBeenCalled();
-      const allTrueCall = mockJournal.updateBreakpoints.mock.calls.find((call: unknown[]) => {
-        const bps = call[1] as boolean[];
-        return bps && bps.length > 0 && bps.every(Boolean);
-      });
+      const allTrueCall = mockJournal.updateBreakpoints.mock.calls.find(
+        (call: unknown[]) => {
+          const bps = call[1] as boolean[];
+          return bps && bps.length > 0 && bps.every(Boolean);
+        },
+      );
       expect(allTrueCall).toBeTruthy();
     });
   });
@@ -638,9 +675,9 @@ describe('MigrationRunner', () => {
       const runner = new MigrationRunner(driver, { migrationsDir });
       addMigrationDir('001', 'init');
 
-      (driver.query as unknown as ReturnType<typeof vi.fn>).mockRejectedValueOnce(
-        new Error('Table not found'),
-      );
+      (
+        driver.query as unknown as ReturnType<typeof vi.fn>
+      ).mockRejectedValueOnce(new Error('Table not found'));
 
       const status = await runner.status();
 
@@ -671,7 +708,12 @@ describe('MigrationRunner', () => {
   // ==========================================================================
   describe('resume', () => {
     function setupResumeFile(): void {
-      addMigrationDir('001', 'init', ['STEP ONE', 'STEP TWO'], ['DOWN ONE', 'DOWN TWO']);
+      addMigrationDir(
+        '001',
+        'init',
+        ['STEP ONE', 'STEP TWO'],
+        ['DOWN ONE', 'DOWN TWO'],
+      );
     }
 
     it('resumes with provided file from statement index', async () => {
@@ -729,7 +771,9 @@ describe('MigrationRunner', () => {
 
       mockJournal.read.mockResolvedValue(journalWithEntries(['init']));
 
-      await expect(runner.resume()).rejects.toThrow('No partial migrations found');
+      await expect(runner.resume()).rejects.toThrow(
+        'No partial migrations found',
+      );
     });
 
     it('throws when migration file not found for partial', async () => {
@@ -827,16 +871,30 @@ describe('MigrationRunner', () => {
       mockJournal.read.mockResolvedValue({
         ...journalWithEntries(),
         entries: [
-          { idx: 1, tag: 'complete', breakpoints: [true, true], hash: 'mock-hash', when: '' },
-          { idx: 2, tag: 'partial', breakpoints: [true, false], hash: 'mock-hash', when: '' },
+          {
+            idx: 1,
+            tag: 'complete',
+            breakpoints: [true, true],
+            hash: 'mock-hash',
+            when: '',
+          },
+          {
+            idx: 2,
+            tag: 'partial',
+            breakpoints: [true, false],
+            hash: 'mock-hash',
+            when: '',
+          },
         ],
       });
 
-      mockJournal.getLastSuccessfulStatementIdx.mockImplementation(async (tag: string) => {
-        if (tag === 'complete') return 1; // 2 of 2 applied
-        if (tag === 'partial') return 0; // 1 of 2 applied
-        return -1;
-      });
+      mockJournal.getLastSuccessfulStatementIdx.mockImplementation(
+        async (tag: string) => {
+          if (tag === 'complete') return 1; // 2 of 2 applied
+          if (tag === 'partial') return 0; // 1 of 2 applied
+          return -1;
+        },
+      );
 
       expect(await runner.findPartialMigrations()).toEqual(['partial']);
     });
@@ -845,7 +903,9 @@ describe('MigrationRunner', () => {
       const driver = createMockDriver();
       const runner = new MigrationRunner(driver);
 
-      mockJournal.read.mockResolvedValue(journalWithEntries(['init', 'add_bar']));
+      mockJournal.read.mockResolvedValue(
+        journalWithEntries(['init', 'add_bar']),
+      );
 
       expect(await runner.findPartialMigrations()).toEqual([]);
     });
@@ -1013,9 +1073,13 @@ describe('MigrationRunner', () => {
       addMigrationDir('001', 'init', ['STEP ONE']);
 
       // Transaction succeeds, final updateBreakpoints fails
-      mockJournal.updateBreakpoints.mockRejectedValue(new Error('Final checkpoint failed'));
+      mockJournal.updateBreakpoints.mockRejectedValue(
+        new Error('Final checkpoint failed'),
+      );
 
-      await expect(runner.up()).rejects.toThrow('Migration completion checkpoint failed');
+      await expect(runner.up()).rejects.toThrow(
+        'Migration completion checkpoint failed',
+      );
     });
 
     it('throws MigrationError when checksum mismatch detected at apply time', async () => {
@@ -1033,7 +1097,9 @@ describe('MigrationRunner', () => {
         .mockReturnValueOnce('mock-hash') // loadMigrationFiles
         .mockReturnValue('different'); // applyMigration (journal hash + verification)
 
-      await expect(runner.up()).rejects.toThrow('Migration file checksum mismatch for init');
+      await expect(runner.up()).rejects.toThrow(
+        'Migration file checksum mismatch for init',
+      );
     });
   });
 
@@ -1053,7 +1119,11 @@ describe('MigrationRunner', () => {
       queryMock
         .mockResolvedValueOnce([]) // getDbAppliedMigrations
         .mockResolvedValueOnce([
-          { name: 'init', checksum: 'mock-hash', applied_at: '2026-01-01T00:00:00.000Z' },
+          {
+            name: 'init',
+            checksum: 'mock-hash',
+            applied_at: '2026-01-01T00:00:00.000Z',
+          },
         ]); // syncJournalWithDb (calls 2-4 use default [])
 
       await runner.up();
@@ -1068,8 +1138,14 @@ describe('MigrationRunner', () => {
         );
       });
       console.log('READ CALL count:', mockJournal.read.mock.calls.length);
-      console.log('UPDATE_BP CALL count:', mockJournal.updateBreakpoints.mock.calls.length);
-      console.log('UPDATE_BP CALLS:', JSON.stringify(mockJournal.updateBreakpoints.mock.calls));
+      console.log(
+        'UPDATE_BP CALL count:',
+        mockJournal.updateBreakpoints.mock.calls.length,
+      );
+      console.log(
+        'UPDATE_BP CALLS:',
+        JSON.stringify(mockJournal.updateBreakpoints.mock.calls),
+      );
       const syncWrite = writeCalls.at(-1);
       expect(syncWrite).toBeTruthy();
       expect(syncWrite?.[0].entries[0].tag).toBe('init');
@@ -1092,7 +1168,8 @@ describe('MigrationRunner', () => {
       queryMock.mockImplementation(async () => {
         queryNum++;
         if (queryNum === 1) return []; // getDbAppliedMigrations
-        if (queryNum === 2) return [{ name: 'orphan', checksum: '', applied_at: '' }]; // syncJournalWithDb
+        if (queryNum === 2)
+          return [{ name: 'orphan', checksum: '', applied_at: '' }]; // syncJournalWithDb
         return [];
       });
 
@@ -1103,12 +1180,18 @@ describe('MigrationRunner', () => {
       // Get the LAST write call (from syncJournalWithDb, not applyMigration)
       const syncCalls = writeCalls.filter((call: unknown[]) => {
         const c0 = call[0] as Record<string, unknown>;
-        return c0 && Array.isArray(c0.entries) && (c0.entries as unknown[]).length > 0;
+        return (
+          c0 &&
+          Array.isArray(c0.entries) &&
+          (c0.entries as unknown[]).length > 0
+        );
       });
       expect(syncCalls.length).toBeGreaterThanOrEqual(2); // apply + sync
       const lastWrite = syncCalls[syncCalls.length - 1];
       // Orphan entry should have fallback breakpoints [true] since no matching file
-      const orphanEntry = lastWrite[0].entries.find((e: any) => e.tag === 'orphan');
+      const orphanEntry = lastWrite[0].entries.find(
+        (e: any) => e.tag === 'orphan',
+      );
       expect(orphanEntry).toBeTruthy();
       expect(orphanEntry.breakpoints).toEqual([true]);
     });
