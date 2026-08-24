@@ -1,7 +1,10 @@
 {
   "$schema": "https://biomejs.dev/schemas/2.5.10/schema.json",
   "files": {
-    "includes": ["packages/dali-orm/**", "!packages/dali-orm/dist"]
+    "includes": [
+      "packages/dali-orm/**",
+      "!packages/dali-orm/dist"
+    ]
   },
   "formatter": {
     "enabled": true,
@@ -24,11 +27,14 @@
   },
   "overrides": [
     {
-      "includes": ["**/*.d.ts"],
+      "includes": [
+        "**/__tests__/**",
+        "**/*.test.ts"
+      ],
       "linter": {
         "rules": {
-          "suspicious": {
-            "noExplicitAny": "off"
+          "correctness": {
+            "useYield": "off"
           }
         }
       }
