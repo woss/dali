@@ -8,7 +8,7 @@
  */
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { EmbeddedDriver } from '../../../sdk/driver/embedded-driver.js';
 
 // Mock connect before importing pullSchema
@@ -16,10 +16,10 @@ vi.mock('../../../sdk/driver/orm-connection.js', () => ({
   connect: vi.fn(),
 }));
 
+import type { SurrealColumnType } from '../../../sdk/schema/column/types.js';
+import type { Config } from '../../config.js';
 import { generateColumnDefinition, pullSchema } from '../pull.js';
 import { createTempDir } from './helpers.js';
-import type { Config } from '../../config.js';
-import type { SurrealColumnType } from '../../../sdk/schema/column/types.js';
 
 // ============================================================================
 // Helpers
@@ -94,7 +94,10 @@ describe('generateColumnDefinition', () => {
   });
 
   it('generates boolean column', () => {
-    const def = generateColumnDefinition({ name: 'flag', kind: 'boolean' as SurrealColumnType });
+    const def = generateColumnDefinition({
+      name: 'flag',
+      kind: 'boolean' as SurrealColumnType,
+    });
     expect(def).toBe("flag: bool('flag')");
   });
 
@@ -104,17 +107,26 @@ describe('generateColumnDefinition', () => {
   });
 
   it('generates date as datetime column', () => {
-    const def = generateColumnDefinition({ name: 'birth', kind: 'date' as SurrealColumnType });
+    const def = generateColumnDefinition({
+      name: 'birth',
+      kind: 'date' as SurrealColumnType,
+    });
     expect(def).toBe("birth: datetime('birth')");
   });
 
   it('generates time as datetime column', () => {
-    const def = generateColumnDefinition({ name: 'ts', kind: 'time' as SurrealColumnType });
+    const def = generateColumnDefinition({
+      name: 'ts',
+      kind: 'time' as SurrealColumnType,
+    });
     expect(def).toBe("ts: datetime('ts')");
   });
 
   it('generates timestamp as datetime column', () => {
-    const def = generateColumnDefinition({ name: 'ts', kind: 'timestamp' as SurrealColumnType });
+    const def = generateColumnDefinition({
+      name: 'ts',
+      kind: 'timestamp' as SurrealColumnType,
+    });
     expect(def).toBe("ts: datetime('ts')");
   });
 
@@ -134,7 +146,10 @@ describe('generateColumnDefinition', () => {
   });
 
   it('generates geometry column', () => {
-    const def = generateColumnDefinition({ name: 'location', kind: 'geometry' });
+    const def = generateColumnDefinition({
+      name: 'location',
+      kind: 'geometry',
+    });
     expect(def).toBe("location: geometry('location')");
   });
 
@@ -144,27 +159,47 @@ describe('generateColumnDefinition', () => {
   });
 
   it('generates record column with recordTable', () => {
-    const def = generateColumnDefinition({ name: 'author', kind: 'record', recordTable: 'user' });
+    const def = generateColumnDefinition({
+      name: 'author',
+      kind: 'record',
+      recordTable: 'user',
+    });
     expect(def).toBe("author: record('user')");
   });
 
   it('adds .optional() modifier', () => {
-    const def = generateColumnDefinition({ name: 'nickname', kind: 'string', optional: true });
+    const def = generateColumnDefinition({
+      name: 'nickname',
+      kind: 'string',
+      optional: true,
+    });
     expect(def).toBe("nickname: string('nickname').optional()");
   });
 
   it('adds .flexible() modifier', () => {
-    const def = generateColumnDefinition({ name: 'meta', kind: 'object', flexible: true });
+    const def = generateColumnDefinition({
+      name: 'meta',
+      kind: 'object',
+      flexible: true,
+    });
     expect(def).toBe("meta: object('meta').flexible()");
   });
 
   it('adds .readonly() modifier', () => {
-    const def = generateColumnDefinition({ name: 'id', kind: 'string', readonly: true });
+    const def = generateColumnDefinition({
+      name: 'id',
+      kind: 'string',
+      readonly: true,
+    });
     expect(def).toBe("id: string('id').readonly()");
   });
 
   it('adds .default() modifier', () => {
-    const def = generateColumnDefinition({ name: 'status', kind: 'string', default: "'active'" });
+    const def = generateColumnDefinition({
+      name: 'status',
+      kind: 'string',
+      default: "'active'",
+    });
     expect(def).toBe("status: string('status').default('active')");
   });
 
@@ -202,7 +237,10 @@ describe('generateColumnDefinition', () => {
 
   it('uses string builder for unknown type', () => {
     // @ts-expect-error — testing fallback for unrecognized type
-    const def = generateColumnDefinition({ name: 'custom', kind: 'custom_type' });
+    const def = generateColumnDefinition({
+      name: 'custom',
+      kind: 'custom_type',
+    });
     expect(def).toBe("custom: string('custom')");
   });
 
@@ -273,7 +311,9 @@ describe('generateTypeScriptSchema (via pullSchema)', () => {
 
     // Should report "No tables found"
     const logCalls = vi.mocked(console.log).mock.calls;
-    const noTablesLine = logCalls.find((c) => String(c[0]).includes('No tables found'));
+    const noTablesLine = logCalls.find((c) =>
+      String(c[0]).includes('No tables found'),
+    );
     expect(noTablesLine).toBeDefined();
   });
 
@@ -367,6 +407,174 @@ describe('generateTypeScriptSchema (via pullSchema)', () => {
     if (schemaFile) {
       const content = await fs.readFile(path.join(tmpDir, schemaFile), 'utf-8');
       expect(content).toContain('datetime');
+    }
+  });
+
+  it('includes int and float imports when needed', async () => {
+    await driver.query('DEFINE TABLE pull_num_test SCHEMAFULL');
+    await driver.query('DEFINE FIELD score ON pull_num_test TYPE int');
+    await driver.query('DEFINE FIELD price ON pull_num_test TYPE float');
+    await driver.query('DEFINE FIELD name ON pull_num_test TYPE string');
+
+    const config = makeConfig({
+      schema: { dir: tmpDir, pattern: '**/*.{js,ts}' },
+      migrations: {
+        dir: path.join(tmpDir, 'migrations'),
+        table: '__test_pull_migrations',
+        journalDir: path.join(tmpDir, 'meta'),
+      },
+    });
+
+    await pullSchema({ config, outputDir: tmpDir, embeddedDriver: true });
+
+    const files = await fs.readdir(tmpDir);
+    const schemaFile = files.find((f) => f.endsWith('.ts'));
+    expect(schemaFile).toBeDefined();
+
+    if (schemaFile) {
+      const content = await fs.readFile(path.join(tmpDir, schemaFile), 'utf-8');
+      expect(content).toContain('int');
+      expect(content).toContain('float');
+    }
+  });
+
+  it('includes bool import when needed', async () => {
+    await driver.query('DEFINE TABLE pull_bool_test SCHEMAFULL');
+    await driver.query('DEFINE FIELD active ON pull_bool_test TYPE bool');
+
+    const config = makeConfig({
+      schema: { dir: tmpDir, pattern: '**/*.{js,ts}' },
+      migrations: {
+        dir: path.join(tmpDir, 'migrations'),
+        table: '__test_pull_migrations',
+        journalDir: path.join(tmpDir, 'meta'),
+      },
+    });
+
+    await pullSchema({ config, outputDir: tmpDir, embeddedDriver: true });
+
+    const files = await fs.readdir(tmpDir);
+    const schemaFile = files.find((f) => f.endsWith('.ts'));
+    expect(schemaFile).toBeDefined();
+
+    if (schemaFile) {
+      const content = await fs.readFile(path.join(tmpDir, schemaFile), 'utf-8');
+      expect(content).toContain('bool');
+    }
+  });
+
+  it('includes array import when needed', async () => {
+    await driver.query('DEFINE TABLE pull_arr_test SCHEMAFULL');
+    await driver.query('DEFINE FIELD tags ON pull_arr_test TYPE array');
+
+    const config = makeConfig({
+      schema: { dir: tmpDir, pattern: '**/*.{js,ts}' },
+      migrations: {
+        dir: path.join(tmpDir, 'migrations'),
+        table: '__test_pull_migrations',
+        journalDir: path.join(tmpDir, 'meta'),
+      },
+    });
+
+    await pullSchema({ config, outputDir: tmpDir, embeddedDriver: true });
+
+    const files = await fs.readdir(tmpDir);
+    const schemaFile = files.find((f) => f.endsWith('.ts'));
+    expect(schemaFile).toBeDefined();
+
+    if (schemaFile) {
+      const content = await fs.readFile(path.join(tmpDir, schemaFile), 'utf-8');
+      expect(content).toContain('array');
+    }
+  });
+
+  it('uses provided driver when ownsDriver=false', async () => {
+    await driver.query('DEFINE TABLE pull_existing_test SCHEMAFULL');
+    await driver.query('DEFINE FIELD name ON pull_existing_test TYPE string');
+
+    const config = makeConfig({
+      schema: { dir: tmpDir, pattern: '**/*.{js,ts}' },
+      migrations: {
+        dir: path.join(tmpDir, 'migrations'),
+        table: '__test_pull_migrations',
+        journalDir: path.join(tmpDir, 'meta'),
+      },
+    });
+
+    // Pass driver directly — should not create new connection
+    await pullSchema(
+      { config, outputDir: tmpDir, embeddedDriver: true },
+      driver,
+    );
+
+    const files = await fs.readdir(tmpDir);
+    const schemaFile = files.find((f) => f.endsWith('.ts'));
+    expect(schemaFile).toBeDefined();
+  });
+
+  it('derives filename from pattern when no wildcards', async () => {
+    await driver.query('DEFINE TABLE pull_pattern_test SCHEMAFULL');
+    await driver.query('DEFINE FIELD name ON pull_pattern_test TYPE string');
+
+    const config = makeConfig({
+      schema: { dir: tmpDir, pattern: 'custom-schema.ts' },
+      migrations: {
+        dir: path.join(tmpDir, 'migrations'),
+        table: '__test_pull_migrations',
+        journalDir: path.join(tmpDir, 'meta'),
+      },
+    });
+
+    await pullSchema({ config, outputDir: tmpDir, embeddedDriver: true });
+
+    const files = await fs.readdir(tmpDir);
+    expect(files).toContain('custom-schema.ts');
+  });
+
+  it('derives filename as schema.ts when pattern has wildcards', async () => {
+    await driver.query('DEFINE TABLE pull_wc_test SCHEMAFULL');
+    await driver.query('DEFINE FIELD name ON pull_wc_test TYPE string');
+
+    const config = makeConfig({
+      schema: { dir: tmpDir, pattern: '**/*.ts' },
+      migrations: {
+        dir: path.join(tmpDir, 'migrations'),
+        table: '__test_pull_migrations',
+        journalDir: path.join(tmpDir, 'meta'),
+      },
+    });
+
+    await pullSchema({ config, outputDir: tmpDir, embeddedDriver: true });
+
+    const files = await fs.readdir(tmpDir);
+    expect(files).toContain('schema.ts');
+  });
+
+  it('generates schema with record column referencing table', async () => {
+    await driver.query('DEFINE TABLE pull_post SCHEMAFULL');
+    await driver.query('DEFINE FIELD title ON pull_post TYPE string');
+    await driver.query('DEFINE TABLE pull_author SCHEMAFULL');
+    await driver.query('DEFINE FIELD name ON pull_author TYPE string');
+
+    const config = makeConfig({
+      schema: { dir: tmpDir, pattern: '**/*.{js,ts}' },
+      migrations: {
+        dir: path.join(tmpDir, 'migrations'),
+        table: '__test_pull_migrations',
+        journalDir: path.join(tmpDir, 'meta'),
+      },
+    });
+
+    await pullSchema({ config, outputDir: tmpDir, embeddedDriver: true });
+
+    const files = await fs.readdir(tmpDir);
+    const schemaFile = files.find((f) => f.endsWith('.ts'));
+    expect(schemaFile).toBeDefined();
+
+    if (schemaFile) {
+      const content = await fs.readFile(path.join(tmpDir, schemaFile), 'utf-8');
+      expect(content).toContain('pull_post');
+      expect(content).toContain('pull_author');
     }
   });
 });

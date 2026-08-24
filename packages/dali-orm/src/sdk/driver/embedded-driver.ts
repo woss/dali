@@ -166,7 +166,9 @@ export class EmbeddedDriver extends BaseDriver {
       this.connected = false;
       const mode = this._config.mode;
       const message = error instanceof Error ? error.message : String(error);
-      throw new Error(`Failed to connect to embedded SurrealDB (${mode}): ${message}`);
+      throw new Error(
+        `Failed to connect to embedded SurrealDB (${mode}): ${message}`,
+      );
     }
   }
 
@@ -210,7 +212,9 @@ export class EmbeddedDriver extends BaseDriver {
       if (!isPlain) return obj;
 
       const result: Record<string, unknown> = {};
-      for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
+      for (const [key, value] of Object.entries(
+        obj as Record<string, unknown>,
+      )) {
         result[key] = this.transformDatetimeValues(value);
       }
       return result;
@@ -223,7 +227,10 @@ export class EmbeddedDriver extends BaseDriver {
    * Override: Live query using query-based approach (not db.live()).
    * EmbeddedDriver uses LIVE SELECT query and async iteration.
    */
-  override async live<T>(table: string, callback: (data: LiveData<T>) => void): Promise<string> {
+  override async live<T>(
+    table: string,
+    callback: (data: LiveData<T>) => void,
+  ): Promise<string> {
     if (!this.connected) {
       throw new Error('Not connected to SurrealDB');
     }
@@ -254,7 +261,7 @@ export class EmbeddedDriver extends BaseDriver {
               callback({ action, result: result as T });
             }
           } catch {
-            // Live query ended
+            this.warn('Live query ended with error');
           }
         })();
 
@@ -310,7 +317,9 @@ export class EmbeddedDriver extends BaseDriver {
           Object.assign(params, bound.bindings);
         }
       } catch {
-        this.warn('Failed to compile WHERE expression for embedded live query, ignoring');
+        this.warn(
+          'Failed to compile WHERE expression for embedded live query, ignoring',
+        );
       }
     }
 
@@ -321,7 +330,9 @@ export class EmbeddedDriver extends BaseDriver {
 
     // DIFF — not supported via SQL, log a warning
     if (options?.diff) {
-      this.warn('DIFF mode is not supported in embedded live queries, ignoring');
+      this.warn(
+        'DIFF mode is not supported in embedded live queries, ignoring',
+      );
     }
 
     const subscriptionId = `live_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
@@ -332,11 +343,14 @@ export class EmbeddedDriver extends BaseDriver {
 
     // Queue for async iterator (single consumer)
     const channel: LiveMessageData<T>[] = [];
-    let channelResolve: ((value: IteratorResult<LiveMessageData<T>>) => void) | null = null;
+    let channelResolve:
+      | ((value: IteratorResult<LiveMessageData<T>>) => void)
+      | null = null;
 
     // Capture driver references for closure
     const driverDb = this.db;
     const subs = this.subscriptions;
+    let onErrorCb: ((error: Error) => void) | undefined;
 
     // Start the LIVE SELECT query in background
     this.db
@@ -368,8 +382,10 @@ export class EmbeddedDriver extends BaseDriver {
               channel.push(data);
             }
           }
-        } catch {
-          // Live query ended
+        } catch (error) {
+          onErrorCb?.(
+            error instanceof Error ? error : new Error(String(error)),
+          );
         } finally {
           alive = false;
         }
@@ -386,6 +402,12 @@ export class EmbeddedDriver extends BaseDriver {
       },
       get isAlive(): boolean {
         return alive;
+      },
+      get onError(): ((error: Error) => void) | undefined {
+        return onErrorCb;
+      },
+      set onError(cb: ((error: Error) => void) | undefined) {
+        onErrorCb = cb;
       },
       async kill(): Promise<void> {
         alive = false;
@@ -407,7 +429,9 @@ export class EmbeddedDriver extends BaseDriver {
             } else if (!alive) {
               break;
             } else {
-              const data = await new Promise<IteratorResult<LiveMessageData<T>>>((resolve) => {
+              const data = await new Promise<
+                IteratorResult<LiveMessageData<T>>
+              >((resolve) => {
                 channelResolve = resolve;
               });
               if (data.done) break;

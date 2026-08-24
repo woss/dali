@@ -6,9 +6,6 @@
  */
 
 import { createDebug as debug } from 'obug';
-import type { ColumnDefinition } from '../../sdk/schema/column/types.js';
-import type { IndexDefinition, TableDefinition, TablePermissions } from '../../sdk/table.js';
-import { SurrealQLGenerator } from '../core/generator.js';
 import { normalizeDefault } from '../utils/format.js';
 import type {
   DdlDiffResult,
@@ -18,70 +15,24 @@ import type {
   SurrealEvent,
   SurrealFunction,
   SurrealIndex,
+  SurrealSequence,
   SurrealStatement,
   SurrealTable,
 } from './ddl.js';
+import {
+  groupStatements,
+  orderStatements,
+  serializePermissions,
+  statementToSql,
+} from './statement-renderer.js';
+
+export { getDefaultPermissions, statementToSql } from './statement-renderer.js';
 
 const log = debug('dali-orm:kit:diff');
 
 // SurrealDB auto-creates an `id` field for all tables (record ID), but it's not returned
 // in INFO FOR TABLE. Skip it when comparing to avoid false "missing field" warnings.
 const SURREALDB_IMPLICIT_FIELDS = new Set(['id']);
-
-/**
- * Format a default value for SQL output - handles now() variants and proper SurrealQL escaping
- * Strings: single-quoted ('viewer')
- * Booleans: unquoted (true/false)
- * Numbers: unquoted (42)
- * null/undefined: NULL/NONE
- */
-function formatDefaultForSql(value: unknown): string {
-  if (value === null) return 'NULL';
-  if (value === undefined) return 'NONE';
-  if (typeof value === 'boolean') return value ? 'true' : 'false';
-  if (typeof value === 'number') return String(value);
-  if (typeof value === 'string') {
-    // SurrealDB function expressions (e.g., `crypto::blake3(content)`, `time::now()`) — emit unquoted
-    if (value.includes('::') && value.endsWith(')')) {
-      return value;
-    }
-    const normalized = value.trim().toLowerCase();
-    if (normalized === 'now' || normalized === 'now()' || normalized === 'time::now()') {
-      return 'time::now()';
-    }
-    // Single-quote strings for SurrealQL, escape internal single quotes
-    return `'${value.replace(/'/g, "\\'")}'`;
-  }
-  // Fallback for objects/arrays
-  return JSON.stringify(value);
-}
-
-/**
- * Serialize SurrealPermissions object to SQL string for field permissions
- */
-function serializePermissions(perms: {
-  select?: string | boolean;
-  create?: string | boolean;
-  update?: string | boolean;
-}): string {
-  const parts: string[] = [];
-  if (perms.select)
-    parts.push(
-      `FOR select ${typeof perms.select === 'string' ? perms.select : String(perms.select)}`,
-    );
-  if (perms.create)
-    parts.push(
-      `FOR create ${typeof perms.create === 'string' ? perms.create : String(perms.create)}`,
-    );
-  if (perms.update)
-    parts.push(
-      `FOR update ${typeof perms.update === 'string' ? perms.update : String(perms.update)}`,
-    );
-  return parts.join(', ');
-}
-
-// Singleton instance of SurrealQLGenerator for SQL generation
-const generator = new SurrealQLGenerator();
 
 /**
  * Diff mode - push vs migrate determines certain behaviors
@@ -158,22 +109,41 @@ export async function ddlDiff(
   dataLossOperations.push(...indexChanges.dataLossOperations);
 
   // 5. Handle relation changes
-  const relationChanges = diffRelations(ddl1.relations, ddl2.relations, tables2Map);
+  const relationChanges = diffRelations(
+    ddl1.relations,
+    ddl2.relations,
+    tables2Map,
+  );
   statements.push(...relationChanges.statements);
 
   // 6. Handle access changes
-  const accessChanges = diffAccess(ddl1.accessStructured, ddl2.accessStructured);
+  const accessChanges = diffAccess(
+    ddl1.accessStructured,
+    ddl2.accessStructured,
+  );
   statements.push(...accessChanges.statements);
 
-  // 7. Handle event changes
+  // X. Handle namespace changes
+  const namespaceChanges = diffNamespaces(ddl1.namespaces, ddl2.namespaces);
+  statements.push(...namespaceChanges.statements);
+
+  // Y. Handle database changes
+  const databaseChanges = diffDatabases(ddl1.databases, ddl2.databases);
+  statements.push(...databaseChanges.statements);
+
+  // 7. Handle sequence changes
+  const sequenceChanges = diffSequences(ddl1.sequences, ddl2.sequences);
+  statements.push(...sequenceChanges.statements);
+
+  // 8. Handle event changes
   const eventChanges = diffEvents(ddl1.events, ddl2.events);
   statements.push(...eventChanges.statements);
 
-  // 8. Handle function changes
+  // 9. Handle function changes
   const functionChanges = diffFunctions(ddl1.functions, ddl2.functions);
   statements.push(...functionChanges.statements);
 
-  // 9. Handle view changes
+  // 10. Handle view changes
   const viewChanges = diffViews(ddl1.views, ddl2.views);
   statements.push(...viewChanges.statements);
 
@@ -186,7 +156,11 @@ export async function ddlDiff(
   // Group by operation type
   const groupedStatements = groupStatements(orderedStatements);
 
-  log('Diff complete: %d statements, %d warnings', statements.length, warnings.length);
+  log(
+    'Diff complete: %d statements, %d warnings',
+    statements.length,
+    warnings.length,
+  );
 
   return {
     statements: orderedStatements,
@@ -204,7 +178,11 @@ function diffTable(
   table1: SurrealTable,
   table2: SurrealTable,
   mode: DiffMode,
-): { statements: SurrealStatement[]; warnings: string[]; dataLossOperations: string[] } {
+): {
+  statements: SurrealStatement[];
+  warnings: string[];
+  dataLossOperations: string[];
+} {
   const statements: SurrealStatement[] = [];
   const warnings: string[] = [];
   const dataLossOperations: string[] = [];
@@ -234,7 +212,9 @@ function diffTable(
 
   // Check table type change
   if (table1.type !== table2.type) {
-    warnings.push(`Table ${table1.name}: type changed from ${table1.type} to ${table2.type}`);
+    warnings.push(
+      `Table ${table1.name}: type changed from ${table1.type} to ${table2.type}`,
+    );
     dataLossOperations.push(`CHANGE TABLE TYPE ${table1.name}`);
   }
 
@@ -253,7 +233,11 @@ function diffTable(
 
     // If column exists in DB but with no kind info, it's a schemaless field - no diff needed
     if (dbColumn && !dbColumn.kind) {
-      log('Schemaless column: %s.%s (no type defined, skipping)', table2.name, name);
+      log(
+        'Schemaless column: %s.%s (no type defined, skipping)',
+        table2.name,
+        name,
+      );
       continue;
     }
 
@@ -262,7 +246,9 @@ function diffTable(
 
       // Check if adding NOT NULL without default (data loss in push mode)
       if (mode === 'push' && !col2.optional && col2.default === undefined) {
-        dataLossOperations.push(`ADD NOT NULL COLUMN ${table2.name}.${name} without default`);
+        dataLossOperations.push(
+          `ADD NOT NULL COLUMN ${table2.name}.${name} without default`,
+        );
         warnings.push(
           `Adding NOT NULL column ${table2.name}.${name} without default will fail on existing rows`,
         );
@@ -283,7 +269,9 @@ function diffTable(
 
       if (mode === 'push') {
         dataLossOperations.push(`DROP COLUMN ${table1.name}.${name}`);
-        warnings.push(`Dropping column ${table1.name}.${name} will delete data`);
+        warnings.push(
+          `Dropping column ${table1.name}.${name} will delete data`,
+        );
       }
 
       statements.push({
@@ -308,7 +296,8 @@ function diffTable(
 
   // Permission changes
   if (table1.permissions || table2.permissions) {
-    const permsChanged = JSON.stringify(table1.permissions) !== JSON.stringify(table2.permissions);
+    const permsChanged =
+      JSON.stringify(table1.permissions) !== JSON.stringify(table2.permissions);
     if (permsChanged) {
       statements.push({
         type: 'alter_table_permissions',
@@ -334,14 +323,24 @@ function diffColumn(
   col2: SurrealColumn,
   tableName: string,
   mode: DiffMode,
-): { statements: SurrealStatement[]; warnings: string[]; dataLossOperations: string[] } {
+): {
+  statements: SurrealStatement[];
+  warnings: string[];
+  dataLossOperations: string[];
+} {
   const statements: SurrealStatement[] = [];
   const warnings: string[] = [];
   const dataLossOperations: string[] = [];
 
   // Type change
   if (col1.kind !== col2.kind) {
-    log('Column type change: %s.%s: %s -> %s', tableName, col1.name, col1.kind, col2.kind);
+    log(
+      'Column type change: %s.%s: %s -> %s',
+      tableName,
+      col1.name,
+      col1.kind,
+      col2.kind,
+    );
 
     if (mode === 'push') {
       dataLossOperations.push(`CHANGE COLUMN TYPE ${tableName}.${col2.name}`);
@@ -364,9 +363,15 @@ function diffColumn(
   // Note: SurrealDB has NOT NULL (NOT OPTIONAL), so optional=false means NOT NULL
   if (col1.optional !== col2.optional) {
     // Only warn about making NOT NULL without default in push mode
-    if (mode === 'push' && col2.optional === false && col2.default === undefined) {
+    if (
+      mode === 'push' &&
+      col2.optional === false &&
+      col2.default === undefined
+    ) {
       dataLossOperations.push(`ADD NOT NULL ${tableName}.${col2.name}`);
-      warnings.push(`Making column ${tableName}.${col2.name} NOT NULL without default may fail`);
+      warnings.push(
+        `Making column ${tableName}.${col2.name} NOT NULL without default may fail`,
+      );
     }
 
     // Always create the alter statement to track the change - include kind for SQL generation
@@ -386,9 +391,21 @@ function diffColumn(
       type: 'alter_column',
       table: tableName,
       column: col2.name,
-      change: { readonly: col2.readonly, optional: col2.optional, type: col2.kind },
-      before: { readonly: col1.readonly, optional: col1.optional, type: col1.kind },
-      after: { readonly: col2.readonly, optional: col2.optional, type: col2.kind },
+      change: {
+        readonly: col2.readonly,
+        optional: col2.optional,
+        type: col2.kind,
+      },
+      before: {
+        readonly: col1.readonly,
+        optional: col1.optional,
+        type: col1.kind,
+      },
+      after: {
+        readonly: col2.readonly,
+        optional: col2.optional,
+        type: col2.kind,
+      },
     });
   }
 
@@ -401,9 +418,21 @@ function diffColumn(
       type: 'alter_column',
       table: tableName,
       column: col2.name,
-      change: { default: col2.default, optional: col2.optional, type: col2.kind } as any,
-      before: { default: col1.default, optional: col1.optional, type: col1.kind } as any,
-      after: { default: col2.default, optional: col2.optional, type: col2.kind } as any,
+      change: {
+        default: col2.default,
+        optional: col2.optional,
+        type: col2.kind,
+      } as any,
+      before: {
+        default: col1.default,
+        optional: col1.optional,
+        type: col1.kind,
+      } as any,
+      after: {
+        default: col2.default,
+        optional: col2.optional,
+        type: col2.kind,
+      } as any,
     });
   }
 
@@ -444,13 +473,21 @@ function diffIndexes(
   indexes1: SurrealIndex[] | undefined,
   indexes2: SurrealIndex[] | undefined,
   _tables2Map: Map<string, SurrealTable>,
-): { statements: SurrealStatement[]; warnings: string[]; dataLossOperations: string[] } {
+): {
+  statements: SurrealStatement[];
+  warnings: string[];
+  dataLossOperations: string[];
+} {
   const statements: SurrealStatement[] = [];
   const warnings: string[] = [];
   const dataLossOperations: string[] = [];
 
-  const idx1Map = new Map((indexes1 ?? []).map((i) => [`${i.table}:${i.name}`, i]));
-  const idx2Map = new Map((indexes2 ?? []).map((i) => [`${i.table}:${i.name}`, i]));
+  const idx1Map = new Map(
+    (indexes1 ?? []).map((i) => [`${i.table}:${i.name}`, i]),
+  );
+  const idx2Map = new Map(
+    (indexes2 ?? []).map((i) => [`${i.table}:${i.name}`, i]),
+  );
 
   // New indexes
   for (const [key, idx2] of idx2Map) {
@@ -564,6 +601,118 @@ function diffAccess(
 }
 
 /**
+ * Diff namespace definitions
+ *
+ * Namespaces are simple string arrays. Detect additions and removals.
+ * Safety-first: never auto-remove namespaces to prevent data loss.
+ */
+function diffNamespaces(
+  ns1: string[] | undefined,
+  ns2: string[] | undefined,
+): { statements: SurrealStatement[] } {
+  const statements: SurrealStatement[] = [];
+
+  const set1 = new Set(ns1 ?? []);
+  const set2 = new Set(ns2 ?? []);
+
+  // New namespaces
+  for (const ns of set2) {
+    if (!set1.has(ns)) {
+      statements.push({
+        type: 'create_namespace',
+        name: ns,
+      });
+    }
+  }
+
+  // Removed namespaces - intentionally skipped (safety-first)
+  // Namespaces are only added during migration, never automatically removed
+  // because removing a namespace drops ALL databases within it.
+
+  return { statements };
+}
+
+/**
+ * Diff database definitions
+ *
+ * Databases are simple string arrays. Detect additions and removals.
+ * Safety-first: never auto-remove databases to prevent data loss.
+ */
+function diffDatabases(
+  db1: string[] | undefined,
+  db2: string[] | undefined,
+): { statements: SurrealStatement[] } {
+  const statements: SurrealStatement[] = [];
+
+  const set1 = new Set(db1 ?? []);
+  const set2 = new Set(db2 ?? []);
+
+  // New databases
+  for (const db of set2) {
+    if (!set1.has(db)) {
+      statements.push({
+        type: 'create_database',
+        name: db,
+      });
+    }
+  }
+
+  // Removed databases - intentionally skipped (safety-first)
+  // Databases are only added during migration, never automatically removed
+  // because removing a database drops ALL data within it.
+
+  return { statements };
+}
+
+/**
+ * Diff sequence definitions
+ *
+ * Sequences are compared by name using SurrealSequence objects.
+ * Detects new sequences and changed sequences (drop+recreate).
+ * Removed sequences are intentionally skipped (safety-first by default).
+ */
+function diffSequences(
+  seqs1: SurrealSequence[] | undefined,
+  seqs2: SurrealSequence[] | undefined,
+): { statements: SurrealStatement[] } {
+  const statements: SurrealStatement[] = [];
+
+  const seq1Map = new Map((seqs1 ?? []).map((s) => [s.name, s]));
+  const seq2Map = new Map((seqs2 ?? []).map((s) => [s.name, s]));
+
+  // New sequences
+  for (const [name, seq2] of seq2Map) {
+    if (!seq1Map.has(name)) {
+      statements.push({
+        type: 'create_sequence',
+        def: seq2,
+      });
+    }
+  }
+
+  // Changed sequences (compare properties — drop and recreate)
+  for (const [name, seq2] of seq2Map) {
+    const seq1 = seq1Map.get(name);
+    if (seq1 && JSON.stringify(seq1) !== JSON.stringify(seq2)) {
+      statements.push({
+        type: 'drop_sequence',
+        def: { name: seq1.name },
+      });
+      statements.push({
+        type: 'create_sequence',
+        def: seq2,
+      });
+    }
+  }
+
+  // Removed sequences — intentionally skipped by default
+  // Sequences are only added/modified during migration, never automatically removed
+  // to prevent accidental disruption. Users must manually remove sequences.
+
+  return { statements };
+}
+
+/**
  * Diff event definitions
  *
  * Events are defined per-table. Compares events arrays by (table:name) key.
@@ -576,8 +725,12 @@ function diffEvents(
 ): { statements: SurrealStatement[] } {
   const statements: SurrealStatement[] = [];
 
-  const evt1Map = new Map((events1 ?? []).map((e) => [`${e.what}:${e.name}`, e]));
-  const evt2Map = new Map((events2 ?? []).map((e) => [`${e.what}:${e.name}`, e]));
+  const evt1Map = new Map(
+    (events1 ?? []).map((e) => [`${e.what}:${e.name}`, e]),
+  );
+  const evt2Map = new Map(
+    (events2 ?? []).map((e) => [`${e.what}:${e.name}`, e]),
+  );
 
   // New events
   for (const [key, evt2] of evt2Map) {
@@ -673,8 +826,12 @@ function diffViews(
   const statements: SurrealStatement[] = [];
 
   // Parse views into name+query+comment pairs for comparison
-  const parseView = (sql: string): { name: string; query: string; comment?: string } => {
-    const rest = sql.replace(/^DEFINE VIEW IF NOT EXISTS /i, '').replace(/^DEFINE VIEW /i, '');
+  const parseView = (
+    sql: string,
+  ): { name: string; query: string; comment?: string } => {
+    const rest = sql
+      .replace(/^DEFINE VIEW IF NOT EXISTS /i, '')
+      .replace(/^DEFINE VIEW /i, '');
     // Split on ' AS ' to get name and query
     const idx = rest.search(/\s+AS\s+/i);
     if (idx === -1) return { name: rest.trim(), query: '' };
@@ -723,10 +880,6 @@ function diffViews(
     const v1 = v1Map.get(name);
     if (v1 && (v1.query !== v2.query || v1.comment !== v2.comment)) {
       statements.push({
-        type: 'drop_view',
-        name,
-      });
-      statements.push({
         type: 'create_view',
         view: { name, query: v2.query, comment: v2.comment },
       });
@@ -736,245 +889,4 @@ function diffViews(
   // Removed views — intentionally skipped by default
 
   return { statements };
-}
-
-/**
- * Order statements following Drizzle's pattern
- */
-function orderStatements(statements: SurrealStatement[]): SurrealStatement[] {
-  const order: Array<SurrealStatement['type']> = [
-    'create_table',
-    'create_relation',
-    'create_access',
-    'create_event',
-    'drop_event',
-    'create_function',
-    'drop_function',
-    'create_view',
-    'drop_view',
-    'rename_table',
-    'add_column',
-    'alter_column',
-    'alter_table_permissions',
-    'alter_field_permissions',
-    'create_index',
-    'drop_index',
-    'remove_column',
-    'drop_table',
-  ];
-
-  return [...statements].sort((a, b) => {
-    const aIndex = order.indexOf(a.type);
-    const bIndex = order.indexOf(b.type);
-    return aIndex - bIndex;
-  });
-}
-
-/**
- * Group statements by type
- */
-function groupStatements(statements: SurrealStatement[]): Record<string, SurrealStatement[]> {
-  const grouped: Record<string, SurrealStatement[]> = {};
-
-  for (const stmt of statements) {
-    const group = stmt.type;
-    grouped[group] = grouped[group] || [];
-    grouped[group].push(stmt);
-  }
-
-  return grouped;
-}
-
-/**
- * Convert statement to SQL string
- */
-export function statementToSql(stmt: SurrealStatement): string {
-  switch (stmt.type) {
-    case 'create_table':
-      return generateCreateTable(stmt);
-    case 'drop_table':
-      return generator.generateRemoveTable(stmt.name);
-    case 'rename_table':
-      return `ALTER TABLE ${stmt.from} RENAME TO ${stmt.to}`;
-    case 'add_column':
-      return generateAddColumn(stmt);
-    case 'remove_column':
-      return generator.generateRemoveField(stmt.table, stmt.column);
-    case 'alter_column':
-      return generateAlterColumn(stmt);
-    case 'create_index':
-      return generateCreateIndex(stmt.index);
-    case 'drop_index':
-      return generator.generateRemoveIndex(stmt.name, stmt.table);
-    case 'alter_table_permissions':
-      return generator.generateAlterTablePermissions(stmt.table, stmt.permissions);
-    case 'alter_field_permissions':
-      return generator.generateAlterFieldPermissions(stmt.table, stmt.field, stmt.permissions);
-    case 'create_relation': {
-      // Relations are defined as tables with TYPE RELATION
-      const inStr = Array.isArray(stmt.in) ? stmt.in.join(', ') : stmt.in;
-      const outStr = Array.isArray(stmt.out) ? stmt.out.join(', ') : stmt.out;
-      return `DEFINE TABLE ${stmt.name} TYPE RELATION IN ${inStr} OUT ${outStr}`;
-    }
-    case 'create_access':
-      return generator.generateAccessDefinition(stmt.access);
-    case 'drop_access':
-      return generator.generateRemoveAccess(stmt.name);
-    case 'create_event':
-      return generator.generateEventDefinition(stmt.event);
-    case 'drop_event':
-      return generator.generateRemoveEvent(stmt.name, stmt.table);
-    case 'create_function':
-      return generator.generateFunctionDefinition(stmt.function);
-    case 'drop_function':
-      return generator.generateRemoveFunction(stmt.name);
-    case 'create_view':
-      return generator.generateViewDefinition(stmt.view);
-    case 'drop_view':
-      return generator.generateRemoveView(stmt.name);
-    default:
-      return `-- Unknown statement type: ${(stmt as any).type}`;
-  }
-}
-
-function generateCreateTable(stmt: CreateTableStatement): string {
-  const lines: string[] = [];
-
-  // Use generator for table definition (handles SCHEMAFULL/SCHEMALESS, TYPE RELATION, permissions)
-  const tableDef: TableDefinition = {
-    name: stmt.name,
-    columns: [],
-    config: {
-      schema: stmt.schema === 'less' ? 'less' : 'full',
-      type: stmt.in && stmt.out ? 'relation' : 'normal',
-      in: stmt.in,
-      out: stmt.out,
-      permissions: stmt.permissions,
-    },
-  };
-
-  lines.push(generator.generateTableDefinition(tableDef));
-
-  // Use generator for each column - use option<T> syntax for optional fields
-  for (const col of stmt.columns) {
-    let line = `DEFINE FIELD IF NOT EXISTS ${col.name} ON TABLE ${stmt.name}`;
-    // For record types with a target table, include the linked table name
-    let typeStr: string = col.kind;
-    if (col.kind === 'record' && col.recordTable) {
-      typeStr = `record<${col.recordTable}>`;
-    }
-    // Use option<T> syntax for optional fields (SurrealDB syntax)
-    // FLEXIBLE only pairs with plain TYPE object, not option<object>
-    if (col.optional && !(col.flex && col.kind === 'object')) line += ` TYPE option<${typeStr}>`;
-    else line += ` TYPE ${typeStr}`;
-    // FLEXIBLE must be specified after TYPE in SurrealDB
-    if (col.flex) line += ' FLEXIBLE';
-    if (col.readonly) line += ' READONLY';
-    if (col.default !== undefined) line += ` DEFAULT ${formatDefaultForSql(col.default)}`;
-    if (col.assert) line += ` ASSERT ${col.assert}`;
-    if (col.permissions) {
-      const permsStr = serializePermissions(col.permissions);
-      if (permsStr) line += ` PERMISSIONS ${permsStr}`;
-    }
-
-    lines.push(line);
-  }
-
-  // Indexes tracked at top-level ddl.indexes — handled by diffIndexes
-  // Do NOT generate inline to avoid duplicate create_index statements
-
-  return lines.join(';\n');
-}
-
-function generateAddColumn(stmt: AddColumnStatement): string {
-  const colDef = colToColumnDefinition(stmt.table)(stmt.column);
-  return generator.generateFieldDefinition(colDef);
-}
-
-function generateAlterColumn(stmt: AlterColumnStatement): string {
-  const parts: string[] = [`ALTER FIELD ${stmt.column} ON TABLE ${stmt.table}`];
-
-  // Handle type change - use change.type if set, otherwise derive from before
-  if (stmt.change.type) {
-    let targetType: string = stmt.change.type;
-    // For record types with a target table, include the linked table name
-    if (targetType === 'record' && stmt.change.recordTable) {
-      targetType = `record<${stmt.change.recordTable}>` as any;
-    }
-    const isOptional = stmt.change.optional ?? stmt.before?.optional ?? false;
-    const typeStr = isOptional ? `option<${targetType}>` : targetType;
-    parts.push(`TYPE ${typeStr}`);
-  }
-
-  // Add explicit OPTIONAL keyword when making field optional but no type change
-  if (stmt.change.optional === true && !stmt.change.type) {
-    parts.push('OPTIONAL');
-  }
-
-  // Handle readonly
-  if (stmt.change.readonly !== undefined) {
-    parts.push(stmt.change.readonly ? 'READONLY' : 'NOT READONLY');
-  }
-
-  // Handle default
-  if (stmt.change.default !== undefined) {
-    parts.push(`DEFAULT ${formatDefaultForSql(stmt.change.default)}`);
-  }
-
-  return parts.join(' ');
-}
-
-function generateCreateIndex(idx: SurrealIndex): string {
-  const idxDef = idxToIndexDefinition(idx.table)(idx);
-  return generator.generateIndexDefinition(idxDef, idx.table);
-}
-
-// Type for CreateTableStatement used locally
-type CreateTableStatement = Extract<SurrealStatement, { type: 'create_table' }>;
-type AddColumnStatement = Extract<SurrealStatement, { type: 'add_column' }>;
-type AlterColumnStatement = Extract<SurrealStatement, { type: 'alter_column' }>;
-
-// Export the function that's used in diffTable for fallback permissions
-export function getDefaultPermissions(): TablePermissions {
-  return { select: 'WHERE true', create: 'WHERE true', update: 'WHERE true', delete: 'WHERE true' };
-}
-
-// =============================================================================
-// Helper functions to convert DDL types to Generator types
-// =============================================================================
-
-/**
- * Convert SurrealColumn to ColumnDefinition for generator
- */
-function colToColumnDefinition(tableName: string) {
-  return (col: SurrealColumn): ColumnDefinition => ({
-    name: col.name,
-    tableName,
-    config: {
-      // Schemaless columns may not have a kind - default to string for conversion
-      type: col.kind ?? 'string',
-      recordTable: col.recordTable,
-      optional: col.optional,
-      default: typeof col.default === 'string' ? col.default : undefined,
-      assert: col.assert,
-      readonly: col.readonly,
-      permissions: col.permissions as unknown as string,
-      flexible: col.flex,
-    },
-  });
-}
-
-/**
- * Convert SurrealIndex to IndexDefinition for generator
- */
-function idxToIndexDefinition(_tableName: string) {
-  return (idx: SurrealIndex): IndexDefinition => ({
-    name: idx.name,
-    fields: idx.cols,
-    type: idx.index as IndexDefinition['type'],
-    analyzer: idx.analyzer,
-    dimension: idx.dimension,
-    vectorType: idx.vectorType,
-    distance: idx.distance as IndexDefinition['distance'],
-  });
 }

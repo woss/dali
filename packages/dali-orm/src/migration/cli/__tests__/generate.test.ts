@@ -5,7 +5,7 @@
  * addSectionSeparators, generateMigrationFile, isTableDefinition,
  * normalizeTableDefinition
  */
-import { describe, expect, it } from 'vite-plus/test';
+import { describe, expect, it } from 'vitest';
 import {
   addSectionSeparators,
   detectSection,
@@ -30,31 +30,39 @@ describe('serializeColumnPermissions', () => {
   });
 
   it('formats select true as "FOR select FULL"', () => {
-    expect(serializeColumnPermissions({ select: true })).toBe('FOR select FULL');
+    expect(serializeColumnPermissions({ select: true })).toBe(
+      'FOR select FULL',
+    );
   });
 
   it('formats select false as "FOR select NONE"', () => {
-    expect(serializeColumnPermissions({ select: false })).toBe('FOR select NONE');
+    expect(serializeColumnPermissions({ select: false })).toBe(
+      'FOR select NONE',
+    );
   });
 
   it('formats select string as "FOR select <expr>"', () => {
-    expect(serializeColumnPermissions({ select: 'WHERE published = true' })).toBe(
-      'FOR select WHERE published = true',
-    );
+    expect(
+      serializeColumnPermissions({ select: 'WHERE published = true' }),
+    ).toBe('FOR select WHERE published = true');
   });
 
   it('formats create true as "FOR create FULL"', () => {
-    expect(serializeColumnPermissions({ create: true })).toBe('FOR create FULL');
+    expect(serializeColumnPermissions({ create: true })).toBe(
+      'FOR create FULL',
+    );
   });
 
   it('formats update false as "FOR update NONE"', () => {
-    expect(serializeColumnPermissions({ update: false })).toBe('FOR update NONE');
+    expect(serializeColumnPermissions({ update: false })).toBe(
+      'FOR update NONE',
+    );
   });
 
   it('formats delete string as "FOR delete <expr>"', () => {
-    expect(serializeColumnPermissions({ delete: 'WHERE $auth.id = user' })).toBe(
-      'FOR delete WHERE $auth.id = user',
-    );
+    expect(
+      serializeColumnPermissions({ delete: 'WHERE $auth.id = user' }),
+    ).toBe('FOR delete WHERE $auth.id = user');
   });
 
   it('joins multiple permissions with comma', () => {
@@ -149,7 +157,9 @@ describe('detectSection', () => {
   });
 
   it('detects DEFINE FIELD as Tables', () => {
-    expect(detectSection('DEFINE FIELD name ON user TYPE string')).toBe('Tables');
+    expect(detectSection('DEFINE FIELD name ON user TYPE string')).toBe(
+      'Tables',
+    );
   });
 
   it('detects REMOVE FIELD as Tables', () => {
@@ -157,7 +167,9 @@ describe('detectSection', () => {
   });
 
   it('detects DEFINE INDEX as Tables', () => {
-    expect(detectSection('DEFINE INDEX idx_name ON user COLUMNS name UNIQUE')).toBe('Tables');
+    expect(
+      detectSection('DEFINE INDEX idx_name ON user COLUMNS name UNIQUE'),
+    ).toBe('Tables');
   });
 
   it('detects REMOVE INDEX as Tables', () => {
@@ -165,7 +177,9 @@ describe('detectSection', () => {
   });
 
   it('detects DEFINE ACCESS as Access', () => {
-    expect(detectSection('DEFINE ACCESS admin ON DATABASE TYPE RECORD')).toBe('Access');
+    expect(detectSection('DEFINE ACCESS admin ON DATABASE TYPE RECORD')).toBe(
+      'Access',
+    );
   });
 
   it('detects REMOVE ACCESS as Access', () => {
@@ -182,7 +196,9 @@ describe('detectSection', () => {
 
   it('detects DEFINE VIEW as Views', () => {
     expect(
-      detectSection('DEFINE VIEW active_users AS SELECT * FROM user WHERE active = true'),
+      detectSection(
+        'DEFINE VIEW active_users AS SELECT * FROM user WHERE active = true',
+      ),
     ).toBe('Views');
   });
 
@@ -191,9 +207,11 @@ describe('detectSection', () => {
   });
 
   it('detects DEFINE FUNCTION as Functions', () => {
-    expect(detectSection('DEFINE FUNCTION fn::hello($name: string) { RETURN $name; }')).toBe(
-      'Functions',
-    );
+    expect(
+      detectSection(
+        'DEFINE FUNCTION fn::hello($name: string) { RETURN $name; }',
+      ),
+    ).toBe('Functions');
   });
 
   it('detects REMOVE FUNCTION as Functions', () => {
@@ -201,9 +219,11 @@ describe('detectSection', () => {
   });
 
   it('detects DEFINE EVENT as Events', () => {
-    expect(detectSection('DEFINE EVENT create_welcome ON user WHEN $before = NONE THEN ...')).toBe(
-      'Events',
-    );
+    expect(
+      detectSection(
+        'DEFINE EVENT create_welcome ON user WHEN $before = NONE THEN ...',
+      ),
+    ).toBe('Events');
   });
 
   it('detects REMOVE EVENT as Events', () => {
@@ -211,7 +231,9 @@ describe('detectSection', () => {
   });
 
   it('detects DEFINE ANALYZER as Analyzers', () => {
-    expect(detectSection('DEFINE ANALYZER my_analyzer TOKENIZERS class')).toBe('Analyzers');
+    expect(detectSection('DEFINE ANALYZER my_analyzer TOKENIZERS class')).toBe(
+      'Analyzers',
+    );
   });
 
   it('detects REMOVE ANALYZER as Analyzers', () => {
@@ -325,23 +347,28 @@ describe('addSectionSeparators', () => {
 // ============================================================================
 
 describe('generateMigrationFile', () => {
-  it('generates minimal file with up/down', () => {
+  it('generates minimal file with up section', () => {
     const result = generateMigrationFile('001', 'create_user', {
-      up: ['DEFINE TABLE user SCHEMAFULL', 'DEFINE FIELD name ON user TYPE string'],
-      down: ['REMOVE TABLE user'],
+      up: [
+        'DEFINE TABLE user SCHEMAFULL',
+        'DEFINE FIELD name ON user TYPE string',
+      ],
     });
     expect(result).toContain('-- Migration: create_user');
     expect(result).toContain('-- Version: 001');
     expect(result).toContain('-- UP');
-    expect(result).toContain('-- DOWN');
     expect(result).toContain('DEFINE TABLE user SCHEMAFULL;');
-    expect(result).toContain('REMOVE TABLE user;');
+    expect(result).toContain('DEFINE FIELD name ON user TYPE string;');
   });
 
   it('filters empty statements from up', () => {
     const result = generateMigrationFile('001', 'test', {
-      up: ['DEFINE TABLE user SCHEMAFULL', '', ' ', 'DEFINE FIELD name ON user TYPE string'],
-      down: [],
+      up: [
+        'DEFINE TABLE user SCHEMAFULL',
+        '',
+        ' ',
+        'DEFINE FIELD name ON user TYPE string',
+      ],
     });
     // Only the two non-empty statements get through (empty/whitespace filtered)
     expect(result).toContain('DEFINE TABLE user SCHEMAFULL;');
@@ -351,21 +378,23 @@ describe('generateMigrationFile', () => {
   });
 
   it('handles empty up', () => {
-    const result = generateMigrationFile('001', 'test', { up: [], down: ['REMOVE TABLE user'] });
+    const result = generateMigrationFile('001', 'test', { up: [] });
     expect(result).toContain('-- UP\n\n');
-    expect(result).toContain('REMOVE TABLE user;');
   });
 
-  it('handles empty down', () => {
-    const result = generateMigrationFile('001', 'test', { up: ['DEFINE TABLE user'], down: [] });
+  it('generates up-only migration content', () => {
+    const result = generateMigrationFile('001', 'test', {
+      up: ['DEFINE TABLE user'],
+    });
     expect(result).toContain('DEFINE TABLE user;');
-    expect(result).toContain('-- DOWN\n\n');
   });
 
   it('adds section separators between statement categories', () => {
     const result = generateMigrationFile('001', 'test', {
-      up: ['DEFINE TABLE user SCHEMAFULL', 'DEFINE ACCESS admin ON DATABASE TYPE RECORD'],
-      down: ['REMOVE TABLE user'],
+      up: [
+        'DEFINE TABLE user SCHEMAFULL',
+        'DEFINE ACCESS admin ON DATABASE TYPE RECORD',
+      ],
     });
     expect(result).toContain('-- ---- Access ----');
   });
@@ -373,7 +402,6 @@ describe('generateMigrationFile', () => {
   it('does not add semicolons to comment lines', () => {
     const result = generateMigrationFile('001', 'test', {
       up: ['DEFINE TABLE user'],
-      down: [],
     });
     const lines = result.split('\n');
     const commentLines = lines.filter((l) => l.startsWith('--'));
@@ -531,7 +559,9 @@ describe('normalizeTableDefinition', () => {
     });
     expect(result).toEqual({
       name: 'user',
-      columns: [{ name: 'name', config: { type: 'string' }, tableName: 'user' }],
+      columns: [
+        { name: 'name', config: { type: 'string' }, tableName: 'user' },
+      ],
       config: {
         schema: 'full',
         type: 'normal',

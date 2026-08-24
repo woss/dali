@@ -1,7 +1,18 @@
-import type { AccessConfig, EventConfig, FunctionConfig } from '../../sdk/schema.js';
+import type { SurrealDriver } from '../../sdk/driver/types.js';
+import type {
+  AccessConfig,
+  EventConfig,
+  FunctionConfig,
+} from '../../sdk/schema.js';
 import type { IndexDefinition, TableDefinition } from '../../sdk/table.js';
 import type { Config } from '../config.js';
-import type { SurrealDriver } from '../../sdk/driver/types.js';
+import {
+  createEmptyDdl,
+  type SurrealDbDDL,
+  type SurrealIndex,
+} from '../ddl/ddl.js';
+import { ddlDiff } from '../ddl/diff.js';
+import { introspectDatabase } from '../ddl/introspect.js';
 import {
   createConnection,
   printAddedSection,
@@ -9,9 +20,6 @@ import {
   printWarnings,
   safeDisconnect,
 } from './operations.js';
-import { createEmptyDdl, type SurrealDbDDL, type SurrealIndex } from '../ddl/ddl.js';
-import { ddlDiff } from '../ddl/diff.js';
-import { introspectDatabase } from '../ddl/introspect.js';
 
 export interface PushOptions {
   config: Config;
@@ -53,7 +61,11 @@ export function tablesToDdl(
 
   for (const table of tables) {
     // If relation type with in/out, add to relations
-    if (table.config.type === 'relation' && table.config.in && table.config.out) {
+    if (
+      table.config.type === 'relation' &&
+      table.config.in &&
+      table.config.out
+    ) {
       ddl.relations.push({
         name: table.name,
         in: table.config.in,
@@ -73,6 +85,7 @@ export function tablesToDdl(
                   select: col.config.permissions,
                   create: col.config.permissions,
                   update: col.config.permissions,
+                  delete: col.config.permissions,
                 }
               : (col.config.permissions ?? {}),
         })),
@@ -80,8 +93,8 @@ export function tablesToDdl(
     }
 
     // Map indexes from table config
-    const tableIndexes: SurrealIndex[] = (table.config.indexes || []).map((idx) =>
-      convertIndex(idx, table.name),
+    const tableIndexes: SurrealIndex[] = (table.config.indexes || []).map(
+      (idx) => convertIndex(idx, table.name),
     );
 
     // Extract unique indexes from columns with unique: true
@@ -119,6 +132,7 @@ export function tablesToDdl(
                 select: col.config.permissions,
                 create: col.config.permissions,
                 update: col.config.permissions,
+                delete: col.config.permissions,
               }
             : (col.config.permissions ?? {}),
       })),
@@ -180,7 +194,10 @@ export function tablesToDdl(
 /**
  * Push schema changes to database
  */
-export async function pushSchema(options: PushOptions, driver?: SurrealDriver): Promise<void> {
+export async function pushSchema(
+  options: PushOptions,
+  driver?: SurrealDriver,
+): Promise<void> {
   const { config, tables, dryRun, embeddedDriver } = options;
 
   let ownsDriver = false;
@@ -194,7 +211,12 @@ export async function pushSchema(options: PushOptions, driver?: SurrealDriver): 
     const currentDdl = await introspectDatabase(driver);
 
     // Convert user tables to DDL format
-    const targetDdl = tablesToDdl(tables, options.access, options.events, options.functions);
+    const targetDdl = tablesToDdl(
+      tables,
+      options.access,
+      options.events,
+      options.functions,
+    );
 
     // Calculate diff
     const diffResult = await ddlDiff(currentDdl, targetDdl, 'push');
@@ -217,7 +239,12 @@ export async function pushSchema(options: PushOptions, driver?: SurrealDriver): 
 
     // Changed tables (add_column, alter_column, etc.)
     const changedTableNames = new Set<string>();
-    const changeTypes = ['add_column', 'alter_column', 'remove_column', 'alter_table_permissions'];
+    const changeTypes = [
+      'add_column',
+      'alter_column',
+      'remove_column',
+      'alter_table_permissions',
+    ];
     for (const changeType of changeTypes) {
       for (const stmt of grouped[changeType] || []) {
         const table = (stmt as { table: string }).table;
@@ -258,7 +285,9 @@ export async function pushSchema(options: PushOptions, driver?: SurrealDriver): 
 
     // Check for data loss operations if not forced
     if (!options.force && diffResult.dataLossOperations.length > 0) {
-      console.log('⚠️  Data loss operations detected. Use --force to apply anyway.');
+      console.log(
+        '⚠️  Data loss operations detected. Use --force to apply anyway.',
+      );
       return;
     }
 

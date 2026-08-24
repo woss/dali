@@ -1,6 +1,10 @@
-import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { JournalEntry, MigrationJournal } from '../journal.js';
-import { computeMigrationHash, createJournal, MigrationJournalManager } from '../journal.js';
+import {
+  computeMigrationHash,
+  createJournal,
+  MigrationJournalManager,
+} from '../journal.js';
 
 // Mock filesystem
 vi.mock('node:fs/promises', () => ({
@@ -24,7 +28,9 @@ const mockMkdir = vi.mocked(fs.mkdir);
 // =============================================================================
 // Helpers
 // =============================================================================
-function makeJournal(overrides: Partial<MigrationJournal> = {}): MigrationJournal {
+function makeJournal(
+  overrides: Partial<MigrationJournal> = {},
+): MigrationJournal {
   return {
     version: 1,
     dialect: 'surrealdb',
@@ -53,7 +59,10 @@ describe('MigrationJournalManager', () => {
 
   beforeEach(() => {
     vi.resetAllMocks();
-    manager = new MigrationJournalManager({ dir: '/tmp/journals', filename: '_journal.json' });
+    manager = new MigrationJournalManager({
+      dir: '/tmp/journals',
+      filename: '_journal.json',
+    });
   });
 
   // ---------------------------------------------------------------------------
@@ -61,16 +70,24 @@ describe('MigrationJournalManager', () => {
   // ---------------------------------------------------------------------------
   describe('constructor', () => {
     it('throws when no dir provided', () => {
-      expect(() => new MigrationJournalManager()).toThrow('journalDir is required');
+      expect(() => new MigrationJournalManager()).toThrow(
+        'journalDir is required',
+      );
     });
 
     it('uses provided config', () => {
-      const m = new MigrationJournalManager({ dir: '/custom/path', filename: 'my_journal.json' });
+      const m = new MigrationJournalManager({
+        dir: '/custom/path',
+        filename: 'my_journal.json',
+      });
       expect(m.getPath()).toBe('/custom/path/my_journal.json');
     });
 
     it('merges partial config with dir', () => {
-      const m = new MigrationJournalManager({ dir: '/base', dialect: 'postgresql' });
+      const m = new MigrationJournalManager({
+        dir: '/base',
+        dialect: 'postgresql',
+      });
       expect(m.getPath()).toBe('/base/_journal.json');
     });
   });
@@ -100,7 +117,10 @@ describe('MigrationJournalManager', () => {
     });
 
     it('uses configured dialect', () => {
-      const m = new MigrationJournalManager({ dir: '/test', dialect: 'postgresql' });
+      const m = new MigrationJournalManager({
+        dir: '/test',
+        dialect: 'postgresql',
+      });
       const journal = m.createEmpty();
       expect(journal.dialect).toBe('postgresql');
     });
@@ -191,7 +211,12 @@ describe('MigrationJournalManager', () => {
 
     it('handles malformed entries gracefully', async () => {
       // entries is not an array
-      const bad = { version: 1, dialect: 'surrealdb', id: 'x', entries: 'not_array' };
+      const bad = {
+        version: 1,
+        dialect: 'surrealdb',
+        id: 'x',
+        entries: 'not_array',
+      };
       mockReadFile.mockResolvedValueOnce(JSON.stringify(bad));
 
       const result = await manager.read();
@@ -208,7 +233,9 @@ describe('MigrationJournalManager', () => {
 
       await manager.write(journal);
 
-      expect(mockMkdir).toHaveBeenCalledWith('/tmp/journals', { recursive: true });
+      expect(mockMkdir).toHaveBeenCalledWith('/tmp/journals', {
+        recursive: true,
+      });
       expect(mockWriteFile).toHaveBeenCalledWith(
         '/tmp/journals/_journal.json',
         JSON.stringify(journal, null, 2),
@@ -218,7 +245,10 @@ describe('MigrationJournalManager', () => {
 
     it('writes journal with entries', async () => {
       const journal = makeJournal({
-        entries: [makeEntry({ idx: 1, tag: 'init' }), makeEntry({ idx: 2, tag: 'add_users' })],
+        entries: [
+          makeEntry({ idx: 1, tag: 'init' }),
+          makeEntry({ idx: 2, tag: 'add_users' }),
+        ],
       });
       mockMkdir.mockResolvedValueOnce(undefined);
       mockWriteFile.mockResolvedValueOnce(undefined);
@@ -246,7 +276,7 @@ describe('MigrationJournalManager', () => {
       expect(written.entries[0].idx).toBe(1);
       expect(written.entries[0].tag).toBe('initial');
       expect(written.entries[0].hash).toBe('hash123');
-      expect(written.entries[0].breakpoints).toEqual([true]);
+      expect(written.entries[0].breakpoints).toEqual([false]);
     });
 
     it('increments idx for subsequent entries', async () => {
@@ -260,12 +290,27 @@ describe('MigrationJournalManager', () => {
       expect(written.entries).toHaveLength(2);
       expect(written.entries[1].idx).toBe(2);
       expect(written.entries[1].tag).toBe('second');
-      expect(written.entries[1].breakpoints).toEqual([true, true]);
+      expect(written.entries[1].breakpoints).toEqual([false, false]);
+    });
+
+    it('creates entry with all-false breakpoints for partial-failure safety', async () => {
+      mockReadFile.mockResolvedValueOnce(JSON.stringify(makeJournal()));
+      await manager.addEntry('partial_safe', 'hash777', ['s1', 's2', 's3']);
+      const written = JSON.parse(mockWriteFile.mock.calls[0][1] as string);
+      // Every breakpoint must be false so partial-execution is visible
+      expect(written.entries[0].breakpoints).toEqual([false, false, false]);
+      // Verify isApplied correctly returns false for all-false entry
+      const isApplied = await manager.isApplied('partial_safe');
+      expect(isApplied).toBe(false);
     });
 
     it('handles non-sequential indices correctly', async () => {
       mockReadFile.mockResolvedValueOnce(
-        JSON.stringify(makeJournal({ entries: [makeEntry({ idx: 5 }), makeEntry({ idx: 10 })] })),
+        JSON.stringify(
+          makeJournal({
+            entries: [makeEntry({ idx: 5 }), makeEntry({ idx: 10 })],
+          }),
+        ),
       );
 
       await manager.addEntry('next', 'hash', ['stmt']);
@@ -290,7 +335,10 @@ describe('MigrationJournalManager', () => {
       mockReadFile.mockResolvedValueOnce(
         JSON.stringify(
           makeJournal({
-            entries: [makeEntry({ tag: 'init' }), makeEntry({ idx: 2, tag: 'add_users' })],
+            entries: [
+              makeEntry({ tag: 'init' }),
+              makeEntry({ idx: 2, tag: 'add_users' }),
+            ],
           }),
         ),
       );
@@ -308,35 +356,6 @@ describe('MigrationJournalManager', () => {
       const tags = await manager.getAppliedMigrations();
 
       expect(tags).toEqual([]);
-    });
-  });
-
-  // ---------------------------------------------------------------------------
-  // getLastMigration
-  // ---------------------------------------------------------------------------
-  describe('getLastMigration', () => {
-    it('returns last entry when entries exist', async () => {
-      mockReadFile.mockResolvedValueOnce(
-        JSON.stringify(
-          makeJournal({
-            entries: [makeEntry({ idx: 1, tag: 'init' }), makeEntry({ idx: 2, tag: 'last_one' })],
-          }),
-        ),
-      );
-
-      const last = await manager.getLastMigration();
-
-      expect(last).not.toBeNull();
-      expect(last?.idx).toBe(2);
-      expect(last?.tag).toBe('last_one');
-    });
-
-    it('returns null when no entries', async () => {
-      mockReadFile.mockResolvedValueOnce(JSON.stringify(makeJournal()));
-
-      const last = await manager.getLastMigration();
-
-      expect(last).toBeNull();
     });
   });
 
@@ -370,60 +389,6 @@ describe('MigrationJournalManager', () => {
   });
 
   // ---------------------------------------------------------------------------
-  // rollback
-  // ---------------------------------------------------------------------------
-  describe('rollback', () => {
-    it('removes last entry and returns it', async () => {
-      mockReadFile.mockResolvedValueOnce(
-        JSON.stringify(
-          makeJournal({
-            entries: [makeEntry({ idx: 1, tag: 'keep' }), makeEntry({ idx: 2, tag: 'remove' })],
-          }),
-        ),
-      );
-
-      const removed = await manager.rollback();
-
-      expect(removed).not.toBeNull();
-      expect(removed?.tag).toBe('remove');
-      expect(removed?.idx).toBe(2);
-
-      const written = JSON.parse(mockWriteFile.mock.calls[0][1] as string);
-      expect(written.entries).toHaveLength(1);
-      expect(written.entries[0].tag).toBe('keep');
-    });
-
-    it('returns null when no entries to rollback', async () => {
-      mockReadFile.mockResolvedValueOnce(JSON.stringify(makeJournal()));
-
-      const result = await manager.rollback();
-
-      expect(result).toBeNull();
-    });
-  });
-
-  // ---------------------------------------------------------------------------
-  // reset
-  // ---------------------------------------------------------------------------
-  describe('reset', () => {
-    it('clears all entries', async () => {
-      mockReadFile.mockResolvedValueOnce(
-        JSON.stringify(
-          makeJournal({
-            entries: [makeEntry({ tag: 'init' }), makeEntry({ idx: 2, tag: 'second' })],
-          }),
-        ),
-      );
-
-      await manager.reset();
-
-      const written = JSON.parse(mockWriteFile.mock.calls[0][1] as string);
-      expect(written.entries).toEqual([]);
-      expect(written.version).toBe(1);
-    });
-  });
-
-  // ---------------------------------------------------------------------------
   // getStatus
   // ---------------------------------------------------------------------------
   describe('getStatus', () => {
@@ -431,7 +396,10 @@ describe('MigrationJournalManager', () => {
       mockReadFile.mockResolvedValueOnce(
         JSON.stringify(
           makeJournal({
-            entries: [makeEntry({ idx: 1, tag: 'init' }), makeEntry({ idx: 2, tag: 'add_users' })],
+            entries: [
+              makeEntry({ idx: 1, tag: 'init' }),
+              makeEntry({ idx: 2, tag: 'add_users' }),
+            ],
           }),
         ),
       );
@@ -464,12 +432,18 @@ describe('MigrationJournalManager', () => {
       mockReadFile.mockResolvedValueOnce(
         JSON.stringify(
           makeJournal({
-            entries: [makeEntry({ tag: 'mig1', breakpoints: [true, true, true] })],
+            entries: [
+              makeEntry({ tag: 'mig1', breakpoints: [true, true, true] }),
+            ],
           }),
         ),
       );
 
-      const result = await manager.updateBreakpoints('mig1', [true, true, false]);
+      const result = await manager.updateBreakpoints('mig1', [
+        true,
+        true,
+        false,
+      ]);
 
       expect(result).not.toBeNull();
       expect(result?.breakpoints).toEqual([true, true, false]);
@@ -495,7 +469,12 @@ describe('MigrationJournalManager', () => {
       mockReadFile.mockResolvedValueOnce(
         JSON.stringify(
           makeJournal({
-            entries: [makeEntry({ tag: 'partial_mig', breakpoints: [true, false, true] })],
+            entries: [
+              makeEntry({
+                tag: 'partial_mig',
+                breakpoints: [true, false, true],
+              }),
+            ],
           }),
         ),
       );
@@ -510,7 +489,9 @@ describe('MigrationJournalManager', () => {
       mockReadFile.mockResolvedValueOnce(
         JSON.stringify(
           makeJournal({
-            entries: [makeEntry({ tag: 'complete', breakpoints: [true, true] })],
+            entries: [
+              makeEntry({ tag: 'complete', breakpoints: [true, true] }),
+            ],
           }),
         ),
       );
@@ -549,7 +530,9 @@ describe('MigrationJournalManager', () => {
       mockReadFile.mockResolvedValueOnce(
         JSON.stringify(
           makeJournal({
-            entries: [makeEntry({ tag: 'partial', breakpoints: [true, false] })],
+            entries: [
+              makeEntry({ tag: 'partial', breakpoints: [true, false] }),
+            ],
           }),
         ),
       );
@@ -574,7 +557,9 @@ describe('MigrationJournalManager', () => {
       mockReadFile.mockResolvedValueOnce(
         JSON.stringify(
           makeJournal({
-            entries: [makeEntry({ tag: 'mig', breakpoints: [true, true, false, true] })],
+            entries: [
+              makeEntry({ tag: 'mig', breakpoints: [true, true, false, true] }),
+            ],
           }),
         ),
       );
@@ -645,11 +630,15 @@ describe('computeMigrationHash', () => {
   it('returns SHA256 hex digest', () => {
     const hash = computeMigrationHash('hello');
     // SHA256 of 'hello' is known
-    expect(hash).toBe('2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824');
+    expect(hash).toBe(
+      '2cf24dba5fb0a30e26e83b2ac5b9e29e1b161e5c1fa7425e73043362938b9824',
+    );
   });
 
   it('is deterministic', () => {
-    expect(computeMigrationHash('test content')).toBe(computeMigrationHash('test content'));
+    expect(computeMigrationHash('test content')).toBe(
+      computeMigrationHash('test content'),
+    );
   });
 
   it('produces different hashes for different content', () => {
@@ -661,7 +650,9 @@ describe('computeMigrationHash', () => {
   it('handles empty string', () => {
     const hash = computeMigrationHash('');
     // SHA256 of empty string
-    expect(hash).toBe('e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855');
+    expect(hash).toBe(
+      'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855',
+    );
   });
 
   it('returns 64-character hex string', () => {

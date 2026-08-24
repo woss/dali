@@ -27,7 +27,11 @@ export function geoHashDecode(hash: SqlExpr): SqlExpr {
   return `geo::hash::decode(${hash})` as SqlExpr;
 }
 
-export function geoHashEncode(lng: SqlExpr, lat: SqlExpr, len?: SqlExpr): SqlExpr {
+export function geoHashEncode(
+  lng: SqlExpr,
+  lat: SqlExpr,
+  len?: SqlExpr,
+): SqlExpr {
   return len
     ? (`geo::hash::encode(${lng}, ${lat}, ${len})` as SqlExpr)
     : (`geo::hash::encode(${lng}, ${lat})` as SqlExpr);

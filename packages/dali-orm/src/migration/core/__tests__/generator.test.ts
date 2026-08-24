@@ -5,10 +5,18 @@
  * definitions, remove statements, alter statements, and migration generation.
  */
 
-import { beforeEach, describe, expect, it } from 'vite-plus/test';
+import { beforeEach, describe, expect, it } from 'vitest';
 import type { ColumnDefinition } from '../../../sdk/schema/column/types.js';
-import type { IndexDefinition, TableDefinition } from '../../../sdk/table.js';
-import type { SurrealEvent, SurrealFunction } from '../../ddl/ddl.js';
+import type {
+  AnalyzerDefinition,
+  IndexDefinition,
+  TableDefinition,
+} from '../../../sdk/table.js';
+import type {
+  SurrealEvent,
+  SurrealFunction,
+  SurrealSequence,
+} from '../../ddl/ddl.js';
 import { SurrealQLGenerator } from '../generator.js';
 
 // ---------------------------------------------------------------------------
@@ -16,7 +24,10 @@ import { SurrealQLGenerator } from '../generator.js';
 // ---------------------------------------------------------------------------
 
 function col(
-  overrides: Partial<ColumnDefinition> & { name: string; config: { type: string } },
+  overrides: Partial<ColumnDefinition> & {
+    name: string;
+    config: { type: string };
+  },
 ): ColumnDefinition {
   return {
     tableName: 'test_table',
@@ -32,7 +43,9 @@ function index(
   } as IndexDefinition;
 }
 
-function tableDef(overrides: Partial<TableDefinition> & { name: string }): TableDefinition {
+function tableDef(
+  overrides: Partial<TableDefinition> & { name: string },
+): TableDefinition {
   return {
     name: overrides.name,
     columns: overrides.columns ?? [],
@@ -51,7 +64,9 @@ beforeEach(() => {
 // ===========================================================================
 describe('generateTableDefinition', () => {
   it('generates DEFINE TABLE IF NOT EXISTS with SCHEMAFULL by default', () => {
-    const sql = gen.generateTableDefinition(tableDef({ name: 'user', config: { schema: 'full' } }));
+    const sql = gen.generateTableDefinition(
+      tableDef({ name: 'user', config: { schema: 'full' } }),
+    );
     expect(sql).toBe('DEFINE TABLE IF NOT EXISTS user SCHEMAFULL');
   });
 
@@ -64,7 +79,10 @@ describe('generateTableDefinition', () => {
 
   it('generates TYPE RELATION with IN and OUT', () => {
     const sql = gen.generateTableDefinition(
-      tableDef({ name: 'follows', config: { type: 'relation', in: 'user', out: 'user' } }),
+      tableDef({
+        name: 'follows',
+        config: { type: 'relation', in: 'user', out: 'user' },
+      }),
     );
     expect(sql).toBe(
       'DEFINE TABLE IF NOT EXISTS follows SCHEMAFULL TYPE RELATION IN user OUT user',
@@ -75,14 +93,18 @@ describe('generateTableDefinition', () => {
     const sql = gen.generateTableDefinition(
       tableDef({ name: 'edge', config: { type: 'relation', out: 'post' } }),
     );
-    expect(sql).toBe('DEFINE TABLE IF NOT EXISTS edge SCHEMAFULL TYPE RELATION OUT post');
+    expect(sql).toBe(
+      'DEFINE TABLE IF NOT EXISTS edge SCHEMAFULL TYPE RELATION OUT post',
+    );
   });
 
   it('generates TYPE RELATION without OUT when not set', () => {
     const sql = gen.generateTableDefinition(
       tableDef({ name: 'edge', config: { type: 'relation', in: 'user' } }),
     );
-    expect(sql).toBe('DEFINE TABLE IF NOT EXISTS edge SCHEMAFULL TYPE RELATION IN user');
+    expect(sql).toBe(
+      'DEFINE TABLE IF NOT EXISTS edge SCHEMAFULL TYPE RELATION IN user',
+    );
   });
 
   it('includes PERMISSIONS clause', () => {
@@ -108,7 +130,9 @@ describe('generateTableDefinition', () => {
 
   it('throws for invalid changefeed format', () => {
     expect(() =>
-      gen.generateTableDefinition(tableDef({ name: 'bad', config: { changefeed: 'abc' } })),
+      gen.generateTableDefinition(
+        tableDef({ name: 'bad', config: { changefeed: 'abc' } }),
+      ),
     ).toThrow(/invalid changefeed duration/i);
   });
 
@@ -137,48 +161,71 @@ describe('generateTableDefinition', () => {
 // ===========================================================================
 describe('generateFieldDefinition', () => {
   it('returns empty string for id field', () => {
-    expect(gen.generateFieldDefinition(col({ name: 'id', config: { type: 'string' } }))).toBe('');
+    expect(
+      gen.generateFieldDefinition(
+        col({ name: 'id', config: { type: 'string' } }),
+      ),
+    ).toBe('');
   });
 
   it('throws when tableName is missing', () => {
     expect(() =>
       gen.generateFieldDefinition(
-        col({ name: 'email', config: { type: 'string' }, tableName: undefined }),
+        col({
+          name: 'email',
+          config: { type: 'string' },
+          tableName: undefined,
+        }),
       ),
     ).toThrow('Column email is missing tableName');
   });
 
   it('generates basic string field', () => {
-    const sql = gen.generateFieldDefinition(col({ name: 'email', config: { type: 'string' } }));
-    expect(sql).toBe('DEFINE FIELD IF NOT EXISTS email ON TABLE test_table TYPE string');
+    const sql = gen.generateFieldDefinition(
+      col({ name: 'email', config: { type: 'string' } }),
+    );
+    expect(sql).toBe(
+      'DEFINE FIELD IF NOT EXISTS email ON TABLE test_table TYPE string',
+    );
   });
 
   it('wraps type in option<> when optional', () => {
     const sql = gen.generateFieldDefinition(
       col({ name: 'bio', config: { type: 'string', optional: true } }),
     );
-    expect(sql).toBe('DEFINE FIELD IF NOT EXISTS bio ON TABLE test_table TYPE option<string>');
+    expect(sql).toBe(
+      'DEFINE FIELD IF NOT EXISTS bio ON TABLE test_table TYPE option<string>',
+    );
   });
 
   it('generates record type with linked table', () => {
     const sql = gen.generateFieldDefinition(
       col({ name: 'author', config: { type: 'record', recordTable: 'user' } }),
     );
-    expect(sql).toBe('DEFINE FIELD IF NOT EXISTS author ON TABLE test_table TYPE record<user>');
+    expect(sql).toBe(
+      'DEFINE FIELD IF NOT EXISTS author ON TABLE test_table TYPE record<user>',
+    );
   });
 
   it('uses linksTo as fallback for record table', () => {
     const sql = gen.generateFieldDefinition(
       col({ name: 'author', config: { type: 'record', linksTo: 'user' } }),
     );
-    expect(sql).toBe('DEFINE FIELD IF NOT EXISTS author ON TABLE test_table TYPE record<user>');
+    expect(sql).toBe(
+      'DEFINE FIELD IF NOT EXISTS author ON TABLE test_table TYPE record<user>',
+    );
   });
 
   it('uses recordTable over linksTo when both provided', () => {
     const sql = gen.generateFieldDefinition(
-      col({ name: 'author', config: { type: 'record', recordTable: 'person', linksTo: 'user' } }),
+      col({
+        name: 'author',
+        config: { type: 'record', recordTable: 'person', linksTo: 'user' },
+      }),
     );
-    expect(sql).toBe('DEFINE FIELD IF NOT EXISTS author ON TABLE test_table TYPE record<person>');
+    expect(sql).toBe(
+      'DEFINE FIELD IF NOT EXISTS author ON TABLE test_table TYPE record<person>',
+    );
   });
 
   it('adds FLEXIBLE when configured', () => {
@@ -291,20 +338,32 @@ describe('generateFieldDefinition', () => {
 // ===========================================================================
 describe('generateFieldRedefine', () => {
   it('returns empty string for id field', () => {
-    expect(gen.generateFieldRedefine(col({ name: 'id', config: { type: 'string' } }))).toBe('');
+    expect(
+      gen.generateFieldRedefine(
+        col({ name: 'id', config: { type: 'string' } }),
+      ),
+    ).toBe('');
   });
 
   it('throws when tableName is missing', () => {
     expect(() =>
       gen.generateFieldRedefine(
-        col({ name: 'email', config: { type: 'string' }, tableName: undefined }),
+        col({
+          name: 'email',
+          config: { type: 'string' },
+          tableName: undefined,
+        }),
       ),
     ).toThrow('Column email is missing tableName');
   });
 
   it('uses OVERWRITE instead of IF NOT EXISTS', () => {
-    const sql = gen.generateFieldRedefine(col({ name: 'email', config: { type: 'string' } }));
-    expect(sql).toBe('DEFINE FIELD OVERWRITE email ON TABLE test_table TYPE string');
+    const sql = gen.generateFieldRedefine(
+      col({ name: 'email', config: { type: 'string' } }),
+    );
+    expect(sql).toBe(
+      'DEFINE FIELD OVERWRITE email ON TABLE test_table TYPE string',
+    );
   });
 
   it('generates tuple redefine correctly', () => {
@@ -353,7 +412,9 @@ describe('generateFieldRedefine', () => {
     const sql = gen.generateFieldRedefine(
       col({ name: 'author', config: { type: 'record', linksTo: 'user' } }),
     );
-    expect(sql).toBe('DEFINE FIELD OVERWRITE author ON TABLE test_table TYPE record<user>');
+    expect(sql).toBe(
+      'DEFINE FIELD OVERWRITE author ON TABLE test_table TYPE record<user>',
+    );
   });
 });
 
@@ -362,14 +423,20 @@ describe('generateFieldRedefine', () => {
 // ===========================================================================
 describe('generateFieldDefinitions', () => {
   it('returns [""] for id field', () => {
-    const result = gen.generateFieldDefinitions(col({ name: 'id', config: { type: 'string' } }));
+    const result = gen.generateFieldDefinitions(
+      col({ name: 'id', config: { type: 'string' } }),
+    );
     expect(result).toEqual(['']);
   });
 
   it('returns array with single statement for normal field', () => {
-    const result = gen.generateFieldDefinitions(col({ name: 'name', config: { type: 'string' } }));
+    const result = gen.generateFieldDefinitions(
+      col({ name: 'name', config: { type: 'string' } }),
+    );
     expect(result).toHaveLength(1);
-    expect(result[0]).toContain('DEFINE FIELD IF NOT EXISTS name ON TABLE test_table');
+    expect(result[0]).toContain(
+      'DEFINE FIELD IF NOT EXISTS name ON TABLE test_table',
+    );
   });
 
   it('throws when tableName is missing', () => {
@@ -407,20 +474,26 @@ describe('generateIndexDefinition', () => {
   const tableName = 'user';
 
   it('throws when tableName is missing', () => {
-    expect(() => gen.generateIndexDefinition(index({ name: 'idx', fields: ['name'] }), '')).toThrow(
-      'Table name is required for index definition',
-    );
+    expect(() =>
+      gen.generateIndexDefinition(index({ name: 'idx', fields: ['name'] }), ''),
+    ).toThrow('Table name is required for index definition');
   });
 
   it('throws when index name is missing', () => {
     expect(() =>
-      gen.generateIndexDefinition(index({ name: '', fields: ['name'] }), tableName),
+      gen.generateIndexDefinition(
+        index({ name: '', fields: ['name'] }),
+        tableName,
+      ),
     ).toThrow('Index name is required');
   });
 
   it('throws when no fields defined', () => {
     expect(() =>
-      gen.generateIndexDefinition(index({ name: 'idx', fields: [] }), tableName),
+      gen.generateIndexDefinition(
+        index({ name: 'idx', fields: [] }),
+        tableName,
+      ),
     ).toThrow('Index idx must have at least one field');
   });
 
@@ -437,7 +510,9 @@ describe('generateIndexDefinition', () => {
       index({ name: 'idx_email', fields: ['email'], type: 'unique' }),
       tableName,
     );
-    expect(sql).toBe('DEFINE INDEX idx_email ON TABLE user COLUMNS email UNIQUE');
+    expect(sql).toBe(
+      'DEFINE INDEX idx_email ON TABLE user COLUMNS email UNIQUE',
+    );
   });
 
   it('generates FULLTEXT index with analyzer', () => {
@@ -450,7 +525,9 @@ describe('generateIndexDefinition', () => {
       }),
       tableName,
     );
-    expect(sql).toBe('DEFINE INDEX idx_bio ON TABLE user COLUMNS bio FULLTEXT ANALYZER english');
+    expect(sql).toBe(
+      'DEFINE INDEX idx_bio ON TABLE user COLUMNS bio FULLTEXT ANALYZER english',
+    );
   });
 
   it('generates FULLTEXT index without analyzer', () => {
@@ -488,7 +565,9 @@ describe('generateIndexDefinition', () => {
       }),
       tableName,
     );
-    expect(sql).toBe('DEFINE INDEX idx_vec ON TABLE user COLUMNS vector HNSW DIMENSION 64');
+    expect(sql).toBe(
+      'DEFINE INDEX idx_vec ON TABLE user COLUMNS vector HNSW DIMENSION 64',
+    );
   });
 
   it('generates composite column index', () => {
@@ -496,7 +575,9 @@ describe('generateIndexDefinition', () => {
       index({ name: 'idx_full', fields: ['last_name', 'first_name'] }),
       tableName,
     );
-    expect(sql).toBe('DEFINE INDEX idx_full ON TABLE user COLUMNS last_name, first_name');
+    expect(sql).toBe(
+      'DEFINE INDEX idx_full ON TABLE user COLUMNS last_name, first_name',
+    );
   });
 });
 
@@ -509,13 +590,17 @@ describe('generateRemoveTable', () => {
   });
 
   it('throws when tableName is empty', () => {
-    expect(() => gen.generateRemoveTable('')).toThrow('Table name is required for REMOVE TABLE');
+    expect(() => gen.generateRemoveTable('')).toThrow(
+      'Table name is required for REMOVE TABLE',
+    );
   });
 });
 
 describe('generateRemoveField', () => {
   it('generates REMOVE FIELD', () => {
-    expect(gen.generateRemoveField('user', 'email')).toBe('REMOVE FIELD email ON TABLE user');
+    expect(gen.generateRemoveField('user', 'email')).toBe(
+      'REMOVE FIELD email ON TABLE user',
+    );
   });
 
   it('throws when tableName is empty', () => {
@@ -559,13 +644,17 @@ describe('generateRemoveAccess', () => {
   });
 
   it('throws when access name is empty', () => {
-    expect(() => gen.generateRemoveAccess('')).toThrow('Access name is required for REMOVE ACCESS');
+    expect(() => gen.generateRemoveAccess('')).toThrow(
+      'Access name is required for REMOVE ACCESS',
+    );
   });
 });
 
 describe('generateRemoveEvent', () => {
   it('generates REMOVE EVENT IF EXISTS', () => {
-    expect(gen.generateRemoveEvent('evt', 'user')).toBe('REMOVE EVENT IF EXISTS evt ON TABLE user');
+    expect(gen.generateRemoveEvent('evt', 'user')).toBe(
+      'REMOVE EVENT IF EXISTS evt ON TABLE user',
+    );
   });
 
   it('throws when eventName is empty', () => {
@@ -583,7 +672,9 @@ describe('generateRemoveEvent', () => {
 
 describe('generateRemoveFunction', () => {
   it('generates REMOVE FUNCTION IF EXISTS', () => {
-    expect(gen.generateRemoveFunction('fn::my_func')).toBe('REMOVE FUNCTION IF EXISTS fn::my_func');
+    expect(gen.generateRemoveFunction('fn::my_func')).toBe(
+      'REMOVE FUNCTION IF EXISTS fn::my_func',
+    );
   });
 
   it('throws when function name is empty', () => {
@@ -626,8 +717,10 @@ describe('generateAccessDefinition', () => {
     const sql = gen.generateAccessDefinition({
       name: 'account',
       type: 'RECORD',
-      signup: 'CREATE user SET email = $email, pass = crypto::argon2::generate($pass)',
-      signin: 'SELECT * FROM user WHERE email = $email AND crypto::argon2::compare(pass, $pass)',
+      signup:
+        'CREATE user SET email = $email, pass = crypto::argon2::generate($pass)',
+      signin:
+        'SELECT * FROM user WHERE email = $email AND crypto::argon2::compare(pass, $pass)',
     });
     expect(sql).toBe(
       'DEFINE ACCESS account ON DATABASE TYPE RECORD ' +
@@ -654,7 +747,9 @@ describe('generateAccessDefinition', () => {
       type: 'JWT',
       issuer: 'https://accounts.example.com',
     });
-    expect(sql).toBe('DEFINE ACCESS oidc ON DATABASE TYPE JWT ISSUER https://accounts.example.com');
+    expect(sql).toBe(
+      'DEFINE ACCESS oidc ON DATABASE TYPE JWT ISSUER https://accounts.example.com',
+    );
   });
 
   it('includes DURATION with TOKEN and SESSION', () => {
@@ -675,7 +770,9 @@ describe('generateAccessDefinition', () => {
       type: 'RECORD',
       duration: '24h',
     });
-    expect(sql).toBe('DEFINE ACCESS api ON DATABASE TYPE RECORD DURATION FOR SESSION 24h');
+    expect(sql).toBe(
+      'DEFINE ACCESS api ON DATABASE TYPE RECORD DURATION FOR SESSION 24h',
+    );
   });
 
   it('includes DURATION with only TOKEN', () => {
@@ -684,13 +781,15 @@ describe('generateAccessDefinition', () => {
       type: 'JWT',
       tokenDuration: '1h',
     });
-    expect(sql).toBe('DEFINE ACCESS api ON DATABASE TYPE JWT DURATION FOR TOKEN 1h');
+    expect(sql).toBe(
+      'DEFINE ACCESS api ON DATABASE TYPE JWT DURATION FOR TOKEN 1h',
+    );
   });
 
   it('throws when name is missing', () => {
-    expect(() => gen.generateAccessDefinition({ name: '', type: 'RECORD' })).toThrow(
-      'Access name is required for DEFINE ACCESS',
-    );
+    expect(() =>
+      gen.generateAccessDefinition({ name: '', type: 'RECORD' }),
+    ).toThrow('Access name is required for DEFINE ACCESS');
   });
 
   it('throws when type is missing', () => {
@@ -705,19 +804,14 @@ describe('generateAccessDefinition', () => {
 // ===========================================================================
 describe('generateAccessMigration', () => {
   it('generates DEFINE ACCESS for up direction', () => {
-    const sql = gen.generateAccessMigration({ name: 'web', type: 'JWT' }, 'up');
+    const sql = gen.generateAccessMigration({ name: 'web', type: 'JWT' });
     expect(sql).toContain('DEFINE ACCESS web');
   });
 
-  it('generates REMOVE ACCESS for down direction', () => {
-    const sql = gen.generateAccessMigration({ name: 'web', type: 'JWT' }, 'down');
-    expect(sql).toBe('REMOVE ACCESS IF EXISTS web ON DATABASE');
-  });
-
   it('throws when name is missing', () => {
-    expect(() => gen.generateAccessMigration({ name: '', type: 'JWT' }, 'up')).toThrow(
-      'Access name is required for migration',
-    );
+    expect(() =>
+      gen.generateAccessMigration({ name: '', type: 'JWT' }),
+    ).toThrow('Access name is required for migration');
   });
 });
 
@@ -798,25 +892,45 @@ describe('generateEventDefinition', () => {
 
   it('throws when name is missing', () => {
     expect(() =>
-      gen.generateEventDefinition({ name: '', what: 'user', when: 'true', then: ['SELECT 1'] }),
+      gen.generateEventDefinition({
+        name: '',
+        what: 'user',
+        when: 'true',
+        then: ['SELECT 1'],
+      }),
     ).toThrow('Event name is required for DEFINE EVENT');
   });
 
   it('throws when what (table) is missing', () => {
     expect(() =>
-      gen.generateEventDefinition({ name: 'evt', what: '', when: 'true', then: ['SELECT 1'] }),
+      gen.generateEventDefinition({
+        name: 'evt',
+        what: '',
+        when: 'true',
+        then: ['SELECT 1'],
+      }),
     ).toThrow('Event table (what) is required for DEFINE EVENT');
   });
 
   it('throws when when (condition) is missing', () => {
     expect(() =>
-      gen.generateEventDefinition({ name: 'evt', what: 'user', when: '', then: ['SELECT 1'] }),
+      gen.generateEventDefinition({
+        name: 'evt',
+        what: 'user',
+        when: '',
+        then: ['SELECT 1'],
+      }),
     ).toThrow('Event condition (when) is required for DEFINE EVENT');
   });
 
   it('throws when then (action) is empty', () => {
     expect(() =>
-      gen.generateEventDefinition({ name: 'evt', what: 'user', when: 'true', then: [] }),
+      gen.generateEventDefinition({
+        name: 'evt',
+        what: 'user',
+        when: 'true',
+        then: [],
+      }),
     ).toThrow('Event action (then) is required for DEFINE EVENT');
   });
 });
@@ -833,21 +947,18 @@ describe('generateEventMigration', () => {
   };
 
   it('generates DEFINE EVENT for up direction', () => {
-    const sql = gen.generateEventMigration(evt, 'up');
+    const sql = gen.generateEventMigration(evt);
     expect(sql).toContain('DEFINE EVENT IF NOT EXISTS on_create');
-  });
-
-  it('generates REMOVE EVENT for down direction', () => {
-    const sql = gen.generateEventMigration(evt, 'down');
-    expect(sql).toBe('REMOVE EVENT IF EXISTS on_create ON TABLE user');
   });
 
   it('throws when name is missing', () => {
     expect(() =>
-      gen.generateEventMigration(
-        { name: '', what: 'user', when: 'true', then: ['SELECT 1'] },
-        'up',
-      ),
+      gen.generateEventMigration({
+        name: '',
+        what: 'user',
+        when: 'true',
+        then: ['SELECT 1'],
+      }),
     ).toThrow('Event name is required for migration');
   });
 });
@@ -861,7 +972,9 @@ describe('generateFunctionDefinition', () => {
       name: 'fn::add',
       body: 'RETURN $a + $b',
     });
-    expect(sql).toBe('DEFINE FUNCTION IF NOT EXISTS fn::add { RETURN $a + $b }');
+    expect(sql).toBe(
+      'DEFINE FUNCTION IF NOT EXISTS fn::add { RETURN $a + $b }',
+    );
   });
 
   it('includes arguments', () => {
@@ -881,7 +994,9 @@ describe('generateFunctionDefinition', () => {
       args: ['$a', '$b'],
       body: 'RETURN $a + $b',
     });
-    expect(sql).toBe('DEFINE FUNCTION IF NOT EXISTS fn::add ($a, $b) { RETURN $a + $b }');
+    expect(sql).toBe(
+      'DEFINE FUNCTION IF NOT EXISTS fn::add ($a, $b) { RETURN $a + $b }',
+    );
   });
 
   it('includes COMMENT', () => {
@@ -903,15 +1018,15 @@ describe('generateFunctionDefinition', () => {
   });
 
   it('throws when name is missing', () => {
-    expect(() => gen.generateFunctionDefinition({ name: '', body: 'RETURN 1' })).toThrow(
-      'Function name is required for DEFINE FUNCTION',
-    );
+    expect(() =>
+      gen.generateFunctionDefinition({ name: '', body: 'RETURN 1' }),
+    ).toThrow('Function name is required for DEFINE FUNCTION');
   });
 
   it('throws when body is missing', () => {
-    expect(() => gen.generateFunctionDefinition({ name: 'fn::x', body: '' })).toThrow(
-      'Function body is required for DEFINE FUNCTION',
-    );
+    expect(() =>
+      gen.generateFunctionDefinition({ name: 'fn::x', body: '' }),
+    ).toThrow('Function body is required for DEFINE FUNCTION');
   });
 });
 
@@ -925,19 +1040,14 @@ describe('generateFunctionMigration', () => {
   };
 
   it('generates DEFINE FUNCTION for up direction', () => {
-    const sql = gen.generateFunctionMigration(fn, 'up');
+    const sql = gen.generateFunctionMigration(fn);
     expect(sql).toContain('DEFINE FUNCTION IF NOT EXISTS fn::add');
   });
 
-  it('generates REMOVE FUNCTION for down direction', () => {
-    const sql = gen.generateFunctionMigration(fn, 'down');
-    expect(sql).toBe('REMOVE FUNCTION IF EXISTS fn::add');
-  });
-
   it('throws when name is missing', () => {
-    expect(() => gen.generateFunctionMigration({ name: '', body: 'RETURN 1' }, 'up')).toThrow(
-      'Function name is required for migration',
-    );
+    expect(() =>
+      gen.generateFunctionMigration({ name: '', body: 'RETURN 1' }),
+    ).toThrow('Function name is required for migration');
   });
 });
 
@@ -973,7 +1083,9 @@ describe('generateAlterTablePermissions', () => {
     const sql = gen.generateAlterTablePermissions('user', {
       select: 'WHERE published = true',
     });
-    expect(sql).toBe('ALTER TABLE user PERMISSIONS FOR select WHERE published = true');
+    expect(sql).toBe(
+      'ALTER TABLE user PERMISSIONS FOR select WHERE published = true',
+    );
   });
 
   it('generates ALTER TABLE PERMISSIONS for all four actions', () => {
@@ -997,16 +1109,22 @@ describe('generateAlterTablePermissions', () => {
   });
 
   it('throws when tableName is empty', () => {
-    expect(() => gen.generateAlterTablePermissions('', { select: 'FULL' })).toThrow(
-      'Table name is required for ALTER TABLE PERMISSIONS',
-    );
+    expect(() =>
+      gen.generateAlterTablePermissions('', { select: 'FULL' }),
+    ).toThrow('Table name is required for ALTER TABLE PERMISSIONS');
   });
 });
 
 describe('generateAlterFieldPermissions', () => {
   it('generates ALTER FIELD PERMISSIONS', () => {
-    const sql = gen.generateAlterFieldPermissions('user', 'email', 'FOR select NONE');
-    expect(sql).toBe('ALTER FIELD email ON TABLE user PERMISSIONS FOR select NONE');
+    const sql = gen.generateAlterFieldPermissions(
+      'user',
+      'email',
+      'FOR select NONE',
+    );
+    expect(sql).toBe(
+      'ALTER FIELD email ON TABLE user PERMISSIONS FOR select NONE',
+    );
   });
 
   it('returns empty string when no permissions', () => {
@@ -1014,15 +1132,15 @@ describe('generateAlterFieldPermissions', () => {
   });
 
   it('throws when tableName is empty', () => {
-    expect(() => gen.generateAlterFieldPermissions('', 'email', 'FOR select NONE')).toThrow(
-      'Table name is required for ALTER FIELD PERMISSIONS',
-    );
+    expect(() =>
+      gen.generateAlterFieldPermissions('', 'email', 'FOR select NONE'),
+    ).toThrow('Table name is required for ALTER FIELD PERMISSIONS');
   });
 
   it('throws when fieldName is empty', () => {
-    expect(() => gen.generateAlterFieldPermissions('user', '', 'FOR select NONE')).toThrow(
-      'Field name is required for ALTER FIELD PERMISSIONS',
-    );
+    expect(() =>
+      gen.generateAlterFieldPermissions('user', '', 'FOR select NONE'),
+    ).toThrow('Field name is required for ALTER FIELD PERMISSIONS');
   });
 });
 
@@ -1044,7 +1162,9 @@ describe('generateAlterFieldDefault', () => {
 
   it('converts now() default to time::now()', () => {
     const sql = gen.generateAlterFieldDefault('user', 'created_at', 'now');
-    expect(sql).toBe('ALTER FIELD created_at ON TABLE user DEFAULT time::now()');
+    expect(sql).toBe(
+      'ALTER FIELD created_at ON TABLE user DEFAULT time::now()',
+    );
   });
 
   it('returns empty string when defaultValue is undefined', () => {
@@ -1068,11 +1188,6 @@ describe('generateAlterFieldDefault', () => {
 // generateTableMigration
 // ===========================================================================
 describe('generateTableMigration', () => {
-  it('generates REMOVE TABLE for down direction', () => {
-    const sql = gen.generateTableMigration(tableDef({ name: 'user' }), 'down');
-    expect(sql).toEqual(['REMOVE TABLE user']);
-  });
-
   it('generates table + fields for up direction', () => {
     const sql = gen.generateTableMigration(
       tableDef({
@@ -1082,7 +1197,6 @@ describe('generateTableMigration', () => {
           col({ name: 'email', config: { type: 'string' } }),
         ],
       }),
-      'up',
     );
     expect(sql).toHaveLength(3); // table + 2 fields
     expect(sql[0]).toBe('DEFINE TABLE IF NOT EXISTS user SCHEMAFULL');
@@ -1096,10 +1210,11 @@ describe('generateTableMigration', () => {
         name: 'user',
         columns: [col({ name: 'email', config: { type: 'string' } })],
         config: {
-          indexes: [index({ name: 'idx_email', fields: ['email'], type: 'unique' })],
+          indexes: [
+            index({ name: 'idx_email', fields: ['email'], type: 'unique' }),
+          ],
         },
       }),
-      'up',
     );
     expect(sql).toHaveLength(3); // table + field + index
     expect(sql[2]).toContain('DEFINE INDEX idx_email');
@@ -1111,7 +1226,6 @@ describe('generateTableMigration', () => {
         name: 'user',
         columns: [col({ name: 'id', config: { type: 'string' } })],
       }),
-      'up',
     );
     // id field returns empty string, filtered out
     expect(sql).toHaveLength(1);
@@ -1138,14 +1252,6 @@ describe('generateMigration', () => {
     expect(sql.filter((s) => s.includes('DEFINE TABLE'))).toHaveLength(2);
   });
 
-  it('generates REMOVE TABLE for down direction', () => {
-    const sql = gen.generateMigration(
-      [tableDef({ name: 'user' }), tableDef({ name: 'post' })],
-      'down',
-    );
-    expect(sql).toEqual(['REMOVE TABLE user', 'REMOVE TABLE post']);
-  });
-
   it('filters out empty statements', () => {
     const sql = gen.generateMigration([
       tableDef({
@@ -1162,33 +1268,36 @@ describe('generateMigration', () => {
 // generateMigrationFile
 // ===========================================================================
 describe('generateMigrationFile', () => {
-  it('returns both up and down arrays', () => {
+  it('returns up array', () => {
     const result = gen.generateMigrationFile(
-      [tableDef({ name: 'user', columns: [col({ name: 'name', config: { type: 'string' } })] })],
+      [
+        tableDef({
+          name: 'user',
+          columns: [col({ name: 'name', config: { type: 'string' } })],
+        }),
+      ],
       '1',
       'create_user',
     );
     expect(result).toHaveProperty('up');
-    expect(result).toHaveProperty('down');
     expect(Array.isArray(result.up)).toBe(true);
-    expect(Array.isArray(result.down)).toBe(true);
   });
 
   it('up contains DEFINE statements', () => {
     const result = gen.generateMigrationFile(
-      [tableDef({ name: 'user', columns: [col({ name: 'name', config: { type: 'string' } })] })],
+      [
+        tableDef({
+          name: 'user',
+          columns: [col({ name: 'name', config: { type: 'string' } })],
+        }),
+      ],
       '1',
       'create_user',
     );
     expect(result.up[0]).toContain('DEFINE TABLE IF NOT EXISTS user');
   });
 
-  it('down contains REMOVE statements', () => {
-    const result = gen.generateMigrationFile([tableDef({ name: 'user' })], '1', 'create_user');
-    expect(result.down).toContain('REMOVE TABLE user');
-  });
-
-  it('filters empty statements in both directions', () => {
+  it('filters empty statements from up array', () => {
     const result = gen.generateMigrationFile(
       [
         tableDef({
@@ -1201,8 +1310,81 @@ describe('generateMigrationFile', () => {
     );
     // up: only table def (id field returns empty)
     expect(result.up.filter((s) => s.trim() !== '')).toEqual(result.up);
-    // down: REMOVE TABLE
-    expect(result.down).toEqual(['REMOVE TABLE user']);
+  });
+});
+
+// ===========================================================================
+// generateAnalyzerDefinition
+// ===========================================================================
+describe('generateAnalyzerDefinition', () => {
+  it('generates with array tokenizers and filters', () => {
+    const analyzer: AnalyzerDefinition = {
+      name: 'fts_ascii',
+      tokenizers: ['class'],
+      filters: ['ascii', 'lowercase'],
+    };
+    const sql = gen.generateAnalyzerDefinition(analyzer);
+    expect(sql).toBe(
+      'DEFINE ANALYZER IF NOT EXISTS fts_ascii TOKENIZERS class FILTERS ascii, lowercase',
+    );
+  });
+
+  it('generates with string tokenizers and string filters', () => {
+    const analyzer: AnalyzerDefinition = {
+      name: 'simple',
+      tokenizers: 'class',
+      filters: 'lowercase',
+    };
+    const sql = gen.generateAnalyzerDefinition(analyzer);
+    expect(sql).toBe(
+      'DEFINE ANALYZER IF NOT EXISTS simple TOKENIZERS class FILTERS lowercase',
+    );
+  });
+
+  it('generates without filters when filters is undefined', () => {
+    const analyzer: AnalyzerDefinition = {
+      name: 'basic',
+      tokenizers: 'class',
+    };
+    const sql = gen.generateAnalyzerDefinition(analyzer);
+    expect(sql).toBe('DEFINE ANALYZER IF NOT EXISTS basic TOKENIZERS class');
+  });
+
+  it('omits TOKENIZERS clause when tokenizers is empty string', () => {
+    const analyzer: AnalyzerDefinition = {
+      name: 'empty',
+      tokenizers: '',
+    };
+    const sql = gen.generateAnalyzerDefinition(analyzer);
+    expect(sql).toBe('DEFINE ANALYZER IF NOT EXISTS empty');
+  });
+
+  it('generates with multiple tokenizers and filters', () => {
+    const analyzer: AnalyzerDefinition = {
+      name: 'multi',
+      tokenizers: ['blank', 'class', 'punctuation'],
+      filters: ['lowercase', 'snowball'],
+    };
+    const sql = gen.generateAnalyzerDefinition(analyzer);
+    expect(sql).toBe(
+      'DEFINE ANALYZER IF NOT EXISTS multi TOKENIZERS blank, class, punctuation FILTERS lowercase, snowball',
+    );
+  });
+});
+
+// ===========================================================================
+// generateRemoveAnalyzer
+// ===========================================================================
+describe('generateRemoveAnalyzer', () => {
+  it('generates REMOVE ANALYZER for a named analyzer', () => {
+    const sql = gen.generateRemoveAnalyzer('fts_ascii');
+    expect(sql).toBe('REMOVE ANALYZER IF EXISTS fts_ascii');
+  });
+
+  it('throws for empty name', () => {
+    expect(() => gen.generateRemoveAnalyzer('')).toThrow(
+      'Analyzer name is required for REMOVE ANALYZER',
+    );
   });
 });
 
@@ -1237,12 +1419,27 @@ describe('error handling edge cases', () => {
 
 describe('field type variations', () => {
   it('handles all common field types', () => {
-    const types = ['string', 'int', 'float', 'bool', 'datetime', 'decimal', 'bytes', 'uuid', 'any'];
+    const types = [
+      'string',
+      'int',
+      'float',
+      'bool',
+      'datetime',
+      'decimal',
+      'bytes',
+      'uuid',
+      'any',
+    ];
     for (const t of types) {
       const sql = gen.generateFieldDefinition(
-        col({ name: 'f', config: { type: t as ColumnDefinition['config']['type'] } }),
+        col({
+          name: 'f',
+          config: { type: t as ColumnDefinition['config']['type'] },
+        }),
       );
-      expect(sql).toBe(`DEFINE FIELD IF NOT EXISTS f ON TABLE test_table TYPE ${t}`);
+      expect(sql).toBe(
+        `DEFINE FIELD IF NOT EXISTS f ON TABLE test_table TYPE ${t}`,
+      );
     }
   });
 
@@ -1290,7 +1487,9 @@ describe('tuple field variations', () => {
     expect(sql).toContain(
       'DEFINE FIELD IF NOT EXISTS point ON TABLE test_table TYPE array<float, 1>',
     );
-    expect(sql).toContain('DEFINE FIELD IF NOT EXISTS point[0] ON TABLE test_table TYPE float');
+    expect(sql).toContain(
+      'DEFINE FIELD IF NOT EXISTS point[0] ON TABLE test_table TYPE float',
+    );
   });
 
   it('generates tuple with element assertions', () => {
@@ -1356,17 +1555,251 @@ describe('empty and boundary states', () => {
   });
 
   it('generateTableMigration with no columns', () => {
-    const sql = gen.generateTableMigration(tableDef({ name: 'empty', columns: [] }), 'up');
+    const sql = gen.generateTableMigration(
+      tableDef({ name: 'empty', columns: [] }),
+    );
     expect(sql).toEqual(['DEFINE TABLE IF NOT EXISTS empty SCHEMAFULL']);
   });
 
   it('generateMigration with empty tables array', () => {
-    const sql = gen.generateMigration([], 'up');
+    const sql = gen.generateMigration([]);
     expect(sql).toEqual([]);
   });
 
   it('generateMigrationFile with empty tables', () => {
     const result = gen.generateMigrationFile([], '1', 'empty');
-    expect(result).toEqual({ up: [], down: [] });
+    expect(result).toEqual({ up: [] });
+  });
+});
+
+// ===========================================================================
+// generateNamespaceDefinition
+// ===========================================================================
+describe('generateNamespaceDefinition', () => {
+  const gen = new SurrealQLGenerator();
+
+  it('generates basic namespace', () => {
+    const sql = gen.generateNamespaceDefinition('production');
+    expect(sql).toBe('DEFINE NAMESPACE production');
+  });
+
+  it('throws for empty name', () => {
+    expect(() => gen.generateNamespaceDefinition('')).toThrow(
+      'Namespace name is required for DEFINE NAMESPACE',
+    );
+  });
+
+  it('generates with comment', () => {
+    const sql = gen.generateNamespaceDefinition('staging', {
+      comment: 'Staging environment',
+    });
+    expect(sql).toBe('DEFINE NAMESPACE staging COMMENT "Staging environment"');
+  });
+
+  it('generates with IF NOT EXISTS', () => {
+    const sql = gen.generateNamespaceDefinition('dev', { ifNotExists: true });
+    expect(sql).toBe('DEFINE NAMESPACE IF NOT EXISTS dev');
+  });
+
+  it('generates with all options', () => {
+    const sql = gen.generateNamespaceDefinition('test', {
+      ifNotExists: true,
+      comment: 'Test env',
+    });
+    expect(sql).toBe('DEFINE NAMESPACE IF NOT EXISTS test COMMENT "Test env"');
+  });
+});
+
+// ===========================================================================
+// generateRemoveNamespace
+// ===========================================================================
+describe('generateRemoveNamespace', () => {
+  const gen = new SurrealQLGenerator();
+
+  it('generates basic remove', () => {
+    expect(gen.generateRemoveNamespace('production')).toBe(
+      'REMOVE NAMESPACE production',
+    );
+  });
+
+  it('generates with IF EXISTS', () => {
+    expect(gen.generateRemoveNamespace('dev', true)).toBe(
+      'REMOVE NAMESPACE IF EXISTS dev',
+    );
+  });
+
+  it('throws for empty name', () => {
+    expect(() => gen.generateRemoveNamespace('')).toThrow(
+      'Namespace name is required for REMOVE NAMESPACE',
+    );
+  });
+});
+
+// ---------------------------------------------------------------------------
+// DATABASE definitions
+// ---------------------------------------------------------------------------
+
+describe('generateDatabaseDefinition', () => {
+  const gen = new SurrealQLGenerator();
+
+  it('generates basic DEFINE DATABASE', () => {
+    expect(gen.generateDatabaseDefinition('testdb')).toBe(
+      'DEFINE DATABASE testdb',
+    );
+  });
+
+  it('generates with IF NOT EXISTS', () => {
+    expect(
+      gen.generateDatabaseDefinition('testdb', { ifNotExists: true }),
+    ).toBe('DEFINE DATABASE IF NOT EXISTS testdb');
+  });
+
+  it('generates with COMMENT', () => {
+    expect(
+      gen.generateDatabaseDefinition('testdb', { comment: 'Test database' }),
+    ).toBe('DEFINE DATABASE testdb COMMENT "Test database"');
+  });
+
+  it('generates with IF NOT EXISTS and COMMENT', () => {
+    expect(
+      gen.generateDatabaseDefinition('testdb', {
+        ifNotExists: true,
+        comment: 'Test',
+      }),
+    ).toBe('DEFINE DATABASE IF NOT EXISTS testdb COMMENT "Test"');
+  });
+
+  it('escapes reserved words with backticks', () => {
+    expect(gen.generateDatabaseDefinition('use')).toBe('DEFINE DATABASE use');
+  });
+
+  it('throws for empty name', () => {
+    expect(() => gen.generateDatabaseDefinition('')).toThrow(
+      'Database name is required for DEFINE DATABASE',
+    );
+  });
+});
+
+describe('generateRemoveDatabase', () => {
+  const gen = new SurrealQLGenerator();
+
+  it('generates basic REMOVE DATABASE', () => {
+    expect(gen.generateRemoveDatabase('testdb')).toBe('REMOVE DATABASE testdb');
+  });
+
+  it('generates with IF EXISTS', () => {
+    expect(gen.generateRemoveDatabase('testdb', true)).toBe(
+      'REMOVE DATABASE IF EXISTS testdb',
+    );
+  });
+
+  it('escapes reserved words with backticks', () => {
+    expect(gen.generateRemoveDatabase('use')).toBe('REMOVE DATABASE use');
+  });
+
+  it('throws for empty name', () => {
+    expect(() => gen.generateRemoveDatabase('')).toThrow(
+      'Database name is required for REMOVE DATABASE',
+    );
+  });
+});
+
+// ===========================================================================
+// generateSequenceDefinition
+// ===========================================================================
+describe('generateSequenceDefinition', () => {
+  const gen = new SurrealQLGenerator();
+
+  it('generates basic DEFINE SEQUENCE', () => {
+    const seq: SurrealSequence = { name: 'my_seq' };
+    expect(gen.generateSequenceDefinition(seq)).toBe(
+      'DEFINE SEQUENCE IF NOT EXISTS my_seq',
+    );
+  });
+
+  it('includes START and INCREMENT', () => {
+    const seq: SurrealSequence = { name: 'my_seq', start: 1, increment: 2 };
+    expect(gen.generateSequenceDefinition(seq)).toBe(
+      'DEFINE SEQUENCE IF NOT EXISTS my_seq START 1 INCREMENT 2',
+    );
+  });
+
+  it('includes MIN and MAX', () => {
+    const seq: SurrealSequence = { name: 'seq1', min: 0, max: 1000 };
+    expect(gen.generateSequenceDefinition(seq)).toBe(
+      'DEFINE SEQUENCE IF NOT EXISTS seq1 MIN 0 MAX 1000',
+    );
+  });
+
+  it('includes CACHE and CYCLE', () => {
+    const seq: SurrealSequence = { name: 'seq1', cache: 10, cycle: true };
+    expect(gen.generateSequenceDefinition(seq)).toBe(
+      'DEFINE SEQUENCE IF NOT EXISTS seq1 CACHE 10 CYCLE',
+    );
+  });
+
+  it('includes COMMENT', () => {
+    const seq: SurrealSequence = { name: 'seq1', comment: 'my sequence' };
+    expect(gen.generateSequenceDefinition(seq)).toBe(
+      'DEFINE SEQUENCE IF NOT EXISTS seq1 COMMENT "my sequence"',
+    );
+  });
+
+  it('includes all options', () => {
+    const seq: SurrealSequence = {
+      name: 'full_seq',
+      start: 1,
+      increment: 5,
+      min: 0,
+      max: 99999,
+      cache: 100,
+      cycle: true,
+      comment: 'full sequence',
+    };
+    expect(gen.generateSequenceDefinition(seq)).toBe(
+      'DEFINE SEQUENCE IF NOT EXISTS full_seq START 1 INCREMENT 5 MIN 0 MAX 99999 CACHE 100 CYCLE COMMENT "full sequence"',
+    );
+  });
+
+  it('escapes special characters in names', () => {
+    const seq: SurrealSequence = { name: 'my-seq' };
+    expect(gen.generateSequenceDefinition(seq)).toBe(
+      'DEFINE SEQUENCE IF NOT EXISTS `my-seq`',
+    );
+  });
+
+  it('throws for empty name', () => {
+    expect(() => gen.generateSequenceDefinition({ name: '' })).toThrow(
+      'Sequence name is required for DEFINE SEQUENCE',
+    );
+  });
+});
+
+// ===========================================================================
+// generateRemoveSequence
+// ===========================================================================
+describe('generateRemoveSequence', () => {
+  const gen = new SurrealQLGenerator();
+
+  it('generates basic REMOVE SEQUENCE', () => {
+    expect(gen.generateRemoveSequence('my_seq')).toBe('REMOVE SEQUENCE my_seq');
+  });
+
+  it('generates with IF EXISTS', () => {
+    expect(gen.generateRemoveSequence('my_seq', true)).toBe(
+      'REMOVE SEQUENCE IF EXISTS my_seq',
+    );
+  });
+
+  it('escapes special characters in names', () => {
+    expect(gen.generateRemoveSequence('my-seq')).toBe(
+      'REMOVE SEQUENCE `my-seq`',
+    );
+  });
+
+  it('throws for empty name', () => {
+    expect(() => gen.generateRemoveSequence('')).toThrow(
+      'Sequence name is required for REMOVE SEQUENCE',
+    );
   });
 });

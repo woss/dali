@@ -1,11 +1,84 @@
 /**
- * Tests for pure functions in cli.ts
+ * Tests for cli.ts
  *
- * Covers: slugify(), parseGlobalOptions()
- * Does NOT test main() since it depends on process.argv, loadConfig, and sub-handlers.
+ * Covers: slugify(), parseGlobalOptions(), main()
  */
-import { describe, expect, it } from 'vite-plus/test';
-import { parseGlobalOptions, slugify } from '../../cli.js';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+// ── Mocks (hoisted before imports) ──────────────────────────────────────────
+
+vi.mock('../../config.js', () => ({
+  loadConfig: vi.fn().mockResolvedValue({
+    url: 'http://localhost:8000',
+    namespace: 'test_ns',
+    database: 'test_db',
+    schema: { dir: './schema', pattern: '**/*.ts' },
+    migrations: { dir: './migrations', table: '__migrations' },
+  }),
+}));
+
+vi.mock('../../cli/operations.js', () => ({
+  createConnection: vi
+    .fn()
+    .mockResolvedValue({ query: vi.fn(), disconnect: vi.fn() }),
+  createConnectionWithTimeout: vi
+    .fn()
+    .mockResolvedValue({ query: vi.fn(), disconnect: vi.fn() }),
+  safeDisconnect: vi.fn().mockResolvedValue(undefined),
+  formatError: vi.fn((e: unknown) =>
+    e instanceof Error ? e.message : String(e),
+  ),
+}));
+
+vi.mock('../../cli/diff.js', () => ({
+  diffSchema: vi.fn().mockResolvedValue(undefined),
+}));
+
+vi.mock('../../cli/generate.js', () => ({
+  loadSchemaFiles: vi.fn().mockResolvedValue({
+    tables: [{ name: 'test_table', columns: [] }],
+    access: [],
+    functions: [],
+    analyzers: [],
+  }),
+  generateMigration: vi.fn().mockResolvedValue('/mock/path/migration.ts'),
+}));
+
+vi.mock('../../core/runner.js', () => ({
+  MigrationRunner: vi.fn().mockImplementation(() => ({
+    init: vi.fn().mockResolvedValue(undefined),
+    status: vi.fn().mockResolvedValue({ applied: [], pending: [] }),
+    up: vi.fn().mockResolvedValue({ applied: [] }),
+  })),
+}));
+
+vi.mock('../../cli/migrate.js', () => ({
+  migrateUp: vi.fn().mockResolvedValue(undefined),
+  migrateDeploy: vi.fn().mockResolvedValue(undefined),
+  migrateDev: vi.fn().mockResolvedValue(undefined),
+  migrateSync: vi.fn().mockResolvedValue(undefined),
+  migrateResume: vi.fn().mockResolvedValue(undefined),
+}));
+
+vi.mock('../../cli/pull.js', () => ({
+  pullSchema: vi.fn().mockResolvedValue(undefined),
+}));
+
+// ── Imports (after mocks) ───────────────────────────────────────────────────
+
+import { diffSchema } from '../../cli/diff.js';
+import { generateMigration, loadSchemaFiles } from '../../cli/generate.js';
+import {
+  migrateDeploy,
+  migrateDev,
+  migrateResume,
+  migrateSync,
+  migrateUp,
+} from '../../cli/migrate.js';
+import { createConnection, safeDisconnect } from '../../cli/operations.js';
+import { pullSchema } from '../../cli/pull.js';
+import { main, parseGlobalOptions, slugify } from '../../cli.js';
+import { loadConfig } from '../../config.js';
 
 // ============================================================================
 // slugify
@@ -90,16 +163,6 @@ describe('parseGlobalOptions', () => {
     expect(opts.to).toBe('001');
   });
 
-  it('parses --steps with numeric value', () => {
-    const opts = parseGlobalOptions(['--steps', '5']);
-    expect(opts.steps).toBe(5);
-  });
-
-  it('parses --steps with zero', () => {
-    const opts = parseGlobalOptions(['--steps', '0']);
-    expect(opts.steps).toBe(0);
-  });
-
   it('parses --name / -m', () => {
     expect(parseGlobalOptions(['--name', 'test']).name).toBe('test');
     expect(parseGlobalOptions(['-m', 'test']).name).toBe('test');
@@ -166,15 +229,12 @@ describe('parseGlobalOptions', () => {
       './schema',
       '--to',
       '003',
-      '--steps',
-      '2',
     ]);
     expect(opts.config).toBe('config.ts');
     expect(opts.name).toBe('my_migration');
     expect(opts.output).toBe('./migrations');
     expect(opts.schema).toBe('./schema');
     expect(opts.to).toBe('003');
-    expect(opts.steps).toBe(2);
   });
 
   it('handles dry-run before --config', () => {
@@ -188,5 +248,187 @@ describe('parseGlobalOptions', () => {
     const opts = parseGlobalOptions(['--dry-run', '--force']);
     expect(opts.dryRun).toBe(true);
     expect(opts.force).toBe(true);
+  });
+});
+
+// ============================================================================
+// main() — command dispatch
+// ============================================================================
+
+describe('main()', () => {
+  let exitSpy: ReturnType<typeof vi.spyOn>;
+  let consoleLogSpy: ReturnType<typeof vi.spyOn>;
+  let consoleErrSpy: ReturnType<typeof vi.spyOn>;
+
+  beforeEach(() => {
+    exitSpy = vi
+      .spyOn(process, 'exit')
+      .mockImplementation(() => undefined as never);
+    consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    consoleErrSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  // ── No command / help ───────────────────────────────────────────────────
+
+  it('prints help and exits when no command given', async () => {
+    await main([]);
+    expect(exitSpy).toHaveBeenCalledWith(0);
+    expect(consoleLogSpy).toHaveBeenCalled();
+  });
+
+  it('prints help for "help" command', async () => {
+    await main(['help']);
+    expect(consoleLogSpy).toHaveBeenCalled();
+  });
+
+  it('prints help for "--help" flag', async () => {
+    await main(['--help']);
+    expect(consoleLogSpy).toHaveBeenCalled();
+  });
+
+  it('prints help for "-h" flag', async () => {
+    await main(['-h']);
+    expect(consoleLogSpy).toHaveBeenCalled();
+  });
+
+  // ── Version ─────────────────────────────────────────────────────────────
+
+  it('prints version for "--version"', async () => {
+    await main(['--version']);
+    expect(consoleLogSpy).toHaveBeenCalledWith('dali-orm v0.1.0');
+  });
+
+  it('prints version for "-v"', async () => {
+    await main(['-v']);
+    expect(consoleLogSpy).toHaveBeenCalledWith('dali-orm v0.1.0');
+  });
+
+  // ── Unknown command ─────────────────────────────────────────────────────
+
+  it('exits on unknown command', async () => {
+    await main(['foobar']);
+    expect(consoleErrSpy).toHaveBeenCalledWith('Unknown command: foobar');
+    expect(exitSpy).toHaveBeenCalledWith(1);
+  });
+
+  // ── Init ────────────────────────────────────────────────────────────────
+
+  it('handles init command', async () => {
+    await main(['init']);
+    expect(consoleLogSpy).toHaveBeenCalledWith(
+      'Initializing DaliORM project...',
+    );
+  });
+
+  // ── Migrate ─────────────────────────────────────────────────────────────
+
+  it('dispatches migrate up', async () => {
+    await main(['migrate', 'up']);
+    expect(migrateUp).toHaveBeenCalled();
+  });
+
+  it('dispatches migrate deploy', async () => {
+    await main(['migrate', 'deploy']);
+    expect(migrateDeploy).toHaveBeenCalled();
+  });
+
+  it('dispatches migrate sync', async () => {
+    await main(['migrate', 'sync']);
+    expect(migrateSync).toHaveBeenCalled();
+  });
+
+  it('dispatches migrate resume', async () => {
+    await main(['migrate', 'resume']);
+    expect(migrateResume).toHaveBeenCalled();
+  });
+
+  it('dispatches migrate dev with name', async () => {
+    await main(['migrate', 'dev', 'add_users']);
+    expect(migrateDev).toHaveBeenCalledWith(
+      expect.objectContaining({ name: 'add_users' }),
+    );
+  });
+
+  it('exits when migrate dev has no name', async () => {
+    await main(['migrate', 'dev']);
+    expect(consoleErrSpy).toHaveBeenCalledWith(
+      'Usage: dali-orm migrate dev <name> [options]',
+    );
+    expect(exitSpy).toHaveBeenCalledWith(1);
+  });
+
+  it('dispatches migrate help', async () => {
+    await main(['migrate', 'help']);
+    expect(consoleLogSpy).toHaveBeenCalled();
+  });
+
+  it('defaults migrate to status when no subcommand', async () => {
+    await main(['migrate']);
+    expect(createConnection).toHaveBeenCalled();
+  });
+
+  // ── Generate ────────────────────────────────────────────────────────────
+
+  it('dispatches generate with name', async () => {
+    await main(['generate', 'add_users']);
+    expect(generateMigration).toHaveBeenCalled();
+  });
+
+  it('exits when generate has no name', async () => {
+    await main(['generate']);
+    expect(exitSpy).toHaveBeenCalledWith(1);
+  });
+
+  // ── Pull ────────────────────────────────────────────────────────────────
+
+  it('dispatches pull command', async () => {
+    await main(['pull']);
+    expect(pullSchema).toHaveBeenCalled();
+  });
+
+  it('passes table arg to pull', async () => {
+    await main(['pull', 'users']);
+    expect(pullSchema).toHaveBeenCalledWith(
+      expect.objectContaining({ table: 'users' }),
+    );
+  });
+
+  // ── Diff ────────────────────────────────────────────────────────────────
+
+  it('dispatches diff command', async () => {
+    await main(['diff']);
+    expect(diffSchema).toHaveBeenCalled();
+  });
+
+  // ── Query ───────────────────────────────────────────────────────────────
+
+  it('dispatches query command', async () => {
+    const mockQuery = vi.fn().mockResolvedValue([{ result: 'ok' }]);
+    vi.mocked(createConnection).mockResolvedValue({
+      query: mockQuery,
+    } as never);
+    await main(['query', 'SELECT * FROM users']);
+    expect(mockQuery).toHaveBeenCalledWith('SELECT * FROM users');
+  });
+
+  it('exits when query has no string', async () => {
+    await main(['query']);
+    expect(consoleErrSpy).toHaveBeenCalledWith(
+      'Usage: dali-orm query "<SURREALQL>" [options]',
+    );
+    expect(exitSpy).toHaveBeenCalledWith(1);
+  });
+
+  // ── Error handling ──────────────────────────────────────────────────────
+
+  it('catches handler errors and exits', async () => {
+    vi.mocked(migrateUp).mockRejectedValueOnce(new Error('migration failed'));
+    await main(['migrate', 'up']);
+    expect(consoleErrSpy).toHaveBeenCalledWith('Error:', 'migration failed');
+    expect(exitSpy).toHaveBeenCalledWith(1);
   });
 });

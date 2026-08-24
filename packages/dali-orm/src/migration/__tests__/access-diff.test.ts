@@ -1,6 +1,10 @@
-import { describe, expect, it } from 'vite-plus/test';
+import { describe, expect, it } from 'vitest';
 import { SurrealQLGenerator } from '../core/generator.js';
-import { createEmptyDdl, type SurrealAccess, type SurrealDbDDL } from '../ddl/ddl.js';
+import {
+  createEmptyDdl,
+  type SurrealAccess,
+  type SurrealDbDDL,
+} from '../ddl/ddl.js';
 import { ddlDiff } from '../ddl/diff.js';
 
 const generator = new SurrealQLGenerator();
@@ -14,10 +18,14 @@ function createDdlWithAccess(access: SurrealAccess[]): SurrealDbDDL {
 describe('access DDL diff', () => {
   it('detects new access definition', async () => {
     const current = createDdlWithAccess([]);
-    const target = createDdlWithAccess([{ name: 'web_access', type: 'RECORD' }]);
+    const target = createDdlWithAccess([
+      { name: 'web_access', type: 'RECORD' },
+    ]);
 
     const result = await ddlDiff(current, target);
-    const createStmts = result.statements.filter((s) => s.type === 'create_access');
+    const createStmts = result.statements.filter(
+      (s) => s.type === 'create_access',
+    );
     expect(createStmts).toHaveLength(1);
     if (createStmts[0].type === 'create_access') {
       expect(createStmts[0].access.name).toBe('web_access');
@@ -33,12 +41,16 @@ describe('access DDL diff', () => {
     ]);
 
     const result = await ddlDiff(current, target);
-    const createStmts = result.statements.filter((s) => s.type === 'create_access');
+    const createStmts = result.statements.filter(
+      (s) => s.type === 'create_access',
+    );
     expect(createStmts).toHaveLength(3);
   });
 
   it('does NOT detect removal of access (safety-first)', async () => {
-    const current = createDdlWithAccess([{ name: 'web_access', type: 'RECORD' }]);
+    const current = createDdlWithAccess([
+      { name: 'web_access', type: 'RECORD' },
+    ]);
     const target = createDdlWithAccess([]);
 
     const result = await ddlDiff(current, target);
@@ -47,23 +59,33 @@ describe('access DDL diff', () => {
   });
 
   it('does not create duplicate statements for unchanged access', async () => {
-    const current = createDdlWithAccess([{ name: 'web_access', type: 'RECORD' }]);
-    const target = createDdlWithAccess([{ name: 'web_access', type: 'RECORD' }]);
+    const current = createDdlWithAccess([
+      { name: 'web_access', type: 'RECORD' },
+    ]);
+    const target = createDdlWithAccess([
+      { name: 'web_access', type: 'RECORD' },
+    ]);
 
     const result = await ddlDiff(current, target);
-    const createStmts = result.statements.filter((s) => s.type === 'create_access');
+    const createStmts = result.statements.filter(
+      (s) => s.type === 'create_access',
+    );
     expect(createStmts).toHaveLength(0);
   });
 
   it('detects only new access when mixing existing and new', async () => {
-    const current = createDdlWithAccess([{ name: 'existing_access', type: 'RECORD' }]);
+    const current = createDdlWithAccess([
+      { name: 'existing_access', type: 'RECORD' },
+    ]);
     const target = createDdlWithAccess([
       { name: 'existing_access', type: 'RECORD' },
       { name: 'new_access', type: 'JWT' },
     ]);
 
     const result = await ddlDiff(current, target);
-    const createStmts = result.statements.filter((s) => s.type === 'create_access');
+    const createStmts = result.statements.filter(
+      (s) => s.type === 'create_access',
+    );
     expect(createStmts).toHaveLength(1);
     if (createStmts[0].type === 'create_access') {
       expect(createStmts[0].access.name).toBe('new_access');
@@ -142,26 +164,26 @@ describe('access SQL generation', () => {
 
   it('generates access migration up', () => {
     const access: SurrealAccess = { name: 'my_access', type: 'JWT' };
-    const sql = generator.generateAccessMigration(access, 'up');
+    const sql = generator.generateAccessMigration(access);
     expect(sql).toContain('DEFINE ACCESS my_access ON DATABASE TYPE JWT');
-  });
-
-  it('generates access migration down', () => {
-    const access: SurrealAccess = { name: 'my_access', type: 'JWT' };
-    const sql = generator.generateAccessMigration(access, 'down');
-    expect(sql).toBe('REMOVE ACCESS IF EXISTS my_access ON DATABASE');
   });
 
   it('converts statement to SQL via statementToSql', async () => {
     const current = createDdlWithAccess([]);
-    const target = createDdlWithAccess([{ name: 'test_access', type: 'RECORD', duration: '1h' }]);
+    const target = createDdlWithAccess([
+      { name: 'test_access', type: 'RECORD', duration: '1h' },
+    ]);
 
     const result = await ddlDiff(current, target);
     expect(result.sqlStatements.length).toBeGreaterThan(0);
 
-    const accessSql = result.sqlStatements.find((s) => s.includes('DEFINE ACCESS'));
+    const accessSql = result.sqlStatements.find((s) =>
+      s.includes('DEFINE ACCESS'),
+    );
     expect(accessSql).toBeDefined();
-    expect(accessSql).toContain('DEFINE ACCESS test_access ON DATABASE TYPE RECORD');
+    expect(accessSql).toContain(
+      'DEFINE ACCESS test_access ON DATABASE TYPE RECORD',
+    );
     expect(accessSql).toContain('DURATION FOR SESSION 1h');
   });
 });

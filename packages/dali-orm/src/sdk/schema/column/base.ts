@@ -1,4 +1,8 @@
-import type { ColumnConfig, ColumnDefinition, SurrealColumnType } from './types.js';
+import type {
+  ColumnConfig,
+  ColumnDefinition,
+  SurrealColumnType,
+} from './types.js';
 
 /**
  * Base class for all column builders.
@@ -20,37 +24,37 @@ export abstract class BaseColumnBuilder<T extends BaseColumnBuilder<T>> {
   }
 
   optional(): T & { _optional: true } {
-    this.config.optional = true;
+    this.config = { ...this.config, optional: true };
     return this.self as T & { _optional: true };
   }
 
   default(value: unknown): T {
-    this.config.default = this.formatDefault(value);
+    this.config = { ...this.config, default: this.formatDefault(value) };
     return this.self;
   }
 
   assert(condition: string): T {
-    this.config.assert = condition;
+    this.config = { ...this.config, assert: condition };
     return this.self;
   }
 
   readonly(): T {
-    this.config.readonly = true;
+    this.config = { ...this.config, readonly: true };
     return this.self;
   }
 
   flexible(): T {
-    this.config.flexible = true;
+    this.config = { ...this.config, flexible: true };
     return this.self;
   }
 
   permissions(permissions: string): T {
-    this.config.permissions = permissions;
+    this.config = { ...this.config, permissions };
     return this.self;
   }
 
   unique(): T {
-    this.config.unique = true;
+    this.config = { ...this.config, unique: true };
     return this.self;
   }
 

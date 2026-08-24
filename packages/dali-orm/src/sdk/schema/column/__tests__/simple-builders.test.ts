@@ -1,14 +1,19 @@
-import { describe, expect, it } from 'vite-plus/test';
+import { describe, expect, it } from 'vitest';
+import { SurrealQLGenerator } from '../../../../migration/core/generator.js';
+import { record } from '../record.js';
 import {
-  string,
-  int,
-  float,
-  bool,
-  datetime,
-  duration,
-  decimal,
   array,
+  bool,
+  bytes,
+  datetime,
+  decimal,
+  duration,
+  float,
+  int,
+  literal,
   object,
+  set,
+  string,
   uuid,
 } from '../simple-builders.ts';
 
@@ -84,8 +89,40 @@ describe('simple-builders', () => {
       expect(def.config.type).toBe('uuid');
     });
 
+    it('set() creates a set builder', () => {
+      const b = set('tags');
+      expect(b.name).toBe('tags');
+      const def = b.build();
+      expect(def.config.type).toBe('set');
+    });
+
+    it('bytes() creates a bytes builder', () => {
+      const b = bytes('data');
+      expect(b.name).toBe('data');
+      const def = b.build();
+      expect(def.config.type).toBe('bytes');
+    });
+
+    it('literal() creates a literal builder', () => {
+      const b = literal('color');
+      expect(b.name).toBe('color');
+      const def = b.build();
+      expect(def.config.type).toBe('literal');
+    });
+
     it('all wrapper types are distinct', () => {
-      const types = [string, int, float, bool, datetime, duration, decimal, array, object, uuid];
+      const types = [
+        string,
+        int,
+        float,
+        bool,
+        datetime,
+        duration,
+        decimal,
+        array,
+        object,
+        uuid,
+      ];
       const names = ['s', 'i', 'f', 'b', 'd', 'du', 'de', 'a', 'o', 'u'];
       const built = names.map((n, i) => types[i](n).build());
       const typeStrings = built.map((d) => d.config.type);
@@ -179,7 +216,10 @@ describe('simple-builders', () => {
 
     it('defaultRaw stores raw expression, separate from default', () => {
       const b = string('hash');
-      const def = b.default('fallback').defaultRaw('crypto::blake3(content)').build();
+      const def = b
+        .default('fallback')
+        .defaultRaw('crypto::blake3(content)')
+        .build();
       expect(def.config.defaultRaw).toBe('crypto::blake3(content)');
       expect(def.config.default).toBe('fallback');
     });
@@ -266,7 +306,10 @@ describe('simple-builders', () => {
 
     it('default and defaultRaw are independent config fields', () => {
       const b = string('hash');
-      const def = b.default('fallback').defaultRaw('crypto::sha256(content)').build();
+      const def = b
+        .default('fallback')
+        .defaultRaw('crypto::sha256(content)')
+        .build();
       expect(def.config.defaultRaw).toBe('crypto::sha256(content)');
       expect(def.config.default).toBe('fallback');
     });
@@ -274,7 +317,10 @@ describe('simple-builders', () => {
     it('default overrides defaultRaw if called last', () => {
       const b = string('hash');
       // defaultRaw sets defaultRaw field, default sets default field — they're independent
-      const def = b.defaultRaw('crypto::sha256(content)').default('fallback').build();
+      const def = b
+        .defaultRaw('crypto::sha256(content)')
+        .default('fallback')
+        .build();
       expect(def.config.defaultRaw).toBe('crypto::sha256(content)');
       expect(def.config.default).toBe('fallback');
     });
@@ -299,6 +345,82 @@ describe('simple-builders', () => {
       expect(def1.config.unique).toBe(true);
       expect(def2.config.optional).toBeUndefined();
       expect(def2.config.unique).toBeUndefined();
+    });
+  });
+
+  describe('record reference', () => {
+    it('record().reference({ onDelete: "CASCADE" }) sets onDelete', () => {
+      const b = record('users').reference({ onDelete: 'CASCADE' });
+      const def = b.build('posts', 'owner');
+      expect(def.config.onDelete).toBe('CASCADE');
+    });
+
+    it('record().reference({ onDelete: "SET NULL" }) sets onDelete', () => {
+      const b = record('users').reference({ onDelete: 'SET NULL' });
+      const def = b.build('posts', 'owner');
+      expect(def.config.onDelete).toBe('SET NULL');
+    });
+
+    it('record().reference({ onDelete: "RESTRICT" }) sets onDelete', () => {
+      const b = record('users').reference({ onDelete: 'RESTRICT' });
+      const def = b.build('posts', 'owner');
+      expect(def.config.onDelete).toBe('RESTRICT');
+    });
+
+    it('reference is chainable with other builder methods', () => {
+      const b = record('users').reference({ onDelete: 'CASCADE' }).optional();
+      const def = b.build('posts', 'owner');
+      expect(def.config.onDelete).toBe('CASCADE');
+      expect(def.config.optional).toBe(true);
+    });
+
+    it('reference without calling reference() leaves onDelete undefined', () => {
+      const b = record('users');
+      const def = b.build('posts', 'owner');
+      expect(def.config.onDelete).toBeUndefined();
+    });
+  });
+
+  describe('generator REFERENCE ON DELETE', () => {
+    it('emits REFERENCE ON DELETE CASCADE in field SQL', () => {
+      const gen = new SurrealQLGenerator();
+      const sql = gen.generateFieldDefinition({
+        name: 'owner',
+        config: { type: 'record', recordTable: 'users', onDelete: 'CASCADE' },
+        tableName: 'projects',
+      });
+      expect(sql).toContain('REFERENCE ON DELETE CASCADE');
+      expect(sql).toContain('TYPE record<users>');
+    });
+
+    it('emits REFERENCE ON DELETE SET NULL in field SQL', () => {
+      const gen = new SurrealQLGenerator();
+      const sql = gen.generateFieldDefinition({
+        name: 'owner',
+        config: { type: 'record', recordTable: 'users', onDelete: 'SET NULL' },
+        tableName: 'projects',
+      });
+      expect(sql).toContain('REFERENCE ON DELETE SET NULL');
+    });
+
+    it('emits REFERENCE ON DELETE RESTRICT in field SQL', () => {
+      const gen = new SurrealQLGenerator();
+      const sql = gen.generateFieldDefinition({
+        name: 'owner',
+        config: { type: 'record', recordTable: 'users', onDelete: 'RESTRICT' },
+        tableName: 'projects',
+      });
+      expect(sql).toContain('REFERENCE ON DELETE RESTRICT');
+    });
+
+    it('omits REFERENCE ON DELETE when onDelete is not set', () => {
+      const gen = new SurrealQLGenerator();
+      const sql = gen.generateFieldDefinition({
+        name: 'owner',
+        config: { type: 'record', recordTable: 'users' },
+        tableName: 'projects',
+      });
+      expect(sql).not.toContain('REFERENCE ON DELETE');
     });
   });
 });

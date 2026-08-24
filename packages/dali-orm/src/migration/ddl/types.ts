@@ -136,7 +136,11 @@ export function parseKind(kind: string): {
 
     if (recordTables.length > 0) {
       // Union of record types — return first as recordTable, all as recordTables
-      return { type: 'record' as SurrealColumnType, recordTable: recordTables[0], recordTables };
+      return {
+        type: 'record' as SurrealColumnType,
+        recordTable: recordTables[0],
+        recordTables,
+      };
     }
 
     // Fallback: return first type with warning
@@ -163,7 +167,11 @@ export function parseKind(kind: string): {
 
     // record<user> → extract record table
     if (baseType === 'record') {
-      return { type: mappedType, recordTable: inner.trim(), recordTables: [inner.trim()] };
+      return {
+        type: mappedType,
+        recordTable: inner.trim(),
+        recordTables: [inner.trim()],
+      };
     }
 
     // table<user, post> → extract as recordTable (comma-separated list)

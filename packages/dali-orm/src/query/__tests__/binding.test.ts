@@ -8,8 +8,8 @@
  * satisfy the builder constructor guard clauses.
  */
 
-import { describe, expect, it } from 'vite-plus/test';
-import type { SurrealDriver } from '../../sdk/driver/types.js';
+import { describe, expect, it } from 'vitest';
+import type { DaliORM } from '../../sdk/dali-orm.js';
 import { string } from '../../sdk/schema/column/index.js';
 import { defineRelationTable, defineTable } from '../../sdk/table.js';
 import { bindTable } from '../binding.js';
@@ -19,10 +19,10 @@ import { SelectBuilder } from '../select.js';
 import { UpdateBuilder } from '../update.js';
 
 // ============================================================================
-// Mock Driver (satisfies builder constructor guard: truthy)
+// Mock ORM (satisfies builder constructor guard: truthy)
 // ============================================================================
 
-const mockDriver = {} as SurrealDriver;
+const orm = { getDriver: () => ({}) } as unknown as DaliORM;
 
 // ============================================================================
 // Table Definitions (use ColumnBuilder objects, not raw strings)
@@ -82,25 +82,36 @@ describe('bindTable adds methods', () => {
 });
 
 // ============================================================================
-// 2. bindTable mutates in place (returns same reference)
+// 2. bindTable returns a new object (non-mutating)
 // ============================================================================
 
-describe('bindTable mutates in place', () => {
-  it('returns the same object reference (identity)', () => {
+describe('bindTable returns a new object', () => {
+  it('returns a different object reference (non-mutating)', () => {
     const original = users;
     const bound = bindTable(users);
 
-    expect(bound).toBe(original);
+    expect(bound).not.toBe(original);
   });
 
-  it('original table def gains methods after bind', () => {
+  it('original table def does NOT gain methods after bind', () => {
     const table = defineTable('temp', { name: string('name') });
 
     expect(typeof (table as any).select).toBe('undefined');
 
     bindTable(table);
 
-    expect(typeof (table as any).select).toBe('function');
+    expect(typeof (table as any).select).toBe('undefined');
+  });
+
+  it('returned copy gains builder methods', () => {
+    const table = defineTable('temp', { name: string('name') });
+    const bound = bindTable(table);
+
+    expect(typeof bound.select).toBe('function');
+    expect(typeof bound.insert).toBe('function');
+    expect(typeof bound.update).toBe('function');
+    expect(typeof bound.delete).toBe('function');
+    expect(typeof bound.relate).toBe('function');
   });
 });
 
@@ -112,32 +123,32 @@ describe('builder factory returns correct instances', () => {
   it('select() returns SelectBuilder', () => {
     const bound = bindTable(users);
 
-    expect(bound.select(mockDriver)).toBeInstanceOf(SelectBuilder);
+    expect(bound.select(orm)).toBeInstanceOf(SelectBuilder);
   });
 
   it('insert() returns InsertBuilder', () => {
     const bound = bindTable(users);
 
-    expect(bound.insert(mockDriver)).toBeInstanceOf(InsertBuilder);
+    expect(bound.insert(orm)).toBeInstanceOf(InsertBuilder);
   });
 
   it('update() returns UpdateBuilder', () => {
     const bound = bindTable(users);
 
-    expect(bound.update(mockDriver)).toBeInstanceOf(UpdateBuilder);
+    expect(bound.update(orm)).toBeInstanceOf(UpdateBuilder);
   });
 
   it('delete() returns DeleteBuilder', () => {
     const bound = bindTable(users);
 
-    expect(bound.delete(mockDriver)).toBeInstanceOf(DeleteBuilder);
+    expect(bound.delete(orm)).toBeInstanceOf(DeleteBuilder);
   });
 
   it('each factory call returns a fresh builder instance', () => {
     const bound = bindTable(users);
 
-    const s1 = bound.select(mockDriver);
-    const s2 = bound.select(mockDriver);
+    const s1 = bound.select(orm);
+    const s2 = bound.select(orm);
 
     expect(s1).toBeInstanceOf(SelectBuilder);
     expect(s2).toBeInstanceOf(SelectBuilder);
@@ -160,7 +171,7 @@ describe('bindTable with relation tables', () => {
   it('relate() returns RelateBuilder for relation table', () => {
     const bound = bindTable(wrote);
 
-    const builder = bound.relate(mockDriver);
+    const builder = bound.relate(orm);
     expect(builder).toBeDefined();
     expect(typeof (builder as any).from).toBe('function');
     expect(typeof (builder as any).to).toBe('function');
@@ -201,7 +212,7 @@ describe('bindTable preserves original properties', () => {
 describe('builder SQL references correct table', () => {
   it('select().toSQL() references table name', () => {
     const bound = bindTable(users);
-    const sql = (bound.select(mockDriver) as SelectBuilder<any, any>).toSQL();
+    const sql = (bound.select(orm) as SelectBuilder<any, any>).toSQL();
 
     expect(sql.sql).toContain('FROM user');
   });
@@ -209,6 +220,6 @@ describe('builder SQL references correct table', () => {
   it('delete() references table name', () => {
     const bound = bindTable(users);
 
-    expect(bound.delete(mockDriver)).toBeInstanceOf(DeleteBuilder);
+    expect(bound.delete(orm)).toBeInstanceOf(DeleteBuilder);
   });
 });

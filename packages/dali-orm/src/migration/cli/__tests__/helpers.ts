@@ -2,13 +2,13 @@
  * Shared test utilities for CLI command tests.
  */
 import * as fs from 'node:fs/promises';
-import * as path from 'node:path';
 import os from 'node:os';
-import { vi } from 'vite-plus/test';
+import * as path from 'node:path';
+import { vi } from 'vitest';
 import { EmbeddedDriver } from '../../../sdk/driver/embedded-driver.js';
-import type { Config } from '../../config.js';
 // Import the EmbeddedConfig type for driver construction
 import type { EmbeddedConfig } from '../../../sdk/driver/types.js';
+import type { Config } from '../../config.js';
 
 let counter = 0;
 
@@ -29,7 +29,9 @@ export function createTestDriver(
 }
 
 /** Create temp directory, return path */
-export async function createTempDir(prefix: string = 'cli-test'): Promise<string> {
+export async function createTempDir(
+  prefix: string = 'cli-test',
+): Promise<string> {
   return fs.mkdtemp(path.join(os.tmpdir(), `${prefix}-`));
 }
 
@@ -58,7 +60,6 @@ export async function createMigrationFile(
   dir: string,
   name: string,
   upStatements: string[],
-  downStatements: string[],
 ): Promise<string> {
   const timestamp = Date.now().toString();
   const migrationDir = path.join(dir, `${timestamp}_${name}`);
@@ -70,9 +71,6 @@ export async function createMigrationFile(
     '',
     '-- UP',
     ...upStatements.map((s) => `${s};`),
-    '',
-    '-- DOWN',
-    ...downStatements.map((s) => `${s};`),
   ].join('\n');
   await fs.writeFile(filePath, content, 'utf-8');
   return filePath;
@@ -101,14 +99,19 @@ export function mockProcessExit(): () => void {
 
 /** Create schema.ts file content for testing generate/diff */
 export function createSchemaFileContent(
-  tables: Array<{ name: string; columns: Array<{ name: string; type: string }> }>,
+  tables: Array<{
+    name: string;
+    columns: Array<{ name: string; type: string }>;
+  }>,
 ): string {
   const imports = [
     'import { defineTable } from "@woss/dali-orm/sdk/table";',
     'import { string } from "@woss/dali-orm/sdk/schema/column/simple-builders";',
   ];
   const tableDefs = tables.map((t) => {
-    const cols = t.columns.map((c) => `  ${c.name}: string('${c.name}'),`).join('\n');
+    const cols = t.columns
+      .map((c) => `  ${c.name}: string('${c.name}'),`)
+      .join('\n');
     return `export const ${t.name}Schema = defineTable('${t.name}', {\n${cols}\n});`;
   });
   const exports = `export default {\n  ${tables.map((t) => `${t.name}: ${t.name}Schema`).join(',\n  ')}\n};`;

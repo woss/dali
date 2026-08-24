@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vite-plus/test';
+import { describe, expect, it } from 'vitest';
 import type { ColumnDefinition } from '../../../sdk/schema/column/types.js';
 import type { IndexDefinition, TableDefinition } from '../../../sdk/table.js';
 import {
@@ -75,7 +75,11 @@ describe('toSurrealColumn', () => {
     expect(result.default).toBe('0');
     expect(result.readonly).toBe(true);
     expect(result.optional).toBe(true);
-    expect(result.permissions).toEqual({ select: 'NONE', create: 'NONE', update: 'NONE' });
+    expect(result.permissions).toEqual({
+      select: 'NONE',
+      create: 'NONE',
+      update: 'NONE',
+    });
     expect(result.flex).toBe(true);
     expect(result.assert).toBe('math::is::finite($value)');
     expect(result.recordTable).toBe('score');
@@ -94,14 +98,16 @@ describe('toSurrealColumn', () => {
   });
 
   it('throws when ColumnDefinition is null', () => {
-    expect(() => toSurrealColumn(null as unknown as ColumnDefinition, 't')).toThrow(
-      'ColumnDefinition required',
-    );
+    expect(() =>
+      toSurrealColumn(null as unknown as ColumnDefinition, 't'),
+    ).toThrow('ColumnDefinition required');
   });
 
   it('throws when tableName is empty', () => {
     const def: ColumnDefinition = { name: 'x', config: { type: 'string' } };
-    expect(() => toSurrealColumn(def, '')).toThrow('tableName required for SurrealColumn');
+    expect(() => toSurrealColumn(def, '')).toThrow(
+      'tableName required for SurrealColumn',
+    );
   });
 });
 
@@ -344,7 +350,9 @@ describe('fromSurrealTable', () => {
       schema: 'full',
       type: 'normal',
       columns: [],
-      indexes: [{ name: 'email_idx', table: 'user', cols: ['email'], index: 'unique' }],
+      indexes: [
+        { name: 'email_idx', table: 'user', cols: ['email'], index: 'unique' },
+      ],
       permissions: undefined,
     };
 
@@ -387,7 +395,10 @@ describe('table roundtrip', () => {
     const def: TableDefinition = {
       name: 'product',
       columns: [{ name: 'price', config: { type: 'float', default: '0.0' } }],
-      config: { schema: 'full', permissions: { select: 'WHERE published = true' } },
+      config: {
+        schema: 'full',
+        permissions: { select: 'WHERE published = true' },
+      },
     };
 
     const sur = toSurrealTable(def);
@@ -395,7 +406,9 @@ describe('table roundtrip', () => {
 
     expect(back.name).toBe('product');
     expect(back.config.schema).toBeUndefined(); // 'full' is default, omitted
-    expect(back.config.permissions).toEqual({ select: 'WHERE published = true' });
+    expect(back.config.permissions).toEqual({
+      select: 'WHERE published = true',
+    });
     expect(back.columns[0].name).toBe('price');
     expect(back.columns[0].config.type).toBe('float');
     expect(back.columns[0].config.default).toBe('0.0');
@@ -467,7 +480,9 @@ describe('toSurrealAccess', () => {
   });
 
   it('throws when name is missing', () => {
-    expect(() => toSurrealAccess({ name: '' } as any)).toThrow('Access name is required');
+    expect(() => toSurrealAccess({ name: '' } as any)).toThrow(
+      'Access name is required',
+    );
   });
 });
 
@@ -576,7 +591,9 @@ describe('toSurrealEvent', () => {
     expect(result.name).toBe('on_signup');
     expect(result.what).toBe('user');
     expect(result.when).toBe('INSERT');
-    expect(result.then).toEqual(['CREATE notification SET message = "Welcome"']);
+    expect(result.then).toEqual([
+      'CREATE notification SET message = "Welcome"',
+    ]);
     expect(result.async).toBeUndefined();
   });
 
@@ -604,21 +621,21 @@ describe('toSurrealEvent', () => {
   });
 
   it('throws when name missing', () => {
-    expect(() => toSurrealEvent({ name: '', on: 't', when: 'INSERT', then: [] })).toThrow(
-      'Event name is required',
-    );
+    expect(() =>
+      toSurrealEvent({ name: '', on: 't', when: 'INSERT', then: [] }),
+    ).toThrow('Event name is required');
   });
 
   it('throws when table missing', () => {
-    expect(() => toSurrealEvent({ name: 'e', on: '', when: 'INSERT', then: [] })).toThrow(
-      'Event table (on) is required',
-    );
+    expect(() =>
+      toSurrealEvent({ name: 'e', on: '', when: 'INSERT', then: [] }),
+    ).toThrow('Event table (on) is required');
   });
 
   it('throws when condition missing', () => {
-    expect(() => toSurrealEvent({ name: 'e', on: 't', when: '', then: [] })).toThrow(
-      'Event condition (when) is required',
-    );
+    expect(() =>
+      toSurrealEvent({ name: 'e', on: 't', when: '', then: [] }),
+    ).toThrow('Event condition (when) is required');
   });
 });
 
@@ -643,7 +660,9 @@ describe('fromSurrealEvent', () => {
     expect(result.name).toBe('on_signup');
     expect(result.on).toBe('user');
     expect(result.when).toBe('INSERT');
-    expect(result.then).toEqual(['CREATE notification SET message = "Welcome"']);
+    expect(result.then).toEqual([
+      'CREATE notification SET message = "Welcome"',
+    ]);
     expect(result.comment).toBe('Send welcome notification on signup');
     expect(result.async).toBe(true);
     expect(result.retry).toBe(3);
@@ -743,7 +762,9 @@ describe('toSurrealFunction', () => {
   });
 
   it('throws when config is null', () => {
-    expect(() => toSurrealFunction(null as any)).toThrow('FunctionConfig required');
+    expect(() => toSurrealFunction(null as any)).toThrow(
+      'FunctionConfig required',
+    );
   });
 
   it('throws when name missing', () => {
@@ -793,15 +814,15 @@ describe('fromSurrealFunction', () => {
   });
 
   it('throws when func is null', () => {
-    expect(() => fromSurrealFunction(null as unknown as SurrealFunction)).toThrow(
-      'SurrealFunction required',
-    );
+    expect(() =>
+      fromSurrealFunction(null as unknown as SurrealFunction),
+    ).toThrow('SurrealFunction required');
   });
 
   it('throws when name is missing', () => {
-    expect(() => fromSurrealFunction({ name: '', body: 'x' } as SurrealFunction)).toThrow(
-      'SurrealFunction.name is required',
-    );
+    expect(() =>
+      fromSurrealFunction({ name: '', body: 'x' } as SurrealFunction),
+    ).toThrow('SurrealFunction.name is required');
   });
 });
 

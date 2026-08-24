@@ -70,7 +70,7 @@ Prerequisites: `pnpm@10.33.0`, Node.js >=20.
 | `vp config`   | Setup project config (runs on `pnpm install`) |
 | `vp staged`   | Pre-commit hook — check + fix staged files    |
 
-Configured in root `vite.config.ts`:
+Configured in root `vitest.config.ts` (test configuration):
 
 ```ts
 import { defineConfig } from 'vite-plus';
@@ -127,7 +127,7 @@ pnpm --filter dali-memory test:all
 
 ## Linting & Formatting
 
-- **Tool**: Vite+ (Oxlint + Oxfmt, configured via `vite.config.ts`)
+- **Tool**: Biome (lint + format; config migration in progress)
 - **Check**: `vp check` — lint + format + type-check in one pass
 - **Format**: `vp fmt` — format code via Oxfmt
 - **Pre-commit**: `.vite-hooks/pre-commit` runs `vp staged` which calls `vp check --fix` on staged files only
@@ -144,7 +144,6 @@ dali-orm/
 │   ├── dali-memory/            # dali-memory — OpenCode memory plugin (SurrealDB-backed)
 │   ├── orm/                    # @dali-orm/orm — legacy ORM package
 │   └── kit/                    # @dali-orm/kit — CLI tooling
-├── vite.config.ts              # Root Vite+ config
 ├── package.json                # Root package (pnpm workspace root)
 └── pnpm-workspace.yaml         # Workspace definition
 ```
@@ -188,7 +187,15 @@ dali-orm/
    pnpm build           # vp pack (all packages)
    ```
 
-4. **Commit** with a descriptive message:
+4. **Changeset** — if your change should trigger a release, create a changeset:
+
+   ```bash
+   pnpm changeset
+   ```
+
+   Select packages to bump and describe the change. Commit the generated `.md` file.
+
+5. **Commit** with a descriptive message:
 
    ```bash
    but commit -m "feat(dali-orm): add defaultRaw() for SurrealDB function defaults"
@@ -196,7 +203,7 @@ dali-orm/
 
    Pre-commit hooks auto-run `vp check --fix` on staged files. If hooks fail, fix the issues and try again.
 
-5. **Push** and open a pull request:
+6. **Push** and open a pull request:
    ```bash
    but push
    ```

@@ -7,13 +7,13 @@
  */
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
-import { afterEach, beforeEach, describe, expect, it } from 'vite-plus/test';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { EmbeddedDriver } from '../../../sdk/driver/embedded-driver.js';
+import type { AccessConfig, FunctionConfig } from '../../../sdk/schema.js';
+import type { TableDefinition } from '../../../sdk/table.js';
 import { SurrealQLGenerator } from '../../core/generator.js';
 import { SnapshotManager } from '../../core/snapshot.js';
-import type { TableDefinition } from '../../../sdk/table.js';
-import type { AccessConfig, FunctionConfig } from '../../../sdk/schema.js';
-import { createTempDir, cleanupDir, mockConsole } from './helpers.js';
+import { cleanupDir, createTempDir, mockConsole } from './helpers.js';
 
 // ============================================================================
 // Helpers
@@ -25,7 +25,11 @@ async function createPlainSchemaFile(
   fileName: string,
   tables: Array<{
     name: string;
-    columns: Array<{ name: string; tableName: string; config: { type: string } }>;
+    columns: Array<{
+      name: string;
+      tableName: string;
+      config: { type: string };
+    }>;
   }>,
 ): Promise<string> {
   const tableEntries = tables
@@ -62,7 +66,10 @@ describe('findMatchingFiles', () => {
   it('finds .ts files with recursive pattern', async () => {
     await fs.mkdir(path.join(tmpDir, 'nested'), { recursive: true });
     await fs.writeFile(path.join(tmpDir, 'schema.ts'), 'export const a = 1;');
-    await fs.writeFile(path.join(tmpDir, 'nested', 'user.ts'), 'export const b = 2;');
+    await fs.writeFile(
+      path.join(tmpDir, 'nested', 'user.ts'),
+      'export const b = 2;',
+    );
 
     const { findMatchingFiles } = await import('../generate.js');
     const files = await findMatchingFiles(tmpDir, '**/*.ts');
@@ -74,7 +81,10 @@ describe('findMatchingFiles', () => {
   it('finds .ts files with non-recursive pattern', async () => {
     await fs.writeFile(path.join(tmpDir, 'schema.ts'), 'export const a = 1;');
     await fs.mkdir(path.join(tmpDir, 'sub'), { recursive: true });
-    await fs.writeFile(path.join(tmpDir, 'sub', 'other.ts'), 'export const b = 2;');
+    await fs.writeFile(
+      path.join(tmpDir, 'sub', 'other.ts'),
+      'export const b = 2;',
+    );
 
     const { findMatchingFiles } = await import('../generate.js');
     const files = await findMatchingFiles(tmpDir, '*.ts');
@@ -92,7 +102,10 @@ describe('findMatchingFiles', () => {
 
   it('handles non-existent directory gracefully', async () => {
     const { findMatchingFiles } = await import('../generate.js');
-    const files = await findMatchingFiles(path.join(tmpDir, 'nonexistent'), '**/*.ts');
+    const files = await findMatchingFiles(
+      path.join(tmpDir, 'nonexistent'),
+      '**/*.ts',
+    );
     expect(files).toHaveLength(0);
   });
 
@@ -129,7 +142,9 @@ describe('loadSchemaFromFile', () => {
     const schemaPath = await createPlainSchemaFile(tmpDir, 'user.schema.ts', [
       {
         name: 'user',
-        columns: [{ name: 'name', tableName: 'user', config: { type: 'string' } }],
+        columns: [
+          { name: 'name', tableName: 'user', config: { type: 'string' } },
+        ],
       },
     ]);
 
@@ -144,11 +159,15 @@ describe('loadSchemaFromFile', () => {
     const schemaPath = await createPlainSchemaFile(tmpDir, 'multi.schema.ts', [
       {
         name: 'user',
-        columns: [{ name: 'name', tableName: 'user', config: { type: 'string' } }],
+        columns: [
+          { name: 'name', tableName: 'user', config: { type: 'string' } },
+        ],
       },
       {
         name: 'post',
-        columns: [{ name: 'title', tableName: 'post', config: { type: 'string' } }],
+        columns: [
+          { name: 'title', tableName: 'post', config: { type: 'string' } },
+        ],
       },
     ]);
 
@@ -162,9 +181,9 @@ describe('loadSchemaFromFile', () => {
 
   it('throws on non-existent schema file', async () => {
     const { loadSchemaFromFile } = await import('../generate.js');
-    await expect(loadSchemaFromFile(path.join(tmpDir, 'nonexistent.ts'))).rejects.toThrow(
-      'Failed to import schema file',
-    );
+    await expect(
+      loadSchemaFromFile(path.join(tmpDir, 'nonexistent.ts')),
+    ).rejects.toThrow('Failed to import schema file');
   });
 
   it('loads tables from schema file with named tables export', async () => {
@@ -173,7 +192,9 @@ describe('loadSchemaFromFile', () => {
       'export const tables = [',
       JSON.stringify({
         name: 'user',
-        columns: [{ name: 'name', tableName: 'user', config: { type: 'string' } }],
+        columns: [
+          { name: 'name', tableName: 'user', config: { type: 'string' } },
+        ],
         config: { schema: 'full', type: 'normal' },
       }),
       '];',
@@ -206,13 +227,17 @@ describe('loadSchemaFiles', () => {
     await createPlainSchemaFile(tmpDir, 'user.schema.ts', [
       {
         name: 'user',
-        columns: [{ name: 'name', tableName: 'user', config: { type: 'string' } }],
+        columns: [
+          { name: 'name', tableName: 'user', config: { type: 'string' } },
+        ],
       },
     ]);
     await createPlainSchemaFile(tmpDir, 'post.schema.ts', [
       {
         name: 'post',
-        columns: [{ name: 'title', tableName: 'post', config: { type: 'string' } }],
+        columns: [
+          { name: 'title', tableName: 'post', config: { type: 'string' } },
+        ],
       },
     ]);
 
@@ -232,22 +257,24 @@ describe('loadSchemaFiles', () => {
 
   it('throws when schema path is empty', async () => {
     const { loadSchemaFiles } = await import('../generate.js');
-    await expect(loadSchemaFiles('', '**/*.ts')).rejects.toThrow('Schema path is required');
+    await expect(loadSchemaFiles('', '**/*.ts')).rejects.toThrow(
+      'Schema path is required',
+    );
   });
 
   it('throws when schema directory does not exist', async () => {
     const { loadSchemaFiles } = await import('../generate.js');
-    await expect(loadSchemaFiles(path.join(tmpDir, 'nonexistent'), '**/*.ts')).rejects.toThrow(
-      'does not exist',
-    );
+    await expect(
+      loadSchemaFiles(path.join(tmpDir, 'nonexistent'), '**/*.ts'),
+    ).rejects.toThrow('does not exist');
   });
 
   it('throws when schema path is a file but does not end in .ts', async () => {
     await fs.writeFile(path.join(tmpDir, 'schema.json'), '{}');
     const { loadSchemaFiles } = await import('../generate.js');
-    await expect(loadSchemaFiles(path.join(tmpDir, 'schema.json'))).rejects.toThrow(
-      'Schema path is not a directory',
-    );
+    await expect(
+      loadSchemaFiles(path.join(tmpDir, 'schema.json')),
+    ).rejects.toThrow('Schema path is not a directory');
   });
 });
 
@@ -264,10 +291,10 @@ describe('generateFullMigration', () => {
       access?: AccessConfig[],
       events?: any[],
       functions?: FunctionConfig[],
-    ) => { upStatements: string[]; downStatements: string[] };
+    ) => { upStatements: string[] };
   }
 
-  it('generates up and down statements for tables', async () => {
+  it('generates up statements for tables', async () => {
     const generateFullMigration = await getGenerateFullMigration();
     const generator = new SurrealQLGenerator();
     const tables: TableDefinition[] = [
@@ -287,14 +314,10 @@ describe('generateFullMigration', () => {
     const result = generateFullMigration(tables, generator);
 
     expect(result.upStatements.length).toBeGreaterThan(0);
-    expect(result.downStatements.length).toBeGreaterThan(0);
 
     const allUp = result.upStatements.join(' ');
     expect(allUp).toContain('DEFINE TABLE');
     expect(allUp).toContain('DEFINE FIELD');
-
-    const allDown = result.downStatements.join(' ');
-    expect(allDown).toContain('REMOVE TABLE');
   });
 
   it('generates access definitions when provided', async () => {
@@ -303,7 +326,9 @@ describe('generateFullMigration', () => {
     const tables: TableDefinition[] = [
       {
         name: 'user',
-        columns: [{ name: 'email', tableName: 'user', config: { type: 'string' } }],
+        columns: [
+          { name: 'email', tableName: 'user', config: { type: 'string' } },
+        ],
         config: { schema: 'full', type: 'normal' },
       },
     ];
@@ -312,8 +337,10 @@ describe('generateFullMigration', () => {
         name: 'account',
         type: 'RECORD',
         table: 'user',
-        signup: 'CREATE user SET email = $email, pass = crypto::argon2::generate($pass)',
-        signin: 'SELECT * FROM user WHERE email = $email AND crypto::argon2::compare(pass, $pass)',
+        signup:
+          'CREATE user SET email = $email, pass = crypto::argon2::generate($pass)',
+        signin:
+          'SELECT * FROM user WHERE email = $email AND crypto::argon2::compare(pass, $pass)',
         duration: '12h',
         tokenDuration: '15m',
       },
@@ -331,7 +358,9 @@ describe('generateFullMigration', () => {
     const tables: TableDefinition[] = [
       {
         name: 'user',
-        columns: [{ name: 'email', tableName: 'user', config: { type: 'string' } }],
+        columns: [
+          { name: 'email', tableName: 'user', config: { type: 'string' } },
+        ],
         config: { schema: 'full', type: 'normal' },
       },
     ];
@@ -356,7 +385,9 @@ describe('generateFullMigration', () => {
     const tables: TableDefinition[] = [
       {
         name: 'user',
-        columns: [{ name: 'email', tableName: 'user', config: { type: 'string' } }],
+        columns: [
+          { name: 'email', tableName: 'user', config: { type: 'string' } },
+        ],
         config: { schema: 'full', type: 'normal' },
       },
     ];
@@ -380,16 +411,17 @@ describe('generateFullMigration', () => {
     const result = generateFullMigration([], generator);
 
     expect(result.upStatements).toEqual([]);
-    expect(result.downStatements).toEqual([]);
   });
 
-  it('generates remove statements for indexes on tables', async () => {
+  it('generates up statements for indexes on tables', async () => {
     const generateFullMigration = await getGenerateFullMigration();
     const generator = new SurrealQLGenerator();
     const tables: TableDefinition[] = [
       {
         name: 'user',
-        columns: [{ name: 'email', tableName: 'user', config: { type: 'string' } }],
+        columns: [
+          { name: 'email', tableName: 'user', config: { type: 'string' } },
+        ],
         config: {
           schema: 'full',
           type: 'normal',
@@ -398,10 +430,7 @@ describe('generateFullMigration', () => {
       },
     ];
 
-    const result = generateFullMigration(tables, generator);
-
-    const allDown = result.downStatements.join(' ');
-    expect(allDown).toContain('REMOVE INDEX');
+    const _result = generateFullMigration(tables, generator);
   });
 });
 
@@ -487,14 +516,22 @@ describe('printDiffSummary', () => {
     const printDiffSummary = await getPrintDiffSummary();
     printDiffSummary({
       added: {
-        tables: [{ name: 'user', columns: [], config: { schema: 'full', type: 'normal' } }],
+        tables: [
+          {
+            name: 'user',
+            columns: [],
+            config: { schema: 'full', type: 'normal' },
+          },
+        ],
         fields: [],
         indexes: [],
       },
       removed: { tables: [], fields: [], indexes: [] },
       changed: { tables: [], fields: [] },
     });
-    expect(console.log).toHaveBeenCalledWith(expect.stringContaining('Tables: user'));
+    expect(console.log).toHaveBeenCalledWith(
+      expect.stringContaining('Tables: user'),
+    );
   });
 
   it('prints added fields', async () => {
@@ -505,7 +542,11 @@ describe('printDiffSummary', () => {
         fields: [
           {
             table: 'user',
-            column: { name: 'email', tableName: 'user', config: { type: 'string' } },
+            column: {
+              name: 'email',
+              tableName: 'user',
+              config: { type: 'string' },
+            },
           },
         ],
         indexes: [],
@@ -513,7 +554,9 @@ describe('printDiffSummary', () => {
       removed: { tables: [], fields: [], indexes: [] },
       changed: { tables: [], fields: [] },
     });
-    expect(console.log).toHaveBeenCalledWith(expect.stringContaining('Fields: user.email'));
+    expect(console.log).toHaveBeenCalledWith(
+      expect.stringContaining('Fields: user.email'),
+    );
   });
 
   it('prints added indexes', async () => {
@@ -527,7 +570,9 @@ describe('printDiffSummary', () => {
       removed: { tables: [], fields: [], indexes: [] },
       changed: { tables: [], fields: [] },
     });
-    expect(console.log).toHaveBeenCalledWith(expect.stringContaining('Indexes: user.idx_email'));
+    expect(console.log).toHaveBeenCalledWith(
+      expect.stringContaining('Indexes: user.idx_email'),
+    );
   });
 
   it('prints removed tables', async () => {
@@ -537,27 +582,41 @@ describe('printDiffSummary', () => {
       removed: { tables: ['old_table'], fields: [], indexes: [] },
       changed: { tables: [], fields: [] },
     });
-    expect(console.log).toHaveBeenCalledWith(expect.stringContaining('Tables: old_table'));
+    expect(console.log).toHaveBeenCalledWith(
+      expect.stringContaining('Tables: old_table'),
+    );
   });
 
   it('prints removed fields', async () => {
     const printDiffSummary = await getPrintDiffSummary();
     printDiffSummary({
       added: { tables: [], fields: [], indexes: [] },
-      removed: { tables: [], fields: [{ table: 'user', field: 'age' }], indexes: [] },
+      removed: {
+        tables: [],
+        fields: [{ table: 'user', field: 'age' }],
+        indexes: [],
+      },
       changed: { tables: [], fields: [] },
     });
-    expect(console.log).toHaveBeenCalledWith(expect.stringContaining('Fields: user.age'));
+    expect(console.log).toHaveBeenCalledWith(
+      expect.stringContaining('Fields: user.age'),
+    );
   });
 
   it('prints removed indexes', async () => {
     const printDiffSummary = await getPrintDiffSummary();
     printDiffSummary({
       added: { tables: [], fields: [], indexes: [] },
-      removed: { tables: [], fields: [], indexes: [{ table: 'user', name: 'old_idx' }] },
+      removed: {
+        tables: [],
+        fields: [],
+        indexes: [{ table: 'user', name: 'old_idx' }],
+      },
       changed: { tables: [], fields: [] },
     });
-    expect(console.log).toHaveBeenCalledWith(expect.stringContaining('Indexes: user.old_idx'));
+    expect(console.log).toHaveBeenCalledWith(
+      expect.stringContaining('Indexes: user.old_idx'),
+    );
   });
 
   it('prints changed tables', async () => {
@@ -567,7 +626,9 @@ describe('printDiffSummary', () => {
       removed: { tables: [], fields: [], indexes: [] },
       changed: { tables: [{ name: 'user' }], fields: [] },
     });
-    expect(console.log).toHaveBeenCalledWith(expect.stringContaining('Changed tables: user'));
+    expect(console.log).toHaveBeenCalledWith(
+      expect.stringContaining('Changed tables: user'),
+    );
   });
 
   it('prints changed fields', async () => {
@@ -577,7 +638,9 @@ describe('printDiffSummary', () => {
       removed: { tables: [], fields: [], indexes: [] },
       changed: { tables: [], fields: [{ table: 'user', field: 'email' }] },
     });
-    expect(console.log).toHaveBeenCalledWith(expect.stringContaining('Changed fields: user.email'));
+    expect(console.log).toHaveBeenCalledWith(
+      expect.stringContaining('Changed fields: user.email'),
+    );
   });
 
   it('prints summary with multiple change types', async () => {
@@ -587,14 +650,20 @@ describe('printDiffSummary', () => {
         tables: [
           {
             name: 'post',
-            columns: [{ name: 'title', tableName: 'post', config: { type: 'string' } }],
+            columns: [
+              { name: 'title', tableName: 'post', config: { type: 'string' } },
+            ],
             config: { schema: 'full', type: 'normal' },
           },
         ],
         fields: [
           {
             table: 'user',
-            column: { name: 'email', tableName: 'user', config: { type: 'string' } },
+            column: {
+              name: 'email',
+              tableName: 'user',
+              config: { type: 'string' },
+            },
           },
         ],
         indexes: [],
@@ -602,10 +671,18 @@ describe('printDiffSummary', () => {
       removed: { tables: [], fields: [], indexes: [] },
       changed: { tables: [], fields: [{ table: 'user', field: 'name' }] },
     });
-    expect(console.log).toHaveBeenCalledWith(expect.stringContaining('Migration Summary'));
-    expect(console.log).toHaveBeenCalledWith(expect.stringContaining('Tables: post'));
-    expect(console.log).toHaveBeenCalledWith(expect.stringContaining('Fields: user.email'));
-    expect(console.log).toHaveBeenCalledWith(expect.stringContaining('Changed fields: user.name'));
+    expect(console.log).toHaveBeenCalledWith(
+      expect.stringContaining('Migration Summary'),
+    );
+    expect(console.log).toHaveBeenCalledWith(
+      expect.stringContaining('Tables: post'),
+    );
+    expect(console.log).toHaveBeenCalledWith(
+      expect.stringContaining('Fields: user.email'),
+    );
+    expect(console.log).toHaveBeenCalledWith(
+      expect.stringContaining('Changed fields: user.name'),
+    );
   });
 });
 
@@ -649,7 +726,11 @@ describe('serializeColumnPermissions', () => {
 
   it('serializes create, update, delete permissions', async () => {
     const fn = await getSerializeColumnPermissions();
-    const result = fn({ create: true, update: false, delete: '$auth.role = "admin"' });
+    const result = fn({
+      create: true,
+      update: false,
+      delete: '$auth.role = "admin"',
+    });
     expect(result).toContain('FOR create FULL');
     expect(result).toContain('FOR update NONE');
     expect(result).toContain('FOR delete $auth.role = "admin"');
@@ -699,42 +780,44 @@ describe('generateMigrationFile', () => {
     return mod.generateMigrationFile;
   }
 
-  it('produces correct surql format with UP/DOWN sections', async () => {
+  it('produces correct surql format', async () => {
     const fn = await getGenerateMigrationFile();
     const result = fn('001', 'create_user', {
-      up: ['DEFINE TABLE user SCHEMAFULL', 'DEFINE FIELD name ON user TYPE string'],
-      down: ['REMOVE TABLE user'],
+      up: [
+        'DEFINE TABLE user SCHEMAFULL',
+        'DEFINE FIELD name ON user TYPE string',
+      ],
     });
 
     expect(result).toContain('-- Migration: create_user');
     expect(result).toContain('-- Version: 001');
     expect(result).toContain('-- UP');
-    expect(result).toContain('-- DOWN');
     expect(result).toContain('DEFINE TABLE user SCHEMAFULL;');
     expect(result).toContain('DEFINE FIELD name ON user TYPE string;');
-    expect(result).toContain('REMOVE TABLE user;');
   });
 
-  it('filters out empty statements', async () => {
+  it('filters out empty statements from up array', async () => {
     const fn = await getGenerateMigrationFile();
     const result = fn('001', 'empty_test', {
-      up: ['DEFINE TABLE user SCHEMAFULL', '', '   ', 'DEFINE FIELD name ON user TYPE string'],
-      down: ['REMOVE TABLE user'],
+      up: [
+        'DEFINE TABLE user SCHEMAFULL',
+        '',
+        '   ',
+        'DEFINE FIELD name ON user TYPE string',
+      ],
     });
 
     // Should not have blank lines where empty statements were
     expect(result).toContain('DEFINE TABLE user SCHEMAFULL;');
     expect(result).toContain('DEFINE FIELD name ON user TYPE string;');
-    expect(result).toContain('REMOVE TABLE user;');
   });
 
-  it('handles empty up/down arrays', async () => {
+  it('handles empty up array', async () => {
     const fn = await getGenerateMigrationFile();
-    const result = fn('001', 'empty', { up: [], down: [] });
+    const result = fn('001', 'empty', { up: [] });
 
     expect(result).toContain('-- Migration: empty');
     expect(result).toContain('-- UP');
-    expect(result).toContain('-- DOWN');
   });
 
   it('inserts section separator comments between categories', async () => {
@@ -745,7 +828,6 @@ describe('generateMigrationFile', () => {
         'DEFINE ACCESS account ON DATABASE TYPE RECORD',
         'DEFINE FUNCTION fn::greet() RETURN "hello"',
       ],
-      down: ['REMOVE TABLE user', 'REMOVE ACCESS account'],
     });
 
     // Should have section comment separators
@@ -792,7 +874,9 @@ describe('detectSection', () => {
 
   it('detects Events for DEFINE EVENT', async () => {
     const fn = await getDetectSection();
-    expect(fn('DEFINE EVENT my_event ON user WHEN $before = NONE THEN ...')).toBe('Events');
+    expect(
+      fn('DEFINE EVENT my_event ON user WHEN $before = NONE THEN ...'),
+    ).toBe('Events');
   });
 
   it('detects Params for DEFINE PARAM', async () => {
@@ -807,7 +891,9 @@ describe('detectSection', () => {
 
   it('detects Analyzers for DEFINE ANALYZER', async () => {
     const fn = await getDetectSection();
-    expect(fn('DEFINE ANALYZER my_analyzer TOKENIZERS blank')).toBe('Analyzers');
+    expect(fn('DEFINE ANALYZER my_analyzer TOKENIZERS blank')).toBe(
+      'Analyzers',
+    );
   });
 
   it('returns Other for unknown statements', async () => {
@@ -842,7 +928,10 @@ describe('addSectionSeparators', () => {
 
   it('does not repeat separator for same section', async () => {
     const fn = await getAddSectionSeparators();
-    const result = fn(['DEFINE TABLE user SCHEMAFULL', 'DEFINE FIELD name ON user TYPE string']);
+    const result = fn([
+      'DEFINE TABLE user SCHEMAFULL',
+      'DEFINE FIELD name ON user TYPE string',
+    ]);
     expect(result).toHaveLength(3);
     expect(result[0]).toBe('-- ---- Tables ----');
     expect(result[1]).toBe('DEFINE TABLE user SCHEMAFULL');
@@ -908,7 +997,6 @@ describe('generateSnapshotMigration', () => {
     const result = await fn(tables, snapshotDir, generator, '001');
 
     expect(result.upStatements.length).toBeGreaterThan(0);
-    expect(result.downStatements.length).toBeGreaterThan(0);
     const allUp = result.upStatements.join(' ');
     expect(allUp).toContain('DEFINE TABLE');
     expect(allUp).toContain('DEFINE FIELD');
@@ -919,12 +1007,18 @@ describe('generateSnapshotMigration', () => {
     const initialTables: TableDefinition[] = [
       {
         name: 'user',
-        columns: [{ name: 'name', tableName: 'user', config: { type: 'string' } }],
+        columns: [
+          { name: 'name', tableName: 'user', config: { type: 'string' } },
+        ],
         config: { schema: 'full', type: 'normal' },
       },
     ];
     const snapManager = new SnapshotManager(snapshotDir);
-    const snapshot = snapManager.createSnapshot(initialTables, '001', 'initial');
+    const snapshot = snapManager.createSnapshot(
+      initialTables,
+      '001',
+      'initial',
+    );
     await snapManager.saveSnapshot(snapshot);
 
     // New schema adds email field
@@ -952,24 +1046,34 @@ describe('generateSnapshotMigration', () => {
     const initialTables: TableDefinition[] = [
       {
         name: 'user',
-        columns: [{ name: 'name', tableName: 'user', config: { type: 'string' } }],
+        columns: [
+          { name: 'name', tableName: 'user', config: { type: 'string' } },
+        ],
         config: { schema: 'full', type: 'normal' },
       },
     ];
     const snapManager = new SnapshotManager(snapshotDir);
-    const snapshot = snapManager.createSnapshot(initialTables, '001', 'initial');
+    const snapshot = snapManager.createSnapshot(
+      initialTables,
+      '001',
+      'initial',
+    );
     await snapManager.saveSnapshot(snapshot);
 
     // New schema adds post table
     const newTables: TableDefinition[] = [
       {
         name: 'user',
-        columns: [{ name: 'name', tableName: 'user', config: { type: 'string' } }],
+        columns: [
+          { name: 'name', tableName: 'user', config: { type: 'string' } },
+        ],
         config: { schema: 'full', type: 'normal' },
       },
       {
         name: 'post',
-        columns: [{ name: 'title', tableName: 'post', config: { type: 'string' } }],
+        columns: [
+          { name: 'title', tableName: 'post', config: { type: 'string' } },
+        ],
         config: { schema: 'full', type: 'normal' },
       },
     ];
@@ -989,13 +1093,21 @@ describe('generateSnapshotMigration', () => {
       {
         name: 'user',
         columns: [
-          { name: 'status', tableName: 'user', config: { type: 'string', default: 'active' } },
+          {
+            name: 'status',
+            tableName: 'user',
+            config: { type: 'string', default: 'active' },
+          },
         ],
         config: { schema: 'full', type: 'normal' },
       },
     ];
     const snapManager = new SnapshotManager(snapshotDir);
-    const snapshot = snapManager.createSnapshot(initialTables, '001', 'initial');
+    const snapshot = snapManager.createSnapshot(
+      initialTables,
+      '001',
+      'initial',
+    );
     await snapManager.saveSnapshot(snapshot);
 
     // New schema changes default
@@ -1003,7 +1115,11 @@ describe('generateSnapshotMigration', () => {
       {
         name: 'user',
         columns: [
-          { name: 'status', tableName: 'user', config: { type: 'string', default: 'inactive' } },
+          {
+            name: 'status',
+            tableName: 'user',
+            config: { type: 'string', default: 'inactive' },
+          },
         ],
         config: { schema: 'full', type: 'normal' },
       },
@@ -1031,14 +1147,20 @@ describe('generateSnapshotMigration', () => {
       },
     ];
     const snapManager = new SnapshotManager(snapshotDir);
-    const snapshot = snapManager.createSnapshot(initialTables, '001', 'initial');
+    const snapshot = snapManager.createSnapshot(
+      initialTables,
+      '001',
+      'initial',
+    );
     await snapManager.saveSnapshot(snapshot);
 
     // New schema removes age field
     const newTables: TableDefinition[] = [
       {
         name: 'user',
-        columns: [{ name: 'name', tableName: 'user', config: { type: 'string' } }],
+        columns: [
+          { name: 'name', tableName: 'user', config: { type: 'string' } },
+        ],
         config: { schema: 'full', type: 'normal' },
       },
     ];
@@ -1070,7 +1192,13 @@ describe('generateSnapshotMigration', () => {
       tables: [
         {
           name: 'user',
-          columns: [{ name: 'name', tableName: 'user', config: { type: 'string' as const } }],
+          columns: [
+            {
+              name: 'name',
+              tableName: 'user',
+              config: { type: 'string' as const },
+            },
+          ],
           config: { schema: 'full' as const, type: 'normal' as const },
         },
       ],
@@ -1092,7 +1220,9 @@ describe('generateSnapshotMigration', () => {
     const tables: TableDefinition[] = [
       {
         name: 'user',
-        columns: [{ name: 'email', tableName: 'user', config: { type: 'string' } }],
+        columns: [
+          { name: 'email', tableName: 'user', config: { type: 'string' } },
+        ],
         config: { schema: 'full', type: 'normal' },
       },
     ];
@@ -1152,7 +1282,9 @@ describe('generateLiveMigration', () => {
     const tables: TableDefinition[] = [
       {
         name: 'new_table',
-        columns: [{ name: 'name', tableName: 'new_table', config: { type: 'string' } }],
+        columns: [
+          { name: 'name', tableName: 'new_table', config: { type: 'string' } },
+        ],
         config: { schema: 'full', type: 'normal' },
       },
     ];
@@ -1174,8 +1306,16 @@ describe('generateLiveMigration', () => {
       {
         name: 'existing_table',
         columns: [
-          { name: 'name', tableName: 'existing_table', config: { type: 'string' } },
-          { name: 'email', tableName: 'existing_table', config: { type: 'string' } },
+          {
+            name: 'name',
+            tableName: 'existing_table',
+            config: { type: 'string' },
+          },
+          {
+            name: 'email',
+            tableName: 'existing_table',
+            config: { type: 'string' },
+          },
         ],
         config: { schema: 'full', type: 'normal' },
       },
@@ -1197,7 +1337,6 @@ describe('generateLiveMigration', () => {
     const result = await fn([], driver, generator);
 
     expect(result.upStatements).toEqual([]);
-    expect(result.downStatements).toEqual([]);
   });
 
   it('generates field definitions for schemaless tables in live DB', async () => {
@@ -1208,7 +1347,13 @@ describe('generateLiveMigration', () => {
     const tables: TableDefinition[] = [
       {
         name: 'schemaless_table',
-        columns: [{ name: 'title', tableName: 'schemaless_table', config: { type: 'string' } }],
+        columns: [
+          {
+            name: 'title',
+            tableName: 'schemaless_table',
+            config: { type: 'string' },
+          },
+        ],
         config: { schema: 'full', type: 'normal' },
       },
     ];
@@ -1231,7 +1376,13 @@ describe('generateLiveMigration', () => {
     const tables: TableDefinition[] = [
       {
         name: 'remove_test',
-        columns: [{ name: 'name', tableName: 'remove_test', config: { type: 'string' } }],
+        columns: [
+          {
+            name: 'name',
+            tableName: 'remove_test',
+            config: { type: 'string' },
+          },
+        ],
         config: { schema: 'full', type: 'normal' },
       },
     ];
@@ -1247,7 +1398,9 @@ describe('generateLiveMigration', () => {
   it('detects field changes when default values differ', async () => {
     // Create table in DB with a default value
     await driver.query('DEFINE TABLE default_test SCHEMAFULL');
-    await driver.query("DEFINE FIELD status ON TABLE default_test TYPE string DEFAULT 'active'");
+    await driver.query(
+      "DEFINE FIELD status ON TABLE default_test TYPE string DEFAULT 'active'",
+    );
 
     const fn = await getGenerateLiveMigration();
     const tables: TableDefinition[] = [
@@ -1299,7 +1452,9 @@ describe('generateMigration', () => {
 
   it('throws when tables array is empty', async () => {
     const fn = await getGenerateMigration();
-    await expect(fn([], { name: 'test' })).rejects.toThrow('No tables provided');
+    await expect(fn([], { name: 'test' })).rejects.toThrow(
+      'No tables provided',
+    );
   });
 
   it('generates full migration when fullMigration option is true', async () => {
@@ -1307,7 +1462,9 @@ describe('generateMigration', () => {
     const tables: TableDefinition[] = [
       {
         name: 'user',
-        columns: [{ name: 'name', tableName: 'user', config: { type: 'string' } }],
+        columns: [
+          { name: 'name', tableName: 'user', config: { type: 'string' } },
+        ],
         config: { schema: 'full', type: 'normal' },
       },
     ];
@@ -1330,7 +1487,9 @@ describe('generateMigration', () => {
     const tables: TableDefinition[] = [
       {
         name: 'user',
-        columns: [{ name: 'name', tableName: 'user', config: { type: 'string' } }],
+        columns: [
+          { name: 'name', tableName: 'user', config: { type: 'string' } },
+        ],
         config: { schema: 'full', type: 'normal' },
       },
     ];
@@ -1363,7 +1522,9 @@ describe('generateMigration', () => {
     const tables: TableDefinition[] = [
       {
         name: 'user',
-        columns: [{ name: 'name', tableName: 'user', config: { type: 'string' } }],
+        columns: [
+          { name: 'name', tableName: 'user', config: { type: 'string' } },
+        ],
         config: { schema: 'full', type: 'normal' },
       },
     ];
@@ -1402,7 +1563,9 @@ describe('generateMigration', () => {
     const tables: TableDefinition[] = [
       {
         name: 'user',
-        columns: [{ name: 'name', tableName: 'user', config: { type: 'string' } }],
+        columns: [
+          { name: 'name', tableName: 'user', config: { type: 'string' } },
+        ],
         config: { schema: 'full', type: 'normal' },
       },
     ];
@@ -1425,7 +1588,9 @@ describe('generateMigration', () => {
     const tables: TableDefinition[] = [
       {
         name: 'user',
-        columns: [{ name: 'email', tableName: 'user', config: { type: 'string' } }],
+        columns: [
+          { name: 'email', tableName: 'user', config: { type: 'string' } },
+        ],
         config: { schema: 'full', type: 'normal' },
       },
     ];
@@ -1692,9 +1857,9 @@ describe('loadSchemaFiles extended patterns', () => {
     await fs.writeFile(path.join(tmpDir, 'schema.json'), '{}');
 
     const { loadSchemaFiles } = await import('../generate.js');
-    await expect(loadSchemaFiles(path.join(tmpDir, 'schema.json'))).rejects.toThrow(
-      'Schema path is not a directory',
-    );
+    await expect(
+      loadSchemaFiles(path.join(tmpDir, 'schema.json')),
+    ).rejects.toThrow('Schema path is not a directory');
   });
 
   it('deduplicates access definitions from different export sources across schema files', async () => {

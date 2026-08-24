@@ -23,6 +23,9 @@ export interface SurrealDbDDL {
   access: string[]; // Access definitions: raw 'DEFINE ACCESS ...' SQL strings
   accessStructured: SurrealAccess[];
   functions: SurrealFunction[];
+  namespaces: string[]; // Namespace definitions: raw 'DEFINE NAMESPACE ...' SQL strings
+  databases: string[]; // Database definitions: raw 'DEFINE DATABASE ...' SQL strings
+  sequences: SurrealSequence[];
 }
 
 /**
@@ -168,6 +171,20 @@ export interface SurrealView {
   comment?: string;
 }
 
+/**
+ * Sequence definition - SurrealDB DEFINE SEQUENCE
+ */
+export interface SurrealSequence {
+  name: string;
+  start?: number;
+  increment?: number;
+  min?: number;
+  max?: number;
+  cache?: number;
+  cycle?: boolean;
+  comment?: string;
+}
+
 // =============================================================================
 // Statement Types (matching Drizzle's JsonStatement)
 // =============================================================================
@@ -193,7 +210,12 @@ export type SurrealStatement =
   | CreateFunctionStatement
   | DropFunctionStatement
   | CreateViewStatement
-  | DropViewStatement;
+  | CreateNamespaceStatement
+  | DropNamespaceStatement
+  | CreateDatabaseStatement
+  | DropDatabaseStatement
+  | CreateSequenceStatement
+  | DropSequenceStatement;
 
 export interface CreateTableStatement {
   type: 'create_table';
@@ -344,8 +366,35 @@ export interface CreateViewStatement {
   view: { name: string; query: string; comment?: string };
 }
 
-export interface DropViewStatement {
-  type: 'drop_view';
+export interface CreateSequenceStatement {
+  type: 'create_sequence';
+  def: SurrealSequence;
+}
+
+export interface DropSequenceStatement {
+  type: 'drop_sequence';
+  def: SurrealSequence;
+}
+
+export interface CreateNamespaceStatement {
+  type: 'create_namespace';
+  name: string;
+  comment?: string;
+}
+
+export interface DropNamespaceStatement {
+  type: 'drop_namespace';
+  name: string;
+}
+
+export interface CreateDatabaseStatement {
+  type: 'create_database';
+  name: string;
+  comment?: string;
+}
+
+export interface DropDatabaseStatement {
+  type: 'drop_database';
   name: string;
 }
 
@@ -379,6 +428,9 @@ export function createEmptyDdl(): SurrealDbDDL {
     access: [],
     accessStructured: [],
     functions: [],
+    namespaces: [],
+    databases: [],
+    sequences: [],
   };
 }
 
@@ -395,6 +447,9 @@ export function isDdlEmpty(ddl: SurrealDbDDL): boolean {
     ddl.views.length === 0 &&
     ddl.access.length === 0 &&
     ddl.accessStructured.length === 0 &&
-    ddl.functions.length === 0
+    ddl.functions.length === 0 &&
+    ddl.namespaces.length === 0 &&
+    ddl.databases.length === 0 &&
+    ddl.sequences.length === 0
   );
 }

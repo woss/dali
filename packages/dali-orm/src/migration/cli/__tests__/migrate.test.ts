@@ -10,24 +10,29 @@
  */
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { EmbeddedDriver } from '../../../sdk/driver/embedded-driver.js';
 import { MigrationRunner } from '../../core/runner.js';
 
 // Ensure real orm-connection module (not leaked mock from other test files)
 vi.unmock('../../../sdk/driver/orm-connection.js');
+
+import type { Config } from '../../config.js';
 import {
   getMigrationProgressString,
   handleResumeWithProgress,
-  migrateDev,
   migrateDeploy,
+  migrateDev,
   migrateResume,
   migrateSync,
   migrateUp,
 } from '../migrate.js';
-import { createMigrationFile, createTempDir as createTmpDir, cleanupDir } from './helpers.js';
 import { createConnection, safeDisconnect } from '../operations.js';
-import type { Config } from '../../config.js';
+import {
+  cleanupDir,
+  createMigrationFile,
+  createTempDir as createTmpDir,
+} from './helpers.js';
 
 // ============================================================================
 // Helpers
@@ -92,7 +97,9 @@ describe('migrateUp', () => {
       },
     });
     // No migration files created
-    await expect(migrateUp({ config, embeddedDriver: true })).resolves.not.toThrow();
+    await expect(
+      migrateUp({ config, embeddedDriver: true }),
+    ).resolves.not.toThrow();
   });
 });
 
@@ -128,7 +135,9 @@ describe('migrateResume', () => {
     await migrateResume({ config, embeddedDriver: true });
 
     const logCalls = vi.mocked(console.log).mock.calls;
-    const noPartialLine = logCalls.find((c) => String(c[0]).includes('No partial'));
+    const noPartialLine = logCalls.find((c) =>
+      String(c[0]).includes('No partial'),
+    );
     expect(noPartialLine).toBeDefined();
   });
 });
@@ -155,12 +164,10 @@ describe('migrateSync', () => {
   });
 
   it('syncs journal from database after migration applied', async () => {
-    await createMigrationFile(
-      migrationsDir,
-      'create_user',
-      ['DEFINE TABLE user SCHEMAFULL', 'DEFINE FIELD name ON user TYPE string'],
-      ['REMOVE TABLE user'],
-    );
+    await createMigrationFile(migrationsDir, 'create_user', [
+      'DEFINE TABLE user SCHEMAFULL',
+      'DEFINE FIELD name ON user TYPE string',
+    ]);
 
     const config = makeConfig({
       migrations: {
@@ -195,7 +202,9 @@ describe('migrateSync', () => {
 
       // Verify journal was synced
       const logCalls = vi.mocked(console.log).mock.calls;
-      const syncLine = logCalls.find((c) => String(c[0]).includes('Journal synced'));
+      const syncLine = logCalls.find((c) =>
+        String(c[0]).includes('Journal synced'),
+      );
       expect(syncLine).toBeDefined();
 
       // Verify journal file content
@@ -231,7 +240,9 @@ describe('migrateSync', () => {
     await migrateSync({ config, embeddedDriver: true });
 
     const logCalls = vi.mocked(console.log).mock.calls;
-    const syncLine = logCalls.find((c) => String(c[0]).includes('Journal synced'));
+    const syncLine = logCalls.find((c) =>
+      String(c[0]).includes('Journal synced'),
+    );
     expect(syncLine).toBeDefined();
 
     // Journal should exist but be empty
@@ -241,7 +252,7 @@ describe('migrateSync', () => {
     expect(journal.entries).toHaveLength(0);
   });
 
-  it('handles disconnect error gracefully', async () => {
+  it('rethrows error on failure', async () => {
     const config = makeConfig({
       migrations: {
         dir: migrationsDir,
@@ -249,14 +260,8 @@ describe('migrateSync', () => {
         journalDir: path.join(tmpDir, 'meta'),
       },
     });
-    // Mock process.exit so migrateSync's catch block doesn't trigger vitest's exit guard
-    const origExit = process.exit.bind(process);
-    process.exit = vi.fn() as unknown as typeof process.exit;
-    try {
-      await expect(migrateSync({ config })).resolves.not.toThrow();
-    } finally {
-      process.exit = origExit;
-    }
+    // Config has no DB URL → NodeDriver constructor throws → migrateSync catches + rethrows
+    await expect(migrateSync({ config })).rejects.toThrow();
   });
 });
 
@@ -302,7 +307,7 @@ describe('getMigrationProgressString', () => {
   });
 
   it('returns no statements for empty migration', async () => {
-    const filePath = await createMigrationFile(migrationsDir, 'empty_mig', [], []);
+    const filePath = await createMigrationFile(migrationsDir, 'empty_mig', []);
     path.dirname(filePath);
 
     // Delete migration.surql and create empty one
@@ -366,12 +371,10 @@ describe('handleResumeWithProgress', () => {
 
   it('skips migration when file not found for a partial entry', async () => {
     // First apply a migration
-    const _filePath = await createMigrationFile(
-      migrationsDir,
-      'create_user',
-      ['DEFINE TABLE user SCHEMAFULL', 'DEFINE FIELD name ON user TYPE string'],
-      ['REMOVE TABLE user'],
-    );
+    const _filePath = await createMigrationFile(migrationsDir, 'create_user', [
+      'DEFINE TABLE user SCHEMAFULL',
+      'DEFINE FIELD name ON user TYPE string',
+    ]);
 
     await runner.up();
     vi.mocked(console.log).mockClear();
@@ -384,12 +387,10 @@ describe('handleResumeWithProgress', () => {
 
   it('resumes partial migration when journal has incomplete breakpoints', async () => {
     // Create migration with multiple statements
-    await createMigrationFile(
-      migrationsDir,
-      'resume_me',
-      ['DEFINE TABLE resume_target SCHEMAFULL', 'DEFINE FIELD name ON resume_target TYPE string'],
-      ['REMOVE TABLE resume_target'],
-    );
+    await createMigrationFile(migrationsDir, 'resume_me', [
+      'DEFINE TABLE resume_target SCHEMAFULL',
+      'DEFINE FIELD name ON resume_target TYPE string',
+    ]);
 
     // Pre-create the first statement's state in DB (like it was partially applied)
     await driver.query('DEFINE TABLE resume_target SCHEMAFULL');
@@ -428,7 +429,9 @@ describe('handleResumeWithProgress', () => {
     await expect(handleResumeWithProgress(freshRunner)).resolves.not.toThrow();
 
     const logCalls = vi.mocked(console.log).mock.calls;
-    const resumeOutput = logCalls.find((c) => String(c[0]).includes('Resuming'));
+    const resumeOutput = logCalls.find((c) =>
+      String(c[0]).includes('Resuming'),
+    );
     expect(resumeOutput).toBeDefined();
   });
 });
@@ -472,17 +475,16 @@ describe('MigrationRunner integration', () => {
 
     // Verify the migrations table exists via INFO FOR DB
     const info = await driver.query('INFO FOR DB');
-    const tables = (info as unknown as { tables: Record<string, string> })?.tables ?? {};
+    const tables =
+      (info as unknown as { tables: Record<string, string> })?.tables ?? {};
     expect(tables.__test_tracking).toBeDefined();
   });
 
   it('applies migration via runner.up()', async () => {
-    await createMigrationFile(
-      migrationsDir,
-      'create_user',
-      ['DEFINE TABLE user SCHEMAFULL', 'DEFINE FIELD name ON user TYPE string'],
-      ['REMOVE TABLE user'],
-    );
+    await createMigrationFile(migrationsDir, 'create_user', [
+      'DEFINE TABLE user SCHEMAFULL',
+      'DEFINE FIELD name ON user TYPE string',
+    ]);
 
     runner = new MigrationRunner(driver, {
       migrationsDir,
@@ -496,17 +498,17 @@ describe('MigrationRunner integration', () => {
     expect(result.applied[0]).toBe('create_user');
 
     // Verify user table exists
-    const tables = await driver.query<Array<{ name: string }>>('SELECT * FROM user;');
+    const tables = await driver.query<Array<{ name: string }>>(
+      'SELECT * FROM user;',
+    );
     expect(Array.isArray(tables)).toBe(true);
   });
 
   it('reports correct status after applying migration', async () => {
-    await createMigrationFile(
-      migrationsDir,
-      'create_user',
-      ['DEFINE TABLE user SCHEMAFULL', 'DEFINE FIELD name ON user TYPE string'],
-      ['REMOVE TABLE user'],
-    );
+    await createMigrationFile(migrationsDir, 'create_user', [
+      'DEFINE TABLE user SCHEMAFULL',
+      'DEFINE FIELD name ON user TYPE string',
+    ]);
 
     runner = new MigrationRunner(driver, {
       migrationsDir,
@@ -522,12 +524,9 @@ describe('MigrationRunner integration', () => {
   });
 
   it('applies migration via runner.up() (dryRun option not available, verifies basic apply)', async () => {
-    await createMigrationFile(
-      migrationsDir,
-      'create_dryrun',
-      ['DEFINE TABLE dryrun_test SCHEMAFULL'],
-      ['REMOVE TABLE dryrun_test'],
-    );
+    await createMigrationFile(migrationsDir, 'create_dryrun', [
+      'DEFINE TABLE dryrun_test SCHEMAFULL',
+    ]);
 
     runner = new MigrationRunner(driver, {
       migrationsDir,
@@ -545,52 +544,6 @@ describe('MigrationRunner integration', () => {
     const dbTables = tables as unknown as { tables: Record<string, string> };
     const tableNames = Object.keys(dbTables?.tables ?? {});
     expect(tableNames).toContain('dryrun_test');
-  });
-
-  it('rolls back migration via runner.down()', async () => {
-    await createMigrationFile(
-      migrationsDir,
-      'create_rollback',
-      ['DEFINE TABLE rollback_test SCHEMAFULL', 'DEFINE FIELD data ON rollback_test TYPE string'],
-      ['REMOVE TABLE rollback_test'],
-    );
-
-    runner = new MigrationRunner(driver, {
-      migrationsDir,
-      migrationsTable: '__test_rollback',
-      journalDir: path.join(tmpDir, 'meta'),
-    });
-    await runner.init();
-    await runner.up();
-
-    // Rollback
-    const downResult = await runner.down(1);
-    expect(downResult.rolledBack.length).toBe(1);
-
-    // Verify table is gone
-    const status = await runner.status();
-    expect(status.applied.length).toBe(0);
-  });
-
-  it('resets all migrations via runner.reset()', async () => {
-    await createMigrationFile(
-      migrationsDir,
-      'create_reset',
-      ['DEFINE TABLE reset_test SCHEMAFULL'],
-      ['REMOVE TABLE reset_test'],
-    );
-
-    runner = new MigrationRunner(driver, {
-      migrationsDir,
-      migrationsTable: '__test_reset',
-      journalDir: path.join(tmpDir, 'meta'),
-    });
-    await runner.init();
-    await runner.up();
-    await runner.reset();
-
-    const status = await runner.status();
-    expect(status.applied.length).toBe(0);
   });
 });
 
@@ -635,7 +588,9 @@ describe('migrateDev', () => {
     await migrateDev({ config, name: 'test_migration' });
 
     const logCalls = vi.mocked(console.log).mock.calls;
-    const noTablesLine = logCalls.find((c) => String(c[0]).includes('No schema tables found'));
+    const noTablesLine = logCalls.find((c) =>
+      String(c[0]).includes('No schema tables found'),
+    );
     expect(noTablesLine).toBeDefined();
   });
 
@@ -680,7 +635,9 @@ describe('migrateDev', () => {
     }
 
     const logCalls = vi.mocked(console.log).mock.calls;
-    const noDbLine = logCalls.find((c) => String(c[0]).includes('No database configuration found'));
+    const noDbLine = logCalls.find((c) =>
+      String(c[0]).includes('No database configuration found'),
+    );
     expect(noDbLine).toBeDefined();
 
     // Verify migration file was created before the connection error
@@ -710,7 +667,11 @@ describe('migrateDeploy', () => {
       namespace: 'test_deploy',
       database: 'test_deploy_db',
       schema: { dir: './schema', pattern: '**/*.ts' },
-      migrations: { dir: './migrations', journalDir: './meta', table: '__test_deploy_mig' },
+      migrations: {
+        dir: './migrations',
+        journalDir: './meta',
+        table: '__test_deploy_mig',
+      },
     };
 
     await expect(migrateDeploy({ config })).rejects.toThrow(/shadow/i);

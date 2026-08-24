@@ -1,15 +1,23 @@
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
+import { escapeString } from '../../core/surql.ts';
 import { connect } from '../../sdk/driver/orm-connection.js';
 import type { EmbeddedConfig, SurrealDriver } from '../../sdk/driver/types.js';
-import type { ColumnConfig, SurrealColumnType } from '../../sdk/schema/column/types.js';
+import type {
+  ColumnConfig,
+  SurrealColumnType,
+} from '../../sdk/schema/column/types.js';
 import type { AccessConfig } from '../../sdk/schema.js';
-import type { TableDefinition } from '../../sdk/table.js';
+import type { AnalyzerDefinition, TableDefinition } from '../../sdk/table.js';
 import type { Config } from '../config.js';
 import { SurrealQLGenerator } from '../core/generator.js';
 import { MigrationRunner } from '../core/runner.js';
 import { introspectDatabase } from '../ddl/introspect.js';
-import { generateFullMigration, generateMigrationFile, loadSchemaFiles } from './generate.js';
+import {
+  generateFullMigration,
+  generateMigrationFile,
+  loadSchemaFiles,
+} from './generate.js';
 import { safeDisconnect } from './operations.js';
 
 export interface PullOptions {
@@ -21,7 +29,10 @@ export interface PullOptions {
   embeddedConfig?: EmbeddedConfig;
 }
 
-export async function pullSchema(options: PullOptions, driver?: SurrealDriver): Promise<void> {
+export async function pullSchema(
+  options: PullOptions,
+  driver?: SurrealDriver,
+): Promise<void> {
   const { config, outputDir, table, embeddedDriver, embeddedConfig } = options;
 
   const resolvedOutputDir = outputDir ?? config.schema?.dir ?? './schema';
@@ -92,7 +103,10 @@ export async function pullSchema(options: PullOptions, driver?: SurrealDriver): 
   }
 }
 
-function deriveOutputFilename(pattern: string | undefined, table?: string): string {
+function deriveOutputFilename(
+  pattern: string | undefined,
+  table?: string,
+): string {
   if (table) {
     return `${table}.schema.ts`;
   }
@@ -155,29 +169,29 @@ async function generateAndApplyMigration(
   // Generate full migration SQL for ALL tables (no diff, no driver)
   const generator = new SurrealQLGenerator();
 
-  // Get access definitions: prefer DB introspection, fall back to schema files
+  // Get access/analyzer definitions: prefer DB introspection, fall back to schema files
   let accessForMigration: AccessConfig[] = [];
+  let analyzersForMigration: AnalyzerDefinition[] = [];
   if (accessSQL.length === 0) {
     const pattern = config.schema?.pattern ?? '**/*.ts';
     const schemaFiles = await loadSchemaFiles(schemaDir, pattern);
     accessForMigration = schemaFiles.access ?? [];
+    analyzersForMigration = schemaFiles.analyzers ?? [];
   }
 
-  const { upStatements, downStatements } = generateFullMigration(
+  const { upStatements } = generateFullMigration(
     tablesAsTableDef,
     generator,
     accessForMigration,
+    undefined,
+    undefined,
+    analyzersForMigration,
   );
 
   // Inject raw access SQL from DB introspection if available
   if (accessSQL.length > 0) {
     for (const sql of accessSQL) {
       upStatements.push(sql);
-      // Extract access name from SQL: "DEFINE ACCESS name ON DATABASE ..."
-      const match = /DEFINE ACCESS (\w+)/i.exec(sql);
-      if (match) {
-        downStatements.push(`REMOVE ACCESS IF EXISTS ${match[1]} ON DATABASE`);
-      }
     }
   }
 
@@ -200,7 +214,6 @@ async function generateAndApplyMigration(
   await fs.mkdir(migrationsDir, { recursive: true });
   const migrationContent = generateMigrationFile(timestamp, 'init_from_pull', {
     up: upStatements,
-    down: downStatements,
   });
   const migrationDir = path.join(migrationsDir, `${timestamp}_init_from_pull`);
   const migrationFilePath = path.join(migrationDir, 'migration.surql');
@@ -243,23 +256,41 @@ function generateTypeScriptSchema(
   },
   tableName?: string,
 ): string {
-  const needsDateTime = ddl.tables.some((t) => t.columns.some((c) => c.kind === 'datetime'));
-  const needsNumber = ddl.tables.some((t) =>
-    t.columns.some((c) => c.kind === 'int' || c.kind === 'float' || c.kind === 'decimal'),
+  const needsDateTime = ddl.tables.some((t) =>
+    t.columns.some((c) => c.kind === 'datetime'),
   );
-  const needsBool = ddl.tables.some((t) => t.columns.some((c) => c.kind === 'bool'));
-  const needsRecord = ddl.tables.some((t) => t.columns.some((c) => c.recordTable));
-  const needsArray = ddl.tables.some((t) => t.columns.some((c) => c.kind === 'array'));
+  const needsNumber = ddl.tables.some((t) =>
+    t.columns.some(
+      (c) => c.kind === 'int' || c.kind === 'float' || c.kind === 'decimal',
+    ),
+  );
+  const needsBool = ddl.tables.some((t) =>
+    t.columns.some((c) => c.kind === 'bool'),
+  );
+  const needsRecord = ddl.tables.some((t) =>
+    t.columns.some((c) => c.recordTable),
+  );
+  const needsArray = ddl.tables.some((t) =>
+    t.columns.some((c) => c.kind === 'array'),
+  );
 
   const imports = [
     `import { defineTable } from '@woss/dali-orm/sdk/table';`,
     needsDateTime
       ? `import { datetime } from '@woss/dali-orm/sdk/schema/column/simple-builders';`
       : '',
-    needsNumber ? `import { int } from '@woss/dali-orm/sdk/schema/column/simple-builders';` : '',
-    needsBool ? `import { bool } from '@woss/dali-orm/sdk/schema/column/simple-builders';` : '',
-    needsArray ? `import { array } from '@woss/dali-orm/sdk/schema/column/simple-builders';` : '',
-    needsRecord ? `import { record } from '@woss/dali-orm/sdk/schema/column/record';` : '',
+    needsNumber
+      ? `import { int } from '@woss/dali-orm/sdk/schema/column/simple-builders';`
+      : '',
+    needsBool
+      ? `import { bool } from '@woss/dali-orm/sdk/schema/column/simple-builders';`
+      : '',
+    needsArray
+      ? `import { array } from '@woss/dali-orm/sdk/schema/column/simple-builders';`
+      : '',
+    needsRecord
+      ? `import { record } from '@woss/dali-orm/sdk/schema/column/record';`
+      : '',
     `import { string } from '@woss/dali-orm/sdk/schema/column/simple-builders';`,
   ]
     .filter(Boolean)
@@ -276,7 +307,9 @@ function generateTypeScriptSchema(
   const schemaExports: string[] = [];
 
   for (const table of ddl.tables) {
-    lines.push(`export const ${table.name}Schema = defineTable('${table.name}', {`);
+    lines.push(
+      `export const ${table.name}Schema = defineTable('${table.name}', {`,
+    );
     schemaExports.push(`${table.name}: ${table.name}Schema`);
 
     for (const column of table.columns) {
@@ -331,7 +364,9 @@ export function generateColumnDefinition(column: {
   };
 
   const builderFn = typeMap[column.kind ?? ''] ?? 'string';
-  const propName = /[^a-zA-Z0-9_$]/.test(column.name) ? `'${column.name}'` : column.name;
+  const propName = /[^a-zA-Z0-9_$]/.test(column.name)
+    ? `'${column.name}'`
+    : column.name;
 
   if (column.kind === 'record' && column.recordTable) {
     let def = `${propName}: record('${column.recordTable}')`;
@@ -391,17 +426,12 @@ function formatDefaultValueForTS(value: unknown): string {
     return String(value);
   }
   if (typeof value === 'string') {
-    // Handle SQL-quoted strings: 'active' → dequote then re-wrap
+    // Handle SQL-quoted strings: 'active' → dequote, re-wrap with proper escaping
     const unquoted =
       value.startsWith("'") && value.endsWith("'") && value.length >= 2
         ? value.slice(1, -1)
         : value;
-    if (unquoted.includes("'")) {
-      const escaped = unquoted.replace(/"/g, '\\"');
-      return `"${escaped}"`;
-    }
-    const escaped = unquoted.replace(/'/g, "\\'");
-    return `'${escaped}'`;
+    return `'${escapeString(unquoted)}'`;
   }
   return JSON.stringify(value);
 }

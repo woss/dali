@@ -14,6 +14,10 @@ export {
   containsAll,
   containsAny,
   containsNone,
+  /** Exact equality — treats the value as a raw SurrealQL expression (no escaping).
+   * Unlike `eq()` which escapes/parameterizes the value, `eeq()` passes it
+   * through literally. Use for column-to-column comparisons or SurrealQL
+   * functions where the right-hand side must not be treated as a string literal. */
   eeq,
   eq,
   expr,
@@ -32,7 +36,7 @@ export {
 export type { Expr, ExprCtx, ExprLike };
 
 // Alias for SDK Expr type
-export type SurrealCondition = Expr;
+export type Condition = Expr;
 
 // ============================================================================
 // Simple Condition Helpers (Serialize to SurrealQL + params)
@@ -65,7 +69,9 @@ export type ConditionOp =
   | 'INTERSECTS'
   | 'IN'
   | '~'
-  | '!~';
+  | '!~'
+  | '@@'
+  | '@N@';
 
 /**
  * Build a parameterized condition
@@ -100,7 +106,9 @@ export function isNotNull(field: string): SerializedCondition {
 /**
  * Combine multiple conditions with AND
  */
-export function allConditions(...conditions: SerializedCondition[]): SerializedCondition {
+export function allConditions(
+  ...conditions: SerializedCondition[]
+): SerializedCondition {
   if (conditions.length === 0) return { sql: '', params: {} };
   if (conditions.length === 1) return conditions[0];
 
@@ -115,7 +123,9 @@ export function allConditions(...conditions: SerializedCondition[]): SerializedC
 /**
  * Combine multiple conditions with OR
  */
-export function anyConditions(...conditions: SerializedCondition[]): SerializedCondition {
+export function anyConditions(
+  ...conditions: SerializedCondition[]
+): SerializedCondition {
   if (conditions.length === 0) return { sql: '', params: {} };
   if (conditions.length === 1) return conditions[0];
 
@@ -130,14 +140,52 @@ export function anyConditions(...conditions: SerializedCondition[]): SerializedC
 /**
  * Wrap a condition with NOT
  */
-export function negateCondition(condition: SerializedCondition): SerializedCondition {
+export function negateCondition(
+  condition: SerializedCondition,
+): SerializedCondition {
   return { sql: `NOT (${condition.sql})`, params: condition.params };
+}
+
+/**
+ * Build a graph traversal field path for use in conditions.
+ * Joins segments as-is (no separator added between segments).
+ * Include `.` in segments when accessing nested fields.
+ *
+ * @example
+ * graphFieldPath('->likes->post.title')
+ * // Returns: '->likes->post.title'
+ *
+ * // Dot must be included in the segment:
+ * graphFieldPath('->writes.', 'title')
+ * // Returns: '->writes.title'
+ *
+ * // With condition builder:
+ * buildCondition(graphFieldPath('->likes->post.', 'status'), '=', 'published')
+ * // Produces: `->likes->post.status = $p_...`
+ */
+export function graphFieldPath(...segments: string[]): string {
+  return segments.join('');
+}
+
+/**
+ * Create a SurrealDB cast expression.
+ * SurrealDB uses `<type>value` syntax for type casting.
+ *
+ * @example
+ * cast('int', '$id')     // <int>$id
+ * cast('string', 'name') // <string>name
+ * cast('decimal', 42)    // <decimal>42
+ */
+export function cast(type: string, expr: string | number): string {
+  return `<${type}>${expr}`;
 }
 
 /**
  * Check if a value is a valid SerializedCondition
  */
-export function isSerializedCondition(value: unknown): value is SerializedCondition {
+export function isSerializedCondition(
+  value: unknown,
+): value is SerializedCondition {
   return (
     typeof value === 'object' &&
     value !== null &&

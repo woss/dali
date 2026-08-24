@@ -74,6 +74,7 @@ export {
 } from './crypto.js';
 // Duration
 export {
+  DURATION_MAX,
   durationDays,
   durationHours,
   durationMicros,
@@ -82,12 +83,18 @@ export {
   durationNanos,
   durationSecs,
   durationWeeks,
-  DURATION_MAX,
 } from './duration.js';
 // Encoding
 export { encodingBase64Decode, encodingBase64Encode } from './encoding.js';
 // Files
-export { filesDelete, filesExists, filesGet, filesInfo, filesList, filesPut } from './files.js';
+export {
+  filesDelete,
+  filesExists,
+  filesGet,
+  filesInfo,
+  filesList,
+  filesPut,
+} from './files.js';
 // Geo
 export {
   geoArea,
@@ -100,7 +107,14 @@ export {
   geoWithin,
 } from './geo.js';
 // Http
-export { httpDelete, httpGet, httpHead, httpPatch, httpPost, httpPut } from './http.js';
+export {
+  httpDelete,
+  httpGet,
+  httpHead,
+  httpPatch,
+  httpPost,
+  httpPut,
+} from './http.js';
 // Math
 export {
   mathAbs,
@@ -135,6 +149,8 @@ export {
 } from './math.js';
 // Meta
 export { metaId, metaTable, metaTb } from './meta.js';
+// ML
+export { mlPredict, mlTrain } from './ml.js';
 // Not
 export { not } from './not.js';
 // Object
@@ -176,6 +192,8 @@ export {
 export { recordId, recordTable } from './record.js';
 // Search
 export { searchHighlight, searchScore } from './search.js';
+// Sequence
+export { sequenceNext, sequencePeek, sequenceSet } from './sequence.js';
 // Session
 export {
   sessionExpiry,
@@ -185,8 +203,6 @@ export {
   sessionToken,
   sessionUser,
 } from './session.js';
-// Sequence
-export { sequenceNext, sequencePeek, sequenceSet } from './sequence.js';
 // Set
 export {
   setAdd,

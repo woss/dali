@@ -3,20 +3,26 @@
 import * as path from 'node:path';
 import { createDebug as debug } from 'obug';
 import type { SurrealDriver } from '../sdk/driver/types.js';
+import { diffSchema } from './cli/diff.js';
+import { generateMigration, loadSchemaFiles } from './cli/generate.js';
+import {
+  migrateDeploy,
+  migrateDev,
+  migrateResume,
+  migrateSync,
+  migrateUp,
+} from './cli/migrate.js';
 import {
   createConnection,
   createConnectionWithTimeout,
   formatError,
   safeDisconnect,
 } from './cli/operations.js';
-import { diffSchema } from './cli/diff.js';
-import { generateMigration, loadSchemaFiles } from './cli/generate.js';
-import { MigrationRunner } from './core/runner.js';
-import { migrateDeploy, migrateDev, migrateResume, migrateSync, migrateUp } from './cli/migrate.js';
 import { pullSchema } from './cli/pull.js';
 import { pushSchema } from './cli/push.js';
-import { loadConfig } from './config.js';
 import type { Config } from './config.js';
+import { loadConfig } from './config.js';
+import { MigrationRunner } from './core/runner.js';
 
 const log = debug('dali-orm:kit:cli');
 
@@ -26,7 +32,6 @@ interface CLIOptions {
   force?: boolean;
   offline?: boolean;
   to?: string;
-  steps?: number;
   output?: string;
   name?: string;
   schema?: string;
@@ -58,7 +63,10 @@ export function slugify(text: string): string {
  */
 if (!process.env.VITEST) {
   process.on('unhandledRejection', (reason) => {
-    console.error('UNHANDLED REJECTION:', reason instanceof Error ? reason.message : reason);
+    console.error(
+      'UNHANDLED REJECTION:',
+      reason instanceof Error ? reason.message : reason,
+    );
   });
   process.on('uncaughtException', (error) => {
     console.error('UNCAUGHT EXCEPTION:', error.message);
@@ -127,7 +135,11 @@ export async function main(argv?: string[]): Promise<void> {
   }
 }
 
-async function handleMigrate(args: string[], options: CLIOptions, config: Config) {
+async function handleMigrate(
+  args: string[],
+  options: CLIOptions,
+  config: Config,
+) {
   const subcommand = args[0];
   log('handleMigrate called with args:', args);
   log('subcommand:', subcommand);
@@ -150,42 +162,6 @@ async function handleMigrate(args: string[], options: CLIOptions, config: Config
         dryRun: options.dryRun,
       });
       break;
-
-    case 'down': {
-      log('Running migrate down');
-      const downDriver = await createConnection(config);
-      try {
-        const downRunner = new MigrationRunner(downDriver, {
-          migrationsDir: config.migrations?.dir,
-          migrationsTable: config.migrations?.table ?? '__migrations',
-          journalDir: config.migrations?.journalDir,
-        });
-        await downRunner.init();
-        await downRunner.down(options.steps ?? 1);
-        console.log(`✓ Rolled back ${options.steps ?? 1} migration(s)`);
-      } finally {
-        await safeDisconnect(downDriver);
-      }
-      break;
-    }
-
-    case 'reset': {
-      log('Running migrate reset');
-      const resetDriver = await createConnection(config);
-      try {
-        const resetRunner = new MigrationRunner(resetDriver, {
-          migrationsDir: config.migrations?.dir,
-          migrationsTable: config.migrations?.table ?? '__migrations',
-          journalDir: config.migrations?.journalDir,
-        });
-        await resetRunner.init();
-        await resetRunner.reset({ force: options.force });
-        console.log('✓ All migrations rolled back');
-      } finally {
-        await safeDisconnect(resetDriver);
-      }
-      break;
-    }
 
     case 'status': {
       log('Running migrate status');
@@ -218,7 +194,9 @@ async function handleMigrate(args: string[], options: CLIOptions, config: Config
       const rawName = options.name ?? args[1];
       const slugName = slugify(rawName);
       if (rawName !== slugName) {
-        console.log(`[INFO] Migration name slugified: "${rawName}" → "${slugName}"`);
+        console.log(
+          `[INFO] Migration name slugified: "${rawName}" → "${slugName}"`,
+        );
       }
       await migrateDev({
         config,
@@ -254,7 +232,10 @@ async function handleMigrate(args: string[], options: CLIOptions, config: Config
  * Print migration status to console using a connected driver.
  * Extracted to avoid duplicating status display logic.
  */
-async function printMigrationStatus(statusDriver: SurrealDriver, config: Config): Promise<void> {
+async function printMigrationStatus(
+  statusDriver: SurrealDriver,
+  config: Config,
+): Promise<void> {
   const statusRunner = new MigrationRunner(statusDriver, {
     migrationsDir: config.migrations?.dir,
     migrationsTable: config.migrations?.table ?? '__migrations',
@@ -285,7 +266,11 @@ async function printMigrationStatus(statusDriver: SurrealDriver, config: Config)
   }
 }
 
-async function handleGenerate(args: string[], options: CLIOptions, config: Config) {
+async function handleGenerate(
+  args: string[],
+  options: CLIOptions,
+  config: Config,
+) {
   // Parse positional arguments and options
   let name: string | undefined;
   let schemaPath: string | undefined;
@@ -310,7 +295,9 @@ async function handleGenerate(args: string[], options: CLIOptions, config: Confi
     console.error('Options:');
     console.error('  --name <name>       Migration name');
     console.error('  --schema <path>     Schema file or directory');
-    console.error('  --output <path>    Output directory (default: ./migrations)');
+    console.error(
+      '  --output <path>    Output directory (default: ./migrations)',
+    );
     console.error('  --version <ver>    Version number');
     console.error(
       '  --offline          Skip database connection, use snapshot comparison if available',
@@ -318,7 +305,10 @@ async function handleGenerate(args: string[], options: CLIOptions, config: Confi
     process.exit(1);
   }
 
-  log('Config loaded: %O', { ...config, auth: config.auth ? '***' : undefined });
+  log('Config loaded: %O', {
+    ...config,
+    auth: config.auth ? '***' : undefined,
+  });
   const schemaDir = schemaPath ?? config.schema?.dir ?? './schema';
   log('Schema dir: %s', schemaDir);
   log('Schema pattern: %s', config.schema?.pattern);
@@ -340,7 +330,9 @@ async function handleGenerate(args: string[], options: CLIOptions, config: Confi
 
   // Skip connection if --offline flag is set
   if (options.offline) {
-    console.log('[INFO] Running in offline mode - skipping database connection');
+    console.log(
+      '[INFO] Running in offline mode - skipping database connection',
+    );
     console.log('[INFO] Offline mode - using snapshot comparison');
   } else if (config.url || config.namespace || config.database) {
     try {
@@ -375,6 +367,7 @@ async function handleGenerate(args: string[], options: CLIOptions, config: Confi
     schemaFiles.access,
     undefined,
     schemaFiles.functions,
+    schemaFiles.analyzers,
   );
 
   // Clean up connection
@@ -413,7 +406,11 @@ async function handlePull(args: string[], options: CLIOptions, config: Config) {
   });
 }
 
-async function handleDiff(_args: string[], options: CLIOptions, config: Config) {
+async function handleDiff(
+  _args: string[],
+  options: CLIOptions,
+  config: Config,
+) {
   const schemaDir = options.schema ?? config.schema?.dir ?? './schema';
   const schemaFiles = await loadSchemaFiles(schemaDir, config.schema?.pattern);
 
@@ -424,7 +421,11 @@ async function handleDiff(_args: string[], options: CLIOptions, config: Config) 
   });
 }
 
-async function handleQuery(args: string[], options: CLIOptions, config: Config) {
+async function handleQuery(
+  args: string[],
+  options: CLIOptions,
+  config: Config,
+) {
   const query = args[0];
   if (!query) {
     console.error('Usage: dali-orm query "<SURREALQL>" [options]');
@@ -463,9 +464,6 @@ export function parseGlobalOptions(args: string[]): CLIOptions {
         break;
       case '--to':
         options.to = args[++i];
-        break;
-      case '--steps':
-        options.steps = parseInt(args[++i], 10);
         break;
       case '--output':
       case '-o':
@@ -507,7 +505,7 @@ Usage:
   dali-orm <command> [options]
 
 Commands:
-  migrate [up|down|reset|status|sync|resume|dev|deploy]  Manage migrations
+  migrate [up|status|sync|resume|dev|deploy]  Manage migrations
   generate <name>                  Generate a new migration
   pull [table]                    Pull schema from database
   diff                            Show schema diff between DB and schema.ts
@@ -520,7 +518,6 @@ Options:
   -n, --dry-run          Show what would be done without executing
   -f, --force            Skip confirmation prompts
   --to <version>         Target migration version
-  --steps <n>            Number of migration steps
   -o, --output <path>    Output directory
   -m, --name <name>      Migration name (for generate, migrate dev)
   -s, --schema <path>    Schema file or directory (for generate)
@@ -536,7 +533,6 @@ Examples:
   dali-orm migrate dev add_users_table
   dali-orm migrate dev "add user table"
   dali-orm migrate deploy
-  dali-orm migrate down --steps 2
   dali-orm generate add_users_table
   dali-orm generate "create posts table"
   dali-orm generate --name create_posts --schema ./schema --output ./migrations
@@ -553,8 +549,6 @@ Usage:
 
 Commands:
   up                   Run pending migrations
-  down                 Revert migrations
-  reset                Revert all migrations
   status               Show migration status
   sync                 Sync journal from database state
   resume               Resume partial migrations
@@ -563,7 +557,6 @@ Commands:
 
 Options:
   --to <version>       Target migration version (for up)
-  --steps <n>          Number of migrations to revert (for down)
   -f, --force          Skip confirmation prompts
   --name <name>        Migration name (for dev)
 
@@ -571,8 +564,6 @@ Examples:
   dali-orm migrate up
   dali-orm migrate dev add_users_table
   dali-orm migrate deploy
-  dali-orm migrate down --steps 2
-  dali-orm migrate reset
   dali-orm migrate status
   `);
 }

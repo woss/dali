@@ -1,17 +1,16 @@
 import * as fs from 'node:fs/promises';
 import os from 'node:os';
 import * as path from 'node:path';
-import { afterEach, beforeEach, describe, expect, it } from 'vite-plus/test';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { EmbeddedDriver } from '../../sdk/driver/embedded-driver.js';
 import type { ColumnDefinition, TableDefinition } from '../../sdk/table.js';
 import {
+  _setTestConfigDir,
   generateAndApplyMigration,
   getMigrationStatus,
   migrateToDatabase,
   pullAndMigrate,
   pushSchemaFromTableDefs,
-  rollbackMigrations,
-  _setTestConfigDir,
 } from '../api.js';
 
 // ============================================================================
@@ -52,7 +51,11 @@ async function setupTestProject(): Promise<{
     "  database: 'test_db',",
     '};',
   ].join('\n');
-  await fs.writeFile(path.join(rootDir, 'dali-orm.config.ts'), configContent, 'utf-8');
+  await fs.writeFile(
+    path.join(rootDir, 'dali-orm.config.ts'),
+    configContent,
+    'utf-8',
+  );
 
   return { rootDir, migrationsDir, journalDir };
 }
@@ -61,7 +64,6 @@ async function createMigrationFile(
   dir: string,
   name: string,
   upStatements: string[],
-  downStatements: string[],
 ): Promise<string> {
   const timestamp = Date.now().toString();
   const migrationDir = path.join(dir, `${timestamp}_${name}`);
@@ -74,16 +76,17 @@ async function createMigrationFile(
     '',
     '-- UP',
     ...upStatements.map((s) => `${s};`),
-    '',
-    '-- DOWN',
-    ...downStatements.map((s) => `${s};`),
   ].join('\n');
 
   await fs.writeFile(filePath, content, 'utf-8');
   return filePath;
 }
 
-function buildColumnDef(name: string, type: string, optional = false): ColumnDefinition {
+function buildColumnDef(
+  name: string,
+  type: string,
+  optional = false,
+): ColumnDefinition {
   return {
     name,
     tableName: 'user',
@@ -109,7 +112,11 @@ function buildUserTable(): TableDefinition {
 
 describe('Migration API', () => {
   let driver: EmbeddedDriver;
-  let testProject: { rootDir: string; migrationsDir: string; journalDir: string };
+  let testProject: {
+    rootDir: string;
+    migrationsDir: string;
+    journalDir: string;
+  };
 
   beforeEach(async () => {
     driver = createTestDriver();
@@ -130,12 +137,10 @@ describe('Migration API', () => {
 
   describe('migrateToDatabase', () => {
     it('applies pending migrations from directory', async () => {
-      await createMigrationFile(
-        testProject.migrationsDir,
-        'add_user_table',
-        ['DEFINE TABLE user SCHEMAFULL', 'DEFINE FIELD name ON user TYPE string'],
-        ['REMOVE TABLE user'],
-      );
+      await createMigrationFile(testProject.migrationsDir, 'add_user_table', [
+        'DEFINE TABLE user SCHEMAFULL',
+        'DEFINE FIELD name ON user TYPE string',
+      ]);
 
       const result = await migrateToDatabase(driver);
 
@@ -145,12 +150,9 @@ describe('Migration API', () => {
     });
 
     it('skips already-applied migrations', async () => {
-      await createMigrationFile(
-        testProject.migrationsDir,
-        'add_user_table',
-        ['DEFINE TABLE user SCHEMAFULL'],
-        ['REMOVE TABLE user'],
-      );
+      await createMigrationFile(testProject.migrationsDir, 'add_user_table', [
+        'DEFINE TABLE user SCHEMAFULL',
+      ]);
 
       const first = await migrateToDatabase(driver);
       expect(first.applied).toHaveLength(1);
@@ -167,76 +169,19 @@ describe('Migration API', () => {
     });
 
     it('applies multiple migrations in order', async () => {
-      await createMigrationFile(
-        testProject.migrationsDir,
-        '001_create_user',
-        ['DEFINE TABLE user SCHEMAFULL'],
-        ['REMOVE TABLE user'],
-      );
+      await createMigrationFile(testProject.migrationsDir, '001_create_user', [
+        'DEFINE TABLE user SCHEMAFULL',
+      ]);
 
       await new Promise((r) => setTimeout(r, 10));
 
-      await createMigrationFile(
-        testProject.migrationsDir,
-        '002_add_email',
-        ['DEFINE FIELD email ON user TYPE string'],
-        ['REMOVE FIELD email ON user'],
-      );
+      await createMigrationFile(testProject.migrationsDir, '002_add_email', [
+        'DEFINE FIELD email ON user TYPE string',
+      ]);
 
       const result = await migrateToDatabase(driver);
 
       expect(result.applied).toHaveLength(2);
-    });
-  });
-
-  // ==========================================================================
-  // rollbackMigrations
-  // ==========================================================================
-
-  describe('rollbackMigrations', () => {
-    it('rolls back applied migrations', async () => {
-      await createMigrationFile(
-        testProject.migrationsDir,
-        'add_user_table',
-        ['DEFINE TABLE user SCHEMAFULL'],
-        ['REMOVE TABLE user'],
-      );
-
-      await migrateToDatabase(driver);
-      const result = await rollbackMigrations(driver, 1);
-
-      expect(result.rolledBack).toHaveLength(1);
-      expect(result.rolledBack[0]).toContain('add_user_table');
-    });
-
-    it('rolls back specified number of steps', async () => {
-      await createMigrationFile(
-        testProject.migrationsDir,
-        '001_create_user',
-        ['DEFINE TABLE user SCHEMAFULL'],
-        ['REMOVE TABLE user'],
-      );
-
-      await new Promise((r) => setTimeout(r, 10));
-
-      await createMigrationFile(
-        testProject.migrationsDir,
-        '002_add_email',
-        ['DEFINE FIELD email ON user TYPE string'],
-        ['REMOVE FIELD email ON user'],
-      );
-
-      await migrateToDatabase(driver);
-      const result = await rollbackMigrations(driver, 1);
-
-      expect(result.rolledBack).toHaveLength(1);
-      expect(result.rolledBack[0]).toContain('add_email');
-    });
-
-    it('handles rollback when no migrations applied', async () => {
-      const result = await rollbackMigrations(driver, 1);
-
-      expect(result.rolledBack).toHaveLength(0);
     });
   });
 
@@ -253,19 +198,13 @@ describe('Migration API', () => {
     });
 
     it('shows pending and applied migrations', async () => {
-      await createMigrationFile(
-        testProject.migrationsDir,
-        'add_user_table',
-        ['DEFINE TABLE user SCHEMAFULL'],
-        ['REMOVE TABLE user'],
-      );
+      await createMigrationFile(testProject.migrationsDir, 'add_user_table', [
+        'DEFINE TABLE user SCHEMAFULL',
+      ]);
 
-      await createMigrationFile(
-        testProject.migrationsDir,
-        'add_post_table',
-        ['DEFINE TABLE post SCHEMAFULL'],
-        ['REMOVE TABLE post'],
-      );
+      await createMigrationFile(testProject.migrationsDir, 'add_post_table', [
+        'DEFINE TABLE post SCHEMAFULL',
+      ]);
 
       await migrateToDatabase(driver);
 
@@ -274,7 +213,6 @@ describe('Migration API', () => {
         testProject.migrationsDir,
         'add_comment_table',
         ['DEFINE TABLE comment SCHEMAFULL'],
-        ['REMOVE TABLE comment'],
       );
 
       const status = await getMigrationStatus(driver);
@@ -292,10 +230,14 @@ describe('Migration API', () => {
     it('generates and applies migration from table definitions', async () => {
       const userTable = buildUserTable();
 
-      const { outputPath, result } = await generateAndApplyMigration(driver, [userTable], {
-        name: 'add_user_table',
-        fullMigration: true,
-      });
+      const { outputPath, result } = await generateAndApplyMigration(
+        driver,
+        [userTable],
+        {
+          name: 'add_user_table',
+          fullMigration: true,
+        },
+      );
 
       // Should have written migration file in the project migrations dir
       expect(outputPath).toContain('add_user_table');
@@ -304,7 +246,10 @@ describe('Migration API', () => {
 
     it('throws with no tables', async () => {
       await expect(
-        generateAndApplyMigration(driver, [], { name: 'empty_migration', fullMigration: true }),
+        generateAndApplyMigration(driver, [], {
+          name: 'empty_migration',
+          fullMigration: true,
+        }),
       ).rejects.toThrow('No tables provided');
     });
 
@@ -312,7 +257,10 @@ describe('Migration API', () => {
       const userTable = buildUserTable();
 
       await expect(
-        generateAndApplyMigration(driver, [userTable], { name: '', fullMigration: true }),
+        generateAndApplyMigration(driver, [userTable], {
+          name: '',
+          fullMigration: true,
+        }),
       ).rejects.toThrow('Migration name is required');
     });
   });
@@ -352,7 +300,9 @@ describe('Migration API', () => {
     });
 
     it('throws with no tables', async () => {
-      await expect(pushSchemaFromTableDefs(driver, [])).rejects.toThrow('No table definitions');
+      await expect(pushSchemaFromTableDefs(driver, [])).rejects.toThrow(
+        'No table definitions',
+      );
     });
   });
 });

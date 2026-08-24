@@ -1,6 +1,6 @@
-import { afterEach, beforeEach, describe, expect, it } from 'vite-plus/test';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import type { DaliORM } from '../../sdk/dali-orm.js';
 import { EmbeddedDriver } from '../../sdk/driver/embedded-driver.js';
-import type { SurrealDriver } from '../../sdk/driver/types.js';
 import { bool, datetime, int, string } from '../../sdk/schema/column/index.js';
 import { defineTable } from '../../sdk/table.js';
 import { live } from '../live.js';
@@ -18,7 +18,8 @@ function createTestDriver(): EmbeddedDriver {
   });
 }
 
-let driver: SurrealDriver;
+let driver: EmbeddedDriver;
+let orm: DaliORM;
 
 const users = defineTable('user', {
   name: string('name'),
@@ -34,12 +35,15 @@ async function defineTables() {
   await driver.query('DEFINE FIELD email ON user TYPE option<string>');
   await driver.query('DEFINE FIELD age ON user TYPE option<int>');
   await driver.query('DEFINE FIELD active ON user TYPE bool DEFAULT true');
-  await driver.query('DEFINE FIELD createdAt ON user TYPE datetime DEFAULT time::now()');
+  await driver.query(
+    'DEFINE FIELD createdAt ON user TYPE datetime DEFAULT time::now()',
+  );
 }
 
 beforeEach(async () => {
   driver = createTestDriver();
   await driver.connect();
+  orm = { getDriver: () => driver } as unknown as DaliORM;
   await defineTables();
 });
 
@@ -53,17 +57,19 @@ afterEach(async () => {
 
 describe('LiveQueryBuilder - Construction', () => {
   it('throws without driver', () => {
-    expect(() => live(null as unknown as SurrealDriver, users)).toThrow('Driver is required');
+    expect(() => live(null as unknown as DaliORM, users)).toThrow(
+      'DaliORM instance is required',
+    );
   });
 
   it('throws without table definition', () => {
-    expect(() => live(driver, null as unknown as typeof users)).toThrow(
+    expect(() => live(orm, null as unknown as typeof users)).toThrow(
       'Table definition with name is required',
     );
   });
 
   it('creates builder with valid inputs', () => {
-    const builder = live(driver, users);
+    const builder = live(orm, users);
     expect(builder).toBeDefined();
     expect(typeof builder.start).toBe('function');
     expect(typeof builder.subscribe).toBe('function');
@@ -76,54 +82,62 @@ describe('LiveQueryBuilder - Construction', () => {
 
 describe('LiveQueryBuilder - Chainable Methods', () => {
   it('diff returns this for chaining', () => {
-    const builder = live(driver, users);
+    const builder = live(orm, users);
     expect(builder.diff()).toBe(builder);
   });
 
   it('fields throws with empty arguments', () => {
-    const builder = live(driver, users);
-    expect(() => builder.fields()).toThrow('At least one field name is required');
+    const builder = live(orm, users);
+    expect(() => builder.fields()).toThrow(
+      'At least one field name is required',
+    );
   });
 
   it('fields returns this for chaining', () => {
-    const builder = live(driver, users);
+    const builder = live(orm, users);
     expect(builder.fields('name', 'age')).toBe(builder);
   });
 
   it('value throws with empty field', () => {
-    const builder = live(driver, users);
-    expect(() => builder.value('' as any)).toThrow('Field name is required for value()');
+    const builder = live(orm, users);
+    expect(() => builder.value('' as any)).toThrow(
+      'Field name is required for value()',
+    );
   });
 
   it('value returns this for chaining', () => {
-    const builder = live(driver, users);
+    const builder = live(orm, users);
     expect(builder.value('name' as const)).toBe(builder);
   });
 
   it('where throws with null condition', () => {
-    const builder = live(driver, users);
+    const builder = live(orm, users);
     expect(() => builder.where(null as unknown as never)).toThrow(
       'WHERE condition cannot be null or undefined',
     );
   });
 
   it('fetch throws with empty arguments', () => {
-    const builder = live(driver, users);
-    expect(() => builder.fetch()).toThrow('At least one field name is required for fetch');
+    const builder = live(orm, users);
+    expect(() => builder.fetch()).toThrow(
+      'At least one field name is required for fetch',
+    );
   });
 
   it('fetch returns this for chaining', () => {
-    const builder = live(driver, users);
+    const builder = live(orm, users);
     expect(builder.fetch('authorId')).toBe(builder);
   });
 
   it('onRecord throws with empty recordId', () => {
-    const builder = live(driver, users);
-    expect(() => builder.onRecord('')).toThrow('Record ID is required for onRecord');
+    const builder = live(orm, users);
+    expect(() => builder.onRecord('')).toThrow(
+      'Record ID is required for onRecord',
+    );
   });
 
   it('onRecord returns this for chaining', () => {
-    const builder = live(driver, users);
+    const builder = live(orm, users);
     expect(builder.onRecord('alice')).toBe(builder);
   });
 });
@@ -134,7 +148,7 @@ describe('LiveQueryBuilder - Chainable Methods', () => {
 
 describe('LiveSubscription', () => {
   it('start returns a subscription with id and isAlive', async () => {
-    const subscription = await live(driver, users).start();
+    const subscription = await live(orm, users).start();
 
     expect(subscription).toBeDefined();
     expect(typeof subscription.id).toBe('string');
@@ -145,7 +159,7 @@ describe('LiveSubscription', () => {
   });
 
   it('subscribe registers a callback and returns unsub function', async () => {
-    const subscription = await live(driver, users).start();
+    const subscription = await live(orm, users).start();
     const received: unknown[] = [];
 
     const unsub = subscription.subscribe((data) => {
@@ -160,7 +174,7 @@ describe('LiveSubscription', () => {
   });
 
   it('multiple subscribe calls are supported', async () => {
-    const subscription = await live(driver, users).start();
+    const subscription = await live(orm, users).start();
     const unsub1 = subscription.subscribe(() => {});
     const unsub2 = subscription.subscribe(() => {});
 
@@ -173,7 +187,7 @@ describe('LiveSubscription', () => {
   });
 
   it('kill stops the subscription', async () => {
-    const subscription = await live(driver, users).start();
+    const subscription = await live(orm, users).start();
     await subscription.kill();
 
     // After kill, subscription should no longer be alive
@@ -186,7 +200,7 @@ describe('LiveSubscription', () => {
     await driver.query("CREATE user:alice SET name = 'Alice', age = 25");
     await driver.query("CREATE user:bob SET name = 'Bob', age = 30");
 
-    const subscription = await live(driver, users).onRecord('alice').start();
+    const subscription = await live(orm, users).onRecord('alice').start();
 
     expect(subscription).toBeDefined();
     expect(typeof subscription.id).toBe('string');
@@ -203,7 +217,7 @@ describe('LiveSubscription', () => {
 
 describe('LiveQueryBuilder - Fields Selection', () => {
   it('fields specific columns in subscription', async () => {
-    const subscription = await live(driver, users).fields('name', 'age').start();
+    const subscription = await live(orm, users).fields('name', 'age').start();
 
     expect(subscription).toBeDefined();
     expect(typeof subscription.id).toBe('string');
@@ -218,7 +232,7 @@ describe('LiveQueryBuilder - Fields Selection', () => {
 
 describe('LiveQueryBuilder - Async Iterator', () => {
   it('subscription is async iterable', async () => {
-    const subscription = await live(driver, users).start();
+    const subscription = await live(orm, users).start();
 
     // Verify it has Symbol.asyncIterator
     expect(typeof subscription[Symbol.asyncIterator]).toBe('function');
@@ -235,7 +249,7 @@ describe('LiveQueryBuilder - Error Handling', () => {
   it('throws when calling on disconnected driver', async () => {
     await driver.disconnect();
 
-    await expect(live(driver, users).start()).rejects.toThrow('Not connected');
+    await expect(live(orm, users).start()).rejects.toThrow('Not connected');
   });
 });
 
@@ -245,7 +259,7 @@ describe('LiveQueryBuilder - Error Handling', () => {
 
 describe('LiveQueryBuilder - Convenience subscribe', () => {
   it('start + subscribe in one call via subscribe method', async () => {
-    const sub = await live(driver, users).subscribe(() => {});
+    const sub = await live(orm, users).subscribe(() => {});
 
     expect(sub).toBeDefined();
     expect(typeof sub.id).toBe('string');
@@ -255,7 +269,7 @@ describe('LiveQueryBuilder - Convenience subscribe', () => {
   });
 
   it('subscribe method works with where chained', async () => {
-    const sub = await live(driver, users)
+    const sub = await live(orm, users)
       .fields('name')
       .subscribe(() => {});
 
@@ -264,7 +278,7 @@ describe('LiveQueryBuilder - Convenience subscribe', () => {
   });
 
   it('subscribe method works with diff mode', async () => {
-    const sub = await live(driver, users)
+    const sub = await live(orm, users)
       .diff()
       .subscribe(() => {});
 
@@ -283,12 +297,12 @@ describe('LiveQueryBuilder - Convenience subscribe', () => {
 
 describe('LiveQueryBuilder - WHERE with valid condition', () => {
   it('where accepts a string condition', () => {
-    const builder = live(driver, users);
+    const builder = live(orm, users);
     expect(builder.where('age > 18' as any)).toBe(builder);
   });
 
   it('where with string condition creates subscription', async () => {
-    const sub = await live(driver, users)
+    const sub = await live(orm, users)
       .where('age > 18' as any)
       .start();
 
@@ -303,7 +317,7 @@ describe('LiveQueryBuilder - WHERE with valid condition', () => {
 
 describe('LiveSubscription - async iterator', () => {
   it('can be used in for-await-of loop', async () => {
-    const subscription = await live(driver, users).start();
+    const subscription = await live(orm, users).start();
 
     // Exercise the Symbol.asyncIterator method body
     const iterator = subscription[Symbol.asyncIterator]();
@@ -321,7 +335,7 @@ describe('LiveSubscription - async iterator', () => {
 describe('LiveSubscription - onRecord filter', () => {
   it('subscribe with record filter executes filter path', async () => {
     // This exercises the filter branch in LiveSubscription.subscribe()
-    const subscription = await live(driver, users).onRecord('alice').start();
+    const subscription = await live(orm, users).onRecord('alice').start();
 
     const unsub = subscription.subscribe(() => {});
 
@@ -330,7 +344,7 @@ describe('LiveSubscription - onRecord filter', () => {
   });
 
   it('subscribe with record filter supports multiple callbacks', async () => {
-    const subscription = await live(driver, users).onRecord('bob').start();
+    const subscription = await live(orm, users).onRecord('bob').start();
 
     const unsub1 = subscription.subscribe(() => {});
     const unsub2 = subscription.subscribe(() => {});
@@ -344,7 +358,7 @@ describe('LiveSubscription - onRecord filter', () => {
   });
 
   it('onRecord filter does not interfere with kill', async () => {
-    const subscription = await live(driver, users).onRecord('charlie').start();
+    const subscription = await live(orm, users).onRecord('charlie').start();
 
     subscription.subscribe(() => {});
 

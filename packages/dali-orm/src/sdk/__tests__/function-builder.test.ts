@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vite-plus/test';
+import { describe, expect, it } from 'vitest';
 import { defineFunction } from '../schema/function-builder.js';
 
 describe('defineFunction builder', () => {
@@ -10,22 +10,34 @@ describe('defineFunction builder', () => {
   });
 
   it('sets args', () => {
-    const fn = defineFunction('fn::hello').args('$name').body('RETURN $name').build();
+    const fn = defineFunction('fn::hello')
+      .args('$name')
+      .body('RETURN $name')
+      .build();
     expect(fn.args).toEqual(['$name']);
   });
 
   it('sets multiple args', () => {
-    const fn = defineFunction('fn::add').args('$a: int', '$b: int').body('RETURN $a + $b').build();
+    const fn = defineFunction('fn::add')
+      .args('$a: int', '$b: int')
+      .body('RETURN $a + $b')
+      .build();
     expect(fn.args).toEqual(['$a: int', '$b: int']);
   });
 
   it('sets comment', () => {
-    const fn = defineFunction('fn::hello').body('RETURN "hello"').comment('Says hello').build();
+    const fn = defineFunction('fn::hello')
+      .body('RETURN "hello"')
+      .comment('Says hello')
+      .build();
     expect(fn.comment).toBe('Says hello');
   });
 
   it('sets permissions', () => {
-    const fn = defineFunction('fn::hello').body('RETURN $x').permissions('FOR select FULL').build();
+    const fn = defineFunction('fn::hello')
+      .body('RETURN $x')
+      .permissions('FOR select FULL')
+      .build();
     expect(fn.permissions).toBe('FOR select FULL');
   });
 
@@ -46,16 +58,24 @@ describe('defineFunction builder', () => {
 
   it('generates SQL without args', () => {
     const sql = defineFunction('fn::hello').body('RETURN "world"').toSQL();
-    expect(sql).toBe('DEFINE FUNCTION IF NOT EXISTS fn::hello { RETURN "world" }');
+    expect(sql).toBe(
+      'DEFINE FUNCTION IF NOT EXISTS fn::hello { RETURN "world" }',
+    );
   });
 
   it('generates SQL with multi-arg', () => {
-    const sql = defineFunction('fn::add').args('$a: int', '$b: int').body('RETURN $a + $b').toSQL();
+    const sql = defineFunction('fn::add')
+      .args('$a: int', '$b: int')
+      .body('RETURN $a + $b')
+      .toSQL();
     expect(sql).toContain('($a: int, $b: int)');
   });
 
   it('generates SQL with comment only', () => {
-    const sql = defineFunction('fn::hello').body('RETURN $a + $b').comment('Adds numbers').toSQL();
+    const sql = defineFunction('fn::hello')
+      .body('RETURN $a + $b')
+      .comment('Adds numbers')
+      .toSQL();
     expect(sql).toContain('COMMENT "Adds numbers"');
   });
 
@@ -68,11 +88,15 @@ describe('defineFunction builder', () => {
   });
 
   it('throws on empty name', () => {
-    expect(() => defineFunction('').build()).toThrow('Function name is required');
+    expect(() => defineFunction('').build()).toThrow(
+      'Function name is required',
+    );
   });
 
   it('throws on empty body in build()', () => {
-    expect(() => defineFunction('fn::hello').build()).toThrow('Function body is required');
+    expect(() => defineFunction('fn::hello').build()).toThrow(
+      'Function body is required',
+    );
   });
 
   it('chains all properties', () => {

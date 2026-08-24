@@ -4,13 +4,14 @@
  * Covers: createConnectionWithTimeout, safeDisconnect, formatError,
  *         printAddedSection, printRemovedSection, printWarnings
  */
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Mock connect before importing operations
 vi.mock('../../../sdk/driver/orm-connection.js', () => ({
   connect: vi.fn(),
 }));
 
+import type { Config } from '../../config.js';
 import {
   createConnectionWithTimeout,
   formatError,
@@ -19,7 +20,6 @@ import {
   printWarnings,
   safeDisconnect,
 } from '../operations.js';
-import type { Config } from '../../config.js';
 
 // ============================================================================
 // Helpers
@@ -57,7 +57,9 @@ describe('createConnectionWithTimeout', () => {
   });
 
   it('resolves when connection succeeds before timeout', async () => {
-    const mod = (await import('../../../sdk/driver/orm-connection.js')) as unknown as {
+    const mod = (await import(
+      '../../../sdk/driver/orm-connection.js'
+    )) as unknown as {
       connect: ReturnType<typeof vi.fn>;
     };
     const mockDriver = { disconnect: vi.fn() };
@@ -69,14 +71,18 @@ describe('createConnectionWithTimeout', () => {
   });
 
   it('rejects on timeout when connection hangs', async () => {
-    const mod = (await import('../../../sdk/driver/orm-connection.js')) as unknown as {
+    const mod = (await import(
+      '../../../sdk/driver/orm-connection.js'
+    )) as unknown as {
       connect: ReturnType<typeof vi.fn>;
     };
     // Make connect never settle
     mod.connect.mockReturnValue(new Promise(() => {}));
 
     const config = makeConfig();
-    await expect(createConnectionWithTimeout(config, 10)).rejects.toThrow('Connection timeout');
+    await expect(createConnectionWithTimeout(config, 10)).rejects.toThrow(
+      'Connection timeout',
+    );
   });
 });
 
@@ -107,15 +113,25 @@ describe('safeDisconnect', () => {
   });
 
   it('logs non-fatal error on disconnect failure', async () => {
-    const driver = { disconnect: vi.fn().mockRejectedValue(new Error('connection lost')) };
+    const driver = {
+      disconnect: vi.fn().mockRejectedValue(new Error('connection lost')),
+    };
     await safeDisconnect(driver as any);
-    expect(console.log).toHaveBeenCalledWith('Disconnect error (non-fatal):', 'connection lost');
+    expect(console.log).toHaveBeenCalledWith(
+      'Disconnect error (non-fatal):',
+      'connection lost',
+    );
   });
 
   it('logs string error on disconnect failure', async () => {
-    const driver = { disconnect: vi.fn().mockRejectedValue('raw error string') };
+    const driver = {
+      disconnect: vi.fn().mockRejectedValue('raw error string'),
+    };
     await safeDisconnect(driver as any);
-    expect(console.log).toHaveBeenCalledWith('Disconnect error (non-fatal):', 'raw error string');
+    expect(console.log).toHaveBeenCalledWith(
+      'Disconnect error (non-fatal):',
+      'raw error string',
+    );
   });
 });
 
@@ -125,7 +141,9 @@ describe('safeDisconnect', () => {
 
 describe('formatError', () => {
   it('returns Error.message for Error instances', () => {
-    expect(formatError(new Error('something went wrong'))).toBe('something went wrong');
+    expect(formatError(new Error('something went wrong'))).toBe(
+      'something went wrong',
+    );
   });
 
   it('returns string value directly', () => {

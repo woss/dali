@@ -1,5 +1,10 @@
-import { describe, expect, it, vi } from 'vite-plus/test';
-import { getSurrealQLType, mapSurrealType, parseKind, SURREALDB_TYPE_MAP } from '../types.js';
+import { describe, expect, it, vi } from 'vitest';
+import {
+  getSurrealQLType,
+  mapSurrealType,
+  parseKind,
+  SURREALDB_TYPE_MAP,
+} from '../types.js';
 
 // ---------------------------------------------------------------------------
 // SURREALDB_TYPE_MAP
@@ -108,11 +113,15 @@ describe('getSurrealQLType', () => {
 // ---------------------------------------------------------------------------
 describe('parseKind', () => {
   it('throws for empty kind string', () => {
-    expect(() => parseKind('')).toThrow('Kind string is required and cannot be empty');
+    expect(() => parseKind('')).toThrow(
+      'Kind string is required and cannot be empty',
+    );
   });
 
   it('throws for whitespace-only kind string', () => {
-    expect(() => parseKind('   ')).toThrow('Kind string is required and cannot be empty');
+    expect(() => parseKind('   ')).toThrow(
+      'Kind string is required and cannot be empty',
+    );
   });
 
   // Plain types
@@ -198,12 +207,18 @@ describe('parseKind', () => {
 
   // Table types
   it('parses "table<user, post>" with recordTable', () => {
-    expect(parseKind('table<user, post>')).toEqual({ type: 'table', recordTable: 'user, post' });
+    expect(parseKind('table<user, post>')).toEqual({
+      type: 'table',
+      recordTable: 'user, post',
+    });
   });
 
   // File types
   it('parses "file<bucket>" with recordTable', () => {
-    expect(parseKind('file<bucket>')).toEqual({ type: 'file', recordTable: 'bucket' });
+    expect(parseKind('file<bucket>')).toEqual({
+      type: 'file',
+      recordTable: 'bucket',
+    });
   });
 
   // Geometry types
@@ -226,6 +241,9 @@ describe('parseKind', () => {
   });
 
   it('handles special characters in literal values', () => {
-    expect(parseKind("'hello world!'")).toEqual({ type: 'literal', value: 'hello world!' });
+    expect(parseKind("'hello world!'")).toEqual({
+      type: 'literal',
+      value: 'hello world!',
+    });
   });
 });

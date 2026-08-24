@@ -44,7 +44,9 @@ export function randInt(min?: SqlExpr, max?: SqlExpr): SqlExpr {
 }
 
 export function randString(len?: SqlExpr): SqlExpr {
-  return len !== undefined ? (`rand::string(${len})` as SqlExpr) : ('rand::string()' as SqlExpr);
+  return len !== undefined
+    ? (`rand::string(${len})` as SqlExpr)
+    : ('rand::string()' as SqlExpr);
 }
 
 export function randUuidV4(): SqlExpr {

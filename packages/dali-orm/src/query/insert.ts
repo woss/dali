@@ -5,28 +5,35 @@
  * Supports single, multiple, or bulk record insertion.
  */
 
+import { escapeIdent, serializeValue } from '../core/surql.js';
+import type { DaliORM } from '../sdk/dali-orm.js';
 import type { SurrealDriver } from '../sdk/driver/types.js';
 import type { TableDefinition } from '../sdk/table.js';
 import type { InferSelectResult } from './types.js';
 
-export class InsertBuilder<TDef extends TableDefinition, TResult = InferSelectResult<TDef>> {
+export class InsertBuilder<
+  TDef extends TableDefinition,
+  TResult = InferSelectResult<TDef>,
+> {
   private readonly driver: SurrealDriver;
   private readonly tableDef: TDef;
   private _records: Record<string, unknown>[] = [];
   private _ignoreDuplicates = false;
 
-  constructor(driver: SurrealDriver, tableDef: TDef) {
-    if (!driver) throw new Error('Driver is required');
-    if (!tableDef?.name) throw new Error('Table definition with name is required');
+  constructor(orm: DaliORM, tableDef: TDef) {
+    if (!orm) throw new Error('DaliORM instance is required');
+    if (!tableDef?.name)
+      throw new Error('Table definition with name is required');
 
-    this.driver = driver;
+    this.driver = orm.getDriver();
     this.tableDef = tableDef;
   }
 
   /** Add a single record */
   one(data: Record<string, unknown>): this;
   one(data: Record<string, unknown>): this {
-    if (!data || typeof data !== 'object') throw new Error('Data object is required');
+    if (!data || typeof data !== 'object')
+      throw new Error('Data object is required');
     this._records.push({ ...data });
     return this;
   }
@@ -66,9 +73,11 @@ export class InsertBuilder<TDef extends TableDefinition, TResult = InferSelectRe
       // Use VALUES syntax (SurrealDB object literal [ { ... } ] not supported with ON DUPLICATE KEY UPDATE)
       const fields = [...new Set(this._records.flatMap((r) => Object.keys(r)))];
       const values = this._records
-        .map((r) => `(${fields.map((f) => this.serializeValue(r[f])).join(', ')})`)
+        .map(
+          (r) => `(${fields.map((f) => this.serializeValue(r[f])).join(', ')})`,
+        )
         .join(', ');
-      const sql = `INSERT INTO ${this.tableDef.name} (${fields.join(', ')}) VALUES ${values} ON DUPLICATE KEY UPDATE id = id`;
+      const sql = `INSERT INTO ${escapeIdent(this.tableDef.name)} (${fields.map((f) => escapeIdent(f)).join(', ')}) VALUES ${values} ON DUPLICATE KEY UPDATE id = id`;
       return this.driver.query<TResult>(sql);
     }
 
@@ -76,27 +85,20 @@ export class InsertBuilder<TDef extends TableDefinition, TResult = InferSelectRe
     return this.driver.insert<TResult>(this.tableDef.name, this._records);
   }
 
-  /** Serialize a value to SurrealQL */
+  /** Serialize a value to SurrealQL — delegates to canonical serializer */
   private serializeValue(value: unknown): string {
+    // INSERT VALUES requires NONE for null/undefined (canonical serializeValue
+    // returns lowercase 'null' for JS null, which SurrealDB coerces to SQL NULL
+    // and fails against typed schemas expecting NONE).
     if (value === null || value === undefined) return 'NONE';
-    if (typeof value === 'string') return `'${value.replace(/'/g, "\\'")}'`;
-    if (typeof value === 'number') return String(value);
-    if (typeof value === 'boolean') return value ? 'true' : 'false';
-    if (Array.isArray(value)) return `[ ${value.map((v) => this.serializeValue(v)).join(', ')} ]`;
-    if (typeof value === 'object') {
-      const entries = Object.entries(value as Record<string, unknown>)
-        .map(([k, v]) => `${k}: ${this.serializeValue(v)}`)
-        .join(', ');
-      return `{ ${entries} }`;
-    }
-    return JSON.stringify(value);
+    return serializeValue(value);
   }
 }
 
 /** Factory function */
 export function insert<TDef extends TableDefinition>(
-  driver: SurrealDriver,
+  orm: DaliORM,
   tableDef: TDef,
 ): InsertBuilder<TDef> {
-  return new InsertBuilder(driver, tableDef);
+  return new InsertBuilder(orm, tableDef);
 }

@@ -1,5 +1,15 @@
+import type { Model } from '../query/model.js';
+import { createModel } from '../query/model.js';
 import { connect as createDriver } from './driver/orm-connection.js';
+import type {
+  InferInsertData,
+  InferSelectResult,
+  InferUpdateData,
+} from './infer-types.js';
 import type { OrmSchema } from './orm-schema.js';
+import type { SchemaBuilder } from './schema-builder.js';
+import { createSchemaBuilder } from './schema-builder.js';
+import type { TableDefinition } from './table.js';
 
 /**
  * DaliORM configuration - extends SurrealORMConfig with optional schema
@@ -39,11 +49,14 @@ export class DaliORM {
   private readonly driver: import('./driver/types.js').SurrealDriver;
 
   /** Schema definition if provided */
-  readonly schema: OrmSchema | undefined;
+  readonly schemaDefinition: OrmSchema | undefined;
 
-  private constructor(driver: import('./driver/types.js').SurrealDriver, schema?: OrmSchema) {
+  private constructor(
+    driver: import('./driver/types.js').SurrealDriver,
+    schema?: OrmSchema,
+  ) {
     this.driver = driver;
-    this.schema = schema;
+    this.schemaDefinition = schema;
   }
 
   /**
@@ -64,6 +77,7 @@ export class DaliORM {
       config: config.config,
       codecOptions: config.codecOptions,
       reconnect: config.reconnect,
+      schema: config.schema,
     });
     return new DaliORM(driver, config.schema);
   }
@@ -71,7 +85,10 @@ export class DaliORM {
   /**
    * Execute a raw SQL query
    */
-  async query<T = unknown>(sql: string, vars?: Record<string, unknown>): Promise<T[]> {
+  async query<T = unknown>(
+    sql: string,
+    vars?: Record<string, unknown>,
+  ): Promise<T[]> {
     return this.driver.query<T>(sql, vars);
   }
 
@@ -95,6 +112,54 @@ export class DaliORM {
    */
   async select<T = unknown>(thing: string): Promise<T[]> {
     return this.driver.select<T>(thing);
+  }
+
+  /**
+   * Select all records from a table with full type inference from schema
+   * @param table - Table definition from defineTable()
+   * @returns Typed array of records matching the table schema
+   */
+  async selectFrom<T extends TableDefinition>(
+    table: T,
+  ): Promise<InferSelectResult<T>[]> {
+    return await this.driver.select<InferSelectResult<T>>(table.name);
+  }
+
+  /**
+   * Insert typed records into a table with full type inference from schema
+   * @param table - Table definition from defineTable()
+   * @param data - Typed insert data (excludes auto-generated id field)
+   * @returns Typed array of inserted records
+   */
+  async insertInto<T extends TableDefinition>(
+    table: T,
+    data: InferInsertData<T> | InferInsertData<T>[],
+  ): Promise<InferSelectResult<T>[]> {
+    return await this.driver.insert<InferSelectResult<T>>(table.name, data);
+  }
+
+  /**
+   * Update records in a table with full type inference from schema
+   * @param table - Table definition from defineTable()
+   * @param data - Partial typed update data (all fields optional)
+   * @returns Typed array of updated records
+   */
+  async updateTable<T extends TableDefinition>(
+    table: T,
+    data: InferUpdateData<T>,
+  ): Promise<InferSelectResult<T>[]> {
+    return await this.driver.update<InferSelectResult<T>>(table.name, data);
+  }
+
+  /**
+   * Delete all records from a table with full type inference from schema
+   * @param table - Table definition from defineTable()
+   * @returns Typed array of deleted records
+   */
+  async deleteFrom<T extends TableDefinition>(
+    table: T,
+  ): Promise<InferSelectResult<T>[]> {
+    return await this.driver.delete<InferSelectResult<T>>(table.name);
   }
 
   /**
@@ -124,10 +189,45 @@ export class DaliORM {
   // ==================== Schema & Connection Management ====================
 
   /**
+   * Create a runtime SchemaBuilder for defining/modifying database schema
+   * without migration files.
+   *
+   * @example
+   * ```typescript
+   * await orm.schema()
+   *   .defineTable('user', { schema: 'full' })
+   *   .defineField('user', 'name', { type: 'string' })
+   *   .execute();
+   * ```
+   */
+  schema(): SchemaBuilder {
+    return createSchemaBuilder((sql: string) => this.query(sql));
+  }
+
+  /**
    * Get a table definition by name from the schema
    */
   table(name: string) {
-    return this.schema?.getTable(name);
+    return this.schemaDefinition?.getTable(name);
+  }
+
+  /**
+   * Create a Model instance bound to this ORM for the given table definition.
+   *
+   * Unlike `table(name)` which returns a raw table definition,
+   * `model(tableDef)` returns a full Model with builder methods
+   * (select, insert, update, delete, relate, create, upsert, live)
+   * pre-bound to this ORM — no need to pass `orm` on every call.
+   *
+   * @example
+   * ```typescript
+   * const users = defineTable('user', { name: string() });
+   * const userModel = orm.model(users);
+   * const results = await userModel.select().where(...).execute();
+   * ```
+   */
+  model<TDef extends TableDefinition>(tableDef: TDef): Model<TDef> {
+    return createModel(this, tableDef);
   }
 
   /**

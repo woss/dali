@@ -14,6 +14,7 @@ import {
   type NamespaceAuth,
   type RootAuth,
   Surreal,
+  type SystemAuth,
 } from 'surrealdb';
 import { BaseDriver } from './base-driver.js';
 import type { ConfigAuth } from './config/types.js';
@@ -54,6 +55,7 @@ interface NodeDriverConfig {
   database: string;
   auth: ConfigAuth | undefined;
   debug: boolean;
+  reconnect?: boolean | import('./types.js').ReconnectOptions;
 }
 
 /**
@@ -132,6 +134,7 @@ export class NodeDriver extends BaseDriver {
       database: config.database ?? envDatabase ?? DEFAULT_DATABASE,
       auth,
       debug: config.debug ?? false,
+      reconnect: config.reconnect,
     };
 
     this.db = clientFactory();
@@ -155,33 +158,47 @@ export class NodeDriver extends BaseDriver {
         }
       }
 
-      await this.db.connect(connectUrl);
+      const auth = this._config.auth;
+      const authType = auth?.type;
+      const isSystemAuth =
+        authType === 'root' ||
+        authType === 'namespace' ||
+        authType === 'database';
+
+      // Build connect options with defaults
+      const opts: Record<string, unknown> = {
+        namespace: this._config.namespace,
+        database: this._config.database,
+      };
+
+      // Forward reconnect config (if explicitly set)
+      if (this._config.reconnect !== undefined) {
+        opts.reconnect = this._config.reconnect;
+      }
+
+      // For system auth: pass authentication directly in connect options
+      // This persists across SDK auto-reconnections (session-level signin() does NOT)
+      if (isSystemAuth && auth) {
+        opts.authentication = this.buildSystemAuth(auth);
+      }
+
+      await this.db.connect(connectUrl, opts);
       await this.db.ready;
 
-      // For database-level auth, must select NS/DB before signin
-      const authType = this._config.auth?.type;
-      if (authType === 'database' || authType === 'record') {
-        // Select namespace/database first, then signin
+      if (isSystemAuth && auth) {
+        // Auth handled via ConnectOptions — SDK manages token internally
+        this.accessToken = null;
+      } else if (authType === 'record' && auth) {
+        // Record auth: must use NS/DB first, then signin
         await this.db.use({
           namespace: this._config.namespace,
           database: this._config.database,
         });
-
-        if (this._config.auth) {
-          const tokens = await this.db.signin(this.buildSigninObject(this._config.auth));
-          this.accessToken = tokens.access ?? null;
-        }
-      } else {
-        // Root/namespace: signin first, then use
-        if (this._config.auth) {
-          const tokens = await this.db.signin(this.buildSigninObject(this._config.auth));
-          this.accessToken = tokens.access ?? null;
-        }
-
-        await this.db.use({
-          namespace: this._config.namespace,
-          database: this._config.database,
-        });
+        const tokens = await this.db.signin(this.buildSigninObject(auth));
+        this.accessToken = tokens.access ?? null;
+      } else if (!auth) {
+        // No auth: NS/DB already set via connect options, nothing else needed
+        // SDK manages connection without auth
       }
 
       this.connected = true;
@@ -194,7 +211,9 @@ export class NodeDriver extends BaseDriver {
     } catch (error) {
       this.connected = false;
       const message = error instanceof Error ? error.message : String(error);
-      throw new Error(`Failed to connect to SurrealDB at ${this._config.url}: ${message}`);
+      throw new Error(
+        `Failed to connect to SurrealDB at ${this._config.url}: ${message}`,
+      );
     }
   }
 
@@ -223,7 +242,9 @@ export class NodeDriver extends BaseDriver {
       throw new Error('Not connected to SurrealDB');
     }
 
-    const tokens = await this.db.signup(this.buildSigninObject(credentials) as AccessRecordAuth);
+    const tokens = await this.db.signup(
+      this.buildSigninObject(credentials) as AccessRecordAuth,
+    );
     return tokens.access;
   }
 
@@ -250,6 +271,32 @@ export class NodeDriver extends BaseDriver {
   // ============================================================================
   // Private Helpers
   // ============================================================================
+
+  /**
+   * Convert ConfigAuth to SDK SystemAuth for ConnectOptions.authentication.
+   * Strips the 'type' discriminator to match RootAuth | NamespaceAuth | DatabaseAuth.
+   */
+  private buildSystemAuth(auth: ConfigAuth): SystemAuth {
+    switch (auth.type) {
+      case 'root':
+        return { username: auth.username, password: auth.password };
+      case 'namespace':
+        return {
+          namespace: auth.namespace,
+          username: auth.username,
+          password: auth.password,
+        };
+      case 'database':
+        return {
+          namespace: auth.namespace,
+          database: auth.database,
+          username: auth.username,
+          password: auth.password,
+        };
+      default:
+        throw new Error(`Unsupported system auth type: ${auth.type}`);
+    }
+  }
 
   /**
    * Build signin object based on auth type.

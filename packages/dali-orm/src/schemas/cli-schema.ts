@@ -1,4 +1,12 @@
-import { boolean, type InferOutput, literal, object, optional, string, union } from 'valibot';
+import {
+  boolean,
+  type InferOutput,
+  literal,
+  object,
+  optional,
+  string,
+  union,
+} from 'valibot';
 
 // =============================================================================
 // CLI OPTIONS SCHEMAS
@@ -30,7 +38,7 @@ export type CLIOptions = InferOutput<typeof CLIOptionsSchema>;
  */
 export const MigrateOptionsSchema = object({
   subcommand: optional(
-    union([literal('up'), literal('down'), literal('reset'), literal('status'), literal('resume')]),
+    union([literal('up'), literal('status'), literal('resume')]),
   ),
   to: optional(string()),
   steps: optional(string()),

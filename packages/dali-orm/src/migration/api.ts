@@ -10,14 +10,26 @@
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import type { EmbeddedConfig, SurrealDriver } from '../sdk/driver/types.js';
-import type { AccessConfig, EventConfig, FunctionConfig } from '../sdk/schema.js';
-import type { TableDefinition } from '../sdk/table.js';
+import type {
+  AccessConfig,
+  EventConfig,
+  FunctionConfig,
+} from '../sdk/schema.js';
+import type { AnalyzerDefinition, TableDefinition } from '../sdk/table.js';
 import type { GenerateOptions } from './cli/generate.js';
-import { generateFullMigration, generateMigration, generateMigrationFile } from './cli/generate.js';
+import {
+  generateFullMigration,
+  generateMigration,
+  generateMigrationFile,
+} from './cli/generate.js';
 import { generateColumnDefinition } from './cli/pull.js';
 import { tablesToDdl } from './cli/push.js';
 import { SurrealQLGenerator } from './core/generator.js';
-import { type MigrationResult, MigrationRunner, type MigrationStatus } from './core/runner.js';
+import {
+  type MigrationResult,
+  MigrationRunner,
+  type MigrationStatus,
+} from './core/runner.js';
 import type { DdlDiffResult } from './ddl/ddl.js';
 import { ddlDiff } from './ddl/diff.js';
 import { introspectDatabase } from './ddl/introspect.js';
@@ -65,6 +77,8 @@ export interface GenerateAndApplyOptions {
   events?: EventConfig[];
   /** Function definitions to include in migration */
   functions?: FunctionConfig[];
+  /** Analyzer definitions to include in migration */
+  analyzers?: AnalyzerDefinition[];
 }
 
 /**
@@ -138,7 +152,12 @@ export async function pushSchemaFromTableDefs(
   const currentDdl = await introspectDatabase(driver);
 
   // Convert user tables to DDL format
-  const targetDdl = tablesToDdl(tables, options.access, options.events, options.functions);
+  const targetDdl = tablesToDdl(
+    tables,
+    options.access,
+    options.events,
+    options.functions,
+  );
 
   // Calculate diff
   const diffResult = await ddlDiff(currentDdl, targetDdl, 'push');
@@ -177,7 +196,8 @@ function getCallerDir(skipFrames: number = 0): string {
   }
   const frame = stack[skipFrames + 2].trim();
   // Parse "at functionName (/path/file.ts:line:col)" or "at /path/file.ts:line:col"
-  const match = frame.match(/\((.+?):\d+:\d+\)/) || frame.match(/at (.+?):\d+:\d+/);
+  const match =
+    frame.match(/\((.+?):\d+:\d+\)/) || frame.match(/at (.+?):\d+:\d+/);
   if (!match) {
     throw new Error(`Cannot parse caller location from stack frame: ${frame}`);
   }
@@ -221,7 +241,11 @@ async function walkUpForConfig(dir: string): Promise<string | null> {
 let _testConfigDir: string | undefined;
 
 /**
- * @internal - for testing only
+ * Set the config directory for testing purposes.
+ *
+ * @internal NOT part of public API — for testing only.
+ * @deprecated Internal test utility. Do not use in production code.
+ *   This mutates global module state and is only intended for test setup.
  */
 export function _setTestConfigDir(dir: string | undefined): void {
   _testConfigDir = dir;
@@ -300,7 +324,9 @@ export interface ApiPullOptions {
  * console.log(`Applied: ${result.applied.join(', ')}`);
  * ```
  */
-export async function migrateToDatabase(driver: SurrealDriver): Promise<MigrationResult> {
+export async function migrateToDatabase(
+  driver: SurrealDriver,
+): Promise<MigrationResult> {
   // Guard: driver must be connected or able to connect
   if (!driver.isConnected()) {
     await driver.connect();
@@ -319,39 +345,6 @@ export async function migrateToDatabase(driver: SurrealDriver): Promise<Migratio
 }
 
 /**
- * Rollback applied migrations.
- *
- * @param driver - Connected SurrealDriver
- * @param options - Rollback configuration
- * @returns MigrationResult with rolled back migration names
- *
- * @example
- * ```ts
- * const result = await rollbackMigrations(driver, { steps: 2 });
- * console.log(`Rolled back: ${result.rolledBack.join(', ')}`);
- * ```
- */
-export async function rollbackMigrations(
-  driver: SurrealDriver,
-  steps: number = 1,
-): Promise<MigrationResult> {
-  // Guard: driver must be connected
-  if (!driver.isConnected()) {
-    await driver.connect();
-  }
-
-  const configDir = await resolveConfigDir();
-
-  const runner = new MigrationRunner(driver, {
-    migrationsDir: path.join(configDir, 'migrations'),
-    migrationsTable: '__migrations',
-    journalDir: path.join(configDir, 'meta'),
-  });
-
-  return runner.down(steps);
-}
-
-/**
  * Get migration status - applied and pending migrations.
  *
  * @param driver - Connected SurrealDriver
@@ -364,7 +357,9 @@ export async function rollbackMigrations(
  * console.log(`Pending: ${status.pending.length}, Current: ${status.current}`);
  * ```
  */
-export async function getMigrationStatus(driver: SurrealDriver): Promise<MigrationStatus> {
+export async function getMigrationStatus(
+  driver: SurrealDriver,
+): Promise<MigrationStatus> {
   // Guard: driver must be connected
   if (!driver.isConnected()) {
     await driver.connect();
@@ -437,6 +432,7 @@ export async function generateAndApplyMigration(
     options.access,
     options.events,
     options.functions,
+    options.analyzers,
   );
 
   // Guard: no changes detected
@@ -537,7 +533,10 @@ export async function pullAndMigrate(
       const sql = acc.type
         ? (await import('../sdk/schema.js')).accessToSQL(
             acc,
-            tablesRecord as unknown as Record<string, import('../sdk/table.js').TableDefinition>,
+            tablesRecord as unknown as Record<
+              string,
+              import('../sdk/table.js').TableDefinition
+            >,
           )
         : undefined;
       if (sql) {
@@ -548,7 +547,7 @@ export async function pullAndMigrate(
     accessForMigration = [...ddl.access];
   }
 
-  const { upStatements, downStatements } = generateFullMigration(
+  const { upStatements } = generateFullMigration(
     tablesAsTableDef,
     generator,
     options.access,
@@ -558,10 +557,7 @@ export async function pullAndMigrate(
   if (accessForMigration.length > 0 && ddl.access.length > 0) {
     for (const sql of ddl.access) {
       upStatements.push(sql);
-      const match = /DEFINE ACCESS (\w+)/i.exec(sql);
-      if (match) {
-        downStatements.push(`REMOVE ACCESS IF EXISTS ${match[1]} ON DATABASE`);
-      }
+      // REMOVE ACCESS not generated — down migrations removed
     }
   }
 
@@ -585,7 +581,6 @@ export async function pullAndMigrate(
 
   const migrationContent = generateMigrationFile(timestamp, migrationName, {
     up: upStatements,
-    down: downStatements,
   });
 
   await fs.mkdir(migrationDir, { recursive: true });
@@ -630,23 +625,41 @@ function generateTypeScriptSchema(
   },
   tableName?: string,
 ): string {
-  const needsDateTime = ddl.tables.some((t) => t.columns.some((c) => c.kind === 'datetime'));
-  const needsNumber = ddl.tables.some((t) =>
-    t.columns.some((c) => c.kind === 'int' || c.kind === 'float' || c.kind === 'decimal'),
+  const needsDateTime = ddl.tables.some((t) =>
+    t.columns.some((c) => c.kind === 'datetime'),
   );
-  const needsBool = ddl.tables.some((t) => t.columns.some((c) => c.kind === 'bool'));
-  const needsRecord = ddl.tables.some((t) => t.columns.some((c) => c.recordTable));
-  const needsArray = ddl.tables.some((t) => t.columns.some((c) => c.kind === 'array'));
+  const needsNumber = ddl.tables.some((t) =>
+    t.columns.some(
+      (c) => c.kind === 'int' || c.kind === 'float' || c.kind === 'decimal',
+    ),
+  );
+  const needsBool = ddl.tables.some((t) =>
+    t.columns.some((c) => c.kind === 'bool'),
+  );
+  const needsRecord = ddl.tables.some((t) =>
+    t.columns.some((c) => c.recordTable),
+  );
+  const needsArray = ddl.tables.some((t) =>
+    t.columns.some((c) => c.kind === 'array'),
+  );
 
   const imports = [
     `import { defineTable } from '@woss/dali-orm/sdk/table';`,
     needsDateTime
       ? `import { datetime } from '@woss/dali-orm/sdk/schema/column/simple-builders';`
       : '',
-    needsNumber ? `import { int } from '@woss/dali-orm/sdk/schema/column/simple-builders';` : '',
-    needsBool ? `import { bool } from '@woss/dali-orm/sdk/schema/column/simple-builders';` : '',
-    needsArray ? `import { array } from '@woss/dali-orm/sdk/schema/column/simple-builders';` : '',
-    needsRecord ? `import { record } from '@woss/dali-orm/sdk/schema/column/record';` : '',
+    needsNumber
+      ? `import { int } from '@woss/dali-orm/sdk/schema/column/simple-builders';`
+      : '',
+    needsBool
+      ? `import { bool } from '@woss/dali-orm/sdk/schema/column/simple-builders';`
+      : '',
+    needsArray
+      ? `import { array } from '@woss/dali-orm/sdk/schema/column/simple-builders';`
+      : '',
+    needsRecord
+      ? `import { record } from '@woss/dali-orm/sdk/schema/column/record';`
+      : '',
     `import { string } from '@woss/dali-orm/sdk/schema/column/simple-builders';`,
   ]
     .filter(Boolean)
@@ -663,7 +676,9 @@ function generateTypeScriptSchema(
   const schemaExports: string[] = [];
 
   for (const table of ddl.tables) {
-    lines.push(`export const ${table.name}Schema = defineTable('${table.name}', {`);
+    lines.push(
+      `export const ${table.name}Schema = defineTable('${table.name}', {`,
+    );
     schemaExports.push(`${table.name}: ${table.name}Schema`);
 
     for (const column of table.columns) {

@@ -4,7 +4,7 @@
  * Tests against a REAL embedded SurrealDB instance (in-memory).
  * Each test creates tables with unique names to avoid collisions.
  */
-import { afterAll, beforeAll, describe, expect, it } from 'vite-plus/test';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { EmbeddedDriver } from '../../../sdk/driver/embedded-driver.js';
 import {
   introspectAccess,
@@ -104,7 +104,9 @@ describe('introspectDatabase (integration)', () => {
     const tableName = uniqueTable('with_ref');
     await driver.query(`DEFINE TABLE ${refTable} SCHEMAFULL`);
     await driver.query(`DEFINE TABLE ${tableName} SCHEMAFULL`);
-    await driver.query(`DEFINE FIELD owner ON ${tableName} TYPE record<${refTable}>`);
+    await driver.query(
+      `DEFINE FIELD owner ON ${tableName} TYPE record<${refTable}>`,
+    );
 
     const ddl = await introspectDatabase(driver);
     const table = ddl.tables.find((t) => t.name === tableName);
@@ -120,7 +122,9 @@ describe('introspectDatabase (integration)', () => {
     const tableName = uniqueTable('idx_test');
     await driver.query(`DEFINE TABLE ${tableName} SCHEMAFULL`);
     await driver.query(`DEFINE FIELD email ON ${tableName} TYPE string`);
-    await driver.query(`DEFINE INDEX idx_email ON ${tableName} COLUMNS email UNIQUE`);
+    await driver.query(
+      `DEFINE INDEX idx_email ON ${tableName} COLUMNS email UNIQUE`,
+    );
 
     const ddl = await introspectDatabase(driver);
     const table = ddl.tables.find((t) => t.name === tableName);
@@ -216,7 +220,9 @@ describe('introspectDatabase (integration)', () => {
     const relTable = uniqueTable('edge');
     await driver.query(`DEFINE TABLE ${fromTable} SCHEMAFULL`);
     await driver.query(`DEFINE TABLE ${toTable} SCHEMAFULL`);
-    await driver.query(`DEFINE TABLE ${relTable} TYPE RELATION IN ${fromTable} OUT ${toTable}`);
+    await driver.query(
+      `DEFINE TABLE ${relTable} TYPE RELATION IN ${fromTable} OUT ${toTable}`,
+    );
 
     const ddl = await introspectDatabase(driver);
     const table = ddl.tables.find((t) => t.name === relTable);
@@ -299,7 +305,9 @@ describe('introspectDatabase (integration)', () => {
 
   it('introspectFunctions returns defined functions with args and body', async () => {
     try {
-      await driver.query('DEFINE FUNCTION fn_add($a: int, $b: int) { RETURN $a + $b; }');
+      await driver.query(
+        'DEFINE FUNCTION fn_add($a: int, $b: int) { RETURN $a + $b; }',
+      );
     } catch (err) {
       console.warn(
         `Skipping function test - DEFINE FUNCTION not supported in mem:// mode: ${String(err)}`,
@@ -395,14 +403,18 @@ describe('introspectDatabase (integration)', () => {
   it('detects HNSW index with dimension, distance, and vectorType', async () => {
     const tableName = uniqueTable('hnsw_test');
     await driver.query(`DEFINE TABLE ${tableName} SCHEMAFULL`);
-    await driver.query(`DEFINE FIELD embedding ON ${tableName} TYPE array<float>`);
+    await driver.query(
+      `DEFINE FIELD embedding ON ${tableName} TYPE array<float>`,
+    );
 
     try {
       await driver.query(
         `DEFINE INDEX idx_hnsw ON ${tableName} COLUMNS embedding HNSW DIMENSION 3 DIST COSINE TYPE F32`,
       );
     } catch (err) {
-      console.warn(`Skipping HNSW test - not supported in mem:// mode: ${String(err)}`);
+      console.warn(
+        `Skipping HNSW test - not supported in mem:// mode: ${String(err)}`,
+      );
       return;
     }
 
@@ -422,8 +434,12 @@ describe('introspectDatabase (integration)', () => {
     await driver.query(`DEFINE TABLE ${tableName} SCHEMAFULL`);
     await driver.query(`DEFINE FIELD email ON ${tableName} TYPE string`);
     await driver.query(`DEFINE FIELD username ON ${tableName} TYPE string`);
-    await driver.query(`DEFINE INDEX idx_email ON ${tableName} COLUMNS email UNIQUE`);
-    await driver.query(`DEFINE INDEX idx_username ON ${tableName} COLUMNS username UNIQUE`);
+    await driver.query(
+      `DEFINE INDEX idx_email ON ${tableName} COLUMNS email UNIQUE`,
+    );
+    await driver.query(
+      `DEFINE INDEX idx_username ON ${tableName} COLUMNS username UNIQUE`,
+    );
 
     const ddl = await introspectDatabase(driver);
     const table = ddl.tables.find((t) => t.name === tableName);
@@ -468,7 +484,9 @@ describe('introspectDatabase (integration)', () => {
   it('detects option types as optional fields', async () => {
     const tableName = uniqueTable('opt_test');
     await driver.query(`DEFINE TABLE ${tableName} SCHEMAFULL`);
-    await driver.query(`DEFINE FIELD opt_field ON ${tableName} TYPE option<string>`);
+    await driver.query(
+      `DEFINE FIELD opt_field ON ${tableName} TYPE option<string>`,
+    );
 
     const ddl = await introspectDatabase(driver);
     const table = ddl.tables.find((t) => t.name === tableName);
@@ -486,7 +504,9 @@ describe('introspectDatabase (integration)', () => {
   it('detects field with string default value', async () => {
     const tableName = uniqueTable('str_def');
     await driver.query(`DEFINE TABLE ${tableName} SCHEMAFULL`);
-    await driver.query(`DEFINE FIELD label ON ${tableName} TYPE string DEFAULT 'hello'`);
+    await driver.query(
+      `DEFINE FIELD label ON ${tableName} TYPE string DEFAULT 'hello'`,
+    );
 
     const ddl = await introspectDatabase(driver);
     const table = ddl.tables.find((t) => t.name === tableName);
@@ -499,7 +519,9 @@ describe('introspectDatabase (integration)', () => {
   it('detects field with numeric default value', async () => {
     const tableName = uniqueTable('num_def');
     await driver.query(`DEFINE TABLE ${tableName} SCHEMAFULL`);
-    await driver.query(`DEFINE FIELD count ON ${tableName} TYPE int DEFAULT 42`);
+    await driver.query(
+      `DEFINE FIELD count ON ${tableName} TYPE int DEFAULT 42`,
+    );
 
     const ddl = await introspectDatabase(driver);
     const table = ddl.tables.find((t) => t.name === tableName);
@@ -524,7 +546,9 @@ describe('introspectDatabase (integration)', () => {
         `DEFINE FIELD full_name ON ${tableName} VALUE first_name + ' ' + last_name`,
       );
     } catch (err) {
-      console.warn(`Skipping VALUE test - not supported in mem:// mode: ${String(err)}`);
+      console.warn(
+        `Skipping VALUE test - not supported in mem:// mode: ${String(err)}`,
+      );
       return;
     }
 
@@ -545,7 +569,9 @@ describe('introspectDatabase (integration)', () => {
     const tableName = uniqueTable('flex_test');
     await driver.query(`DEFINE TABLE ${tableName} SCHEMAFULL`);
     // FLEXIBLE only works with object types in SurrealDB
-    await driver.query(`DEFINE FIELD data ON ${tableName} TYPE object FLEXIBLE`);
+    await driver.query(
+      `DEFINE FIELD data ON ${tableName} TYPE object FLEXIBLE`,
+    );
 
     const ddl = await introspectDatabase(driver);
     const table = ddl.tables.find((t) => t.name === tableName);
@@ -585,7 +611,9 @@ describe('introspectDatabase (integration)', () => {
 
     try {
       await driver.query(`DEFINE TABLE ${tableName} SCHEMAFULL`);
-      await driver.query(`DEFINE FIELD owner ON ${tableName} TYPE record<user | post>`);
+      await driver.query(
+        `DEFINE FIELD owner ON ${tableName} TYPE record<user | post>`,
+      );
 
       const ddl = await introspectDatabase(driver);
       const table = ddl.tables.find((t) => t.name === tableName);

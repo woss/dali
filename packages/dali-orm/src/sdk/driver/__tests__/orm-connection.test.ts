@@ -9,7 +9,7 @@
  *   → Use globalThis.sharedMocks pattern to share refs across boundary
  */
 
-import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // ============================================================================
 // Shared mock containers — populated by vi.mock factories, read by tests
@@ -62,7 +62,12 @@ vi.mock('../orm-interfaces.js', () => {
 // Imports
 // ============================================================================
 
-import { connect, execute, resolveDriverOptions, showChanges } from '../orm-connection.js';
+import {
+  connect,
+  execute,
+  resolveDriverOptions,
+  showChanges,
+} from '../orm-connection.js';
 
 // ============================================================================
 // Helpers
@@ -192,7 +197,9 @@ describe('connect', () => {
   });
 
   it('throws when neither nodeDriver nor embeddedDriver is provided', async () => {
-    await expect(connect({})).rejects.toThrow('Must provide nodeDriver or embeddedDriver config');
+    await expect(connect({})).rejects.toThrow(
+      'Must provide nodeDriver or embeddedDriver config',
+    );
   });
 
   it('loads config from file when config is true (throws if no config found)', async () => {
@@ -267,9 +274,12 @@ describe('execute', () => {
 
     const result = await execute(driver as never, queryObj);
 
-    expect(driver.query).toHaveBeenCalledWith('SELECT * FROM person WHERE name = $name', {
-      name: 'John',
-    });
+    expect(driver.query).toHaveBeenCalledWith(
+      'SELECT * FROM person WHERE name = $name',
+      {
+        name: 'John',
+      },
+    );
     expect(result).toEqual(['result']);
   });
 
@@ -295,7 +305,9 @@ describe('showChanges', () => {
     const driver = { query: vi.fn().mockResolvedValue([]) };
     const result = await showChanges(driver as never, 'person');
 
-    expect(driver.query).toHaveBeenCalledWith('SHOW CHANGES FOR TABLE person SINCE 0 LIMIT 10');
+    expect(driver.query).toHaveBeenCalledWith(
+      'SHOW CHANGES FOR TABLE person SINCE 0 LIMIT 10',
+    );
     expect(result).toEqual([]);
   });
 
@@ -317,6 +329,8 @@ describe('showChanges', () => {
 
     await showChanges(driver as never, 'my-table');
 
-    expect(driver.query).toHaveBeenCalledWith('SHOW CHANGES FOR TABLE mytable SINCE 0 LIMIT 10');
+    expect(driver.query).toHaveBeenCalledWith(
+      'SHOW CHANGES FOR TABLE mytable SINCE 0 LIMIT 10',
+    );
   });
 });

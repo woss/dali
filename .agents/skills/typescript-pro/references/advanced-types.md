@@ -22,8 +22,7 @@ function merge<T extends HasId, U extends HasName>(obj1: T, obj2: U): T & U {
 
 // Generic constraint with default
 type ApiResponse<T = unknown, E = Error> =
-  | { success: true; data: T }
-  | { success: false; error: E };
+  { success: true; data: T } | { success: false; error: E };
 
 // Constraint with infer
 type UnwrapPromise<T> = T extends Promise<infer U> ? U : T;
