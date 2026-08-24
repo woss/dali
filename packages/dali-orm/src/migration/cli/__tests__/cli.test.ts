@@ -3,7 +3,7 @@
  *
  * Covers: slugify(), parseGlobalOptions(), main()
  */
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // ── Mocks (hoisted before imports) ──────────────────────────────────────────
 

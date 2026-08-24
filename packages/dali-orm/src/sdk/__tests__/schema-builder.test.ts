@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vite-plus/test';
+import { describe, expect, it, vi } from 'vitest';
 import { createSchemaBuilder } from '../schema-builder.js';
 import type { ColumnConfig } from '../schema/column/types.js';
 

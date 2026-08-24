@@ -9,7 +9,7 @@
  */
 
 import { join } from 'node:path';
-import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { SurrealDriver } from '../../../sdk/driver/types.js';
 import type { MigrationFile } from '../runner.js';
 import { createRunner, MigrationRunner } from '../runner.js';

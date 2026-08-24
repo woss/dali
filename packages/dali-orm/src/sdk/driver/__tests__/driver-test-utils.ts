@@ -5,7 +5,7 @@
  * Contains: vi.mock, helper functions, TestDriver subclass, createMockDb.
  */
 
-import { type Mock, vi } from 'vite-plus/test';
+import { type Mock, vi } from 'vitest';
 import { BaseDriver } from '../base-driver.js';
 import type { DriverConfig, EmbeddedConfig } from '../types.js';
 

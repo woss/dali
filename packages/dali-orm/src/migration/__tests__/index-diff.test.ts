@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vite-plus/test';
+import { describe, expect, it } from 'vitest';
 import { datetime, string } from '../../sdk/schema/column/simple-builders.js';
 import { defineTable } from '../../sdk/table.js';
 import { SchemaDiffer } from '../core/diff.js';

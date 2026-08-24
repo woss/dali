@@ -1,0 +1,30 @@
+{
+    "$schema": "https://biomejs.dev/schemas/2.0.0/schema.json",
+    "files": {
+        "ignore": [
+            ".opencode/plugins/**",
+            "packages/dali-memory/.opencode/**",
+            "**/dist/**",
+            "examples/**",
+            "**/meta/_journal.json",
+            "packages/dali-memory/dali-memory.schema.json",
+            "surreal-docs/**",
+            "coverage/**"
+        ]
+    },
+    "formatter": {
+        "enabled": true,
+        "indentStyle": "space",
+        "indentWidth": 2,
+        "lineWidth": 80,
+        "quoteStyle": "single"
+    },
+    "linter": {
+        "enabled": true,
+        "rules": {
+            "suspicious": {
+                "noThenable": "off"
+            }
+        }
+    }
+}

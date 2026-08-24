@@ -48,7 +48,7 @@
     },
   },
   "plugin": [
-    "opencode-swarm@7.144.0",
+    "opencode-swarm@7.146.1",
     "@tarquinen/opencode-dcp",
     "@franlol/opencode-md-table-formatter@0.0.6",
     "./plugins/notify.ts",
@@ -56,6 +56,10 @@
     "./plugins/kdco-primitives",
   ],
   "permission": {
+    "external_directory": {
+      "/Users/woss/projects/woss/.swarm-worktrees/*": "allow",
+      "~/projects/woss/.swarm-worktrees/*": "allow"
+    },
     "task": "deny",
     "context7_*": "deny",
     "exa_*": "deny",

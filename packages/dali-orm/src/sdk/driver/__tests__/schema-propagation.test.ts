@@ -9,7 +9,7 @@
  * Schema is optional everywhere for backward compatibility.
  */
 
-import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // ============================================================================
 // Mock surrealdb — needed by BaseDriver import

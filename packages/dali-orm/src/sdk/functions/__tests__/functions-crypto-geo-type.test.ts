@@ -4,7 +4,7 @@
  * Pure string output — no DB needed.
  */
 
-import { describe, expect, it } from 'vite-plus/test';
+import { describe, expect, it } from 'vitest';
 import {
   $,
   as_,

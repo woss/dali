@@ -4,7 +4,7 @@
  * Execute functions against real embedded SurrealDB.
  */
 
-import { afterEach, beforeEach, describe, expect, it } from 'vite-plus/test';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { select } from '../../../query/select.js';
 import { EmbeddedDriver } from '../../driver/embedded-driver.js';
 import type { DaliORM } from '../../dali-orm.js';

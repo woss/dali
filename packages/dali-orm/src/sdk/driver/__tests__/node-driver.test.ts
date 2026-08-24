@@ -5,7 +5,7 @@
  * Uses mocked Surreal SDK and obug modules.
  */
 
-import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // ============================================================================
 // Helper: thenable objects that mimic Surreal SDK query/promise types

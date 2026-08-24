@@ -1,5 +1,5 @@
 import { safeParse } from 'valibot';
-import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   ConfigSchema,
   createConfigFile,

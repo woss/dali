@@ -4,7 +4,7 @@
  * Covers: createConnectionWithTimeout, safeDisconnect, formatError,
  *         printAddedSection, printRemovedSection, printWarnings
  */
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 // Mock connect before importing operations
 vi.mock('../../../sdk/driver/orm-connection.js', () => ({

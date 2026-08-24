@@ -4,7 +4,7 @@
  * Tests against a REAL embedded SurrealDB instance (in-memory).
  * Each test creates tables with unique names to avoid collisions.
  */
-import { afterAll, beforeAll, describe, expect, it } from 'vite-plus/test';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { EmbeddedDriver } from '../../../sdk/driver/embedded-driver.js';
 import {
   introspectAccess,

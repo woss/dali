@@ -1,7 +1,7 @@
 /**
  * Unit tests for parseFunctionSQL
  */
-import { describe, expect, it } from 'vite-plus/test';
+import { describe, expect, it } from 'vitest';
 import { parseFunctionSQL } from '../introspect.js';
 
 describe('parseFunctionSQL', () => {

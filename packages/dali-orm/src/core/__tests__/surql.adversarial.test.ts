@@ -5,7 +5,7 @@
  * unicode bypass, encoding tricks. Every test asserts the module is
  * resilient (does not produce unsafe output, does not crash).
  */
-import { describe, expect, it } from 'vite-plus/test';
+import { describe, expect, it } from 'vitest';
 import {
   escapeIdent,
   escapeString,
