@@ -7,7 +7,7 @@
  * Each test creates a unique table, defines a vector field, generates HNSW index
  * SQL via SurrealQLGenerator, executes it against the engine, then cleans up.
  */
-import { afterAll, beforeAll, describe, expect, it } from 'vite-plus/test';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { EmbeddedDriver } from '../../../sdk/driver/embedded-driver.js';
 import { SurrealQLGenerator } from '../generator.js';
 import * as fs from 'node:fs/promises';

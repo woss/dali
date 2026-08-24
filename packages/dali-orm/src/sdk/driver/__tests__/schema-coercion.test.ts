@@ -10,7 +10,7 @@
  * 6. upsertWhere passes parsed tableName (not full "table:id") to coerceRecordIds
  */
 
-import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { BaseDriver } from '../base-driver.js';
 import type { DriverConfig, EmbeddedConfig } from '../types.js';
 

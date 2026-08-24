@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vite-plus/test';
+import { describe, expect, it } from 'vitest';
 import { SurrealQLGenerator } from '../core/generator.js';
 import { createEmptyDdl, type SurrealAccess, type SurrealDbDDL } from '../ddl/ddl.js';
 import { ddlDiff } from '../ddl/diff.js';

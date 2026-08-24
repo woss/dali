@@ -8,7 +8,7 @@
  * 4. Non-Error throws are normalized to Error instances
  */
 
-import { describe, expect, it, vi } from 'vite-plus/test';
+import { describe, expect, it, vi } from 'vitest';
 import type { LiveSubscriptionHandle, LiveMessageData } from '../types.js';
 
 // ============================================================================

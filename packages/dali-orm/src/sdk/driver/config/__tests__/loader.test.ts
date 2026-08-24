@@ -10,7 +10,7 @@
  * are tested indirectly through the public API.
  */
 
-import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { existsSync, readFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { join } from 'node:path';

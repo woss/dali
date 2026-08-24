@@ -6,7 +6,7 @@
  * Uses real embedded SurrealDB (memory mode).
  * Mocks connect for pushSchema tests so we retain driver control for verification.
  */
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { EmbeddedDriver } from '../../../sdk/driver/embedded-driver.js';
 import type { AccessConfig, EventConfig, FunctionConfig } from '../../../sdk/schema.js';
 import type { TableDefinition } from '../../../sdk/table.js';

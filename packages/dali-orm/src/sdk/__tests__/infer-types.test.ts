@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, expectTypeOf } from 'vite-plus/test';
+import { describe, expect, it, vi, expectTypeOf } from 'vitest';
 import type {
   SurrealTypeToTS,
   InferSelectResult,

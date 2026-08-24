@@ -5,7 +5,7 @@
  * All private methods tested through public API.
  */
 
-import { describe, expect, it } from 'vite-plus/test';
+import { describe, expect, it } from 'vitest';
 import type { ColumnConfig, ColumnDefinition } from '../../../sdk/schema/column/types.js';
 import type { IndexDefinition, TableConfig, TableDefinition } from '../../../sdk/table.js';
 import type { SchemaDiff } from '../diff.js';

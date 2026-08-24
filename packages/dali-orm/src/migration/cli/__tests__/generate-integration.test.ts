@@ -7,7 +7,7 @@
  */
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
-import { afterEach, beforeEach, describe, expect, it } from 'vite-plus/test';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { EmbeddedDriver } from '../../../sdk/driver/embedded-driver.js';
 import { SurrealQLGenerator } from '../../core/generator.js';
 import { SnapshotManager } from '../../core/snapshot.js';

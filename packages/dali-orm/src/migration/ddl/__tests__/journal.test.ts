@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { JournalEntry, MigrationJournal } from '../journal.js';
 import { computeMigrationHash, createJournal, MigrationJournalManager } from '../journal.js';
 

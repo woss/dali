@@ -11,7 +11,7 @@
  * Unit tests — no DB connection required.
  */
 
-import { describe, expect, it } from 'vite-plus/test';
+import { describe, expect, it } from 'vitest';
 import type { SurrealDriver } from '../../sdk/driver/types.js';
 import { string } from '../../sdk/schema/column/index.js';
 import { defineTable } from '../../sdk/table.js';

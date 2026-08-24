@@ -4,7 +4,7 @@
  * Extracted from base-driver.test.ts.
  */
 
-import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('surrealdb', () => {
   class MockRecordId {

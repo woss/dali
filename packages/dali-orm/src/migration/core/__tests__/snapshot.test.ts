@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { EventConfig, FunctionConfig } from '../../../sdk/schema.js';
 import type { ColumnDefinition, TableDefinition } from '../../../sdk/table.js';
 import type { SchemaSnapshot } from '../snapshot.js';

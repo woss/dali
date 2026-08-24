@@ -4,7 +4,7 @@
  * Extracted from base-driver.test.ts.
  */
 
-import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TestDriver, createMockDb, state, queryMock } from './driver-test-utils.js';
 import type { MockDb } from './driver-test-utils.js';
 

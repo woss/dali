@@ -9,7 +9,7 @@
  *
  * All external modules are mocked for isolated testing.
  */
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { main, parseGlobalOptions } from '../../cli.js';
 
 // ============================================================================

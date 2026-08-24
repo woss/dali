@@ -9,7 +9,7 @@
  * satisfy the builder constructor guard clauses.
  */
 
-import { describe, expect, it } from 'vite-plus/test';
+import { describe, expect, it } from 'vitest';
 import type { DaliORM } from '../../sdk/dali-orm.js';
 import { string } from '../../sdk/schema/column/index.js';
 import { defineRelationTable, defineTable } from '../../sdk/table.js';

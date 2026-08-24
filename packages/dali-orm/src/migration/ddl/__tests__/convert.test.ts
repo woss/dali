@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vite-plus/test';
+import { describe, expect, it } from 'vitest';
 import type { ColumnDefinition } from '../../../sdk/schema/column/types.js';
 import type { IndexDefinition, TableDefinition } from '../../../sdk/table.js';
 import {

@@ -6,7 +6,7 @@
  * Uses real embedded SurrealDB (memory mode).
  * Mocks connect since diffSchema only supports nodeDriver.
  */
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { EmbeddedDriver } from '../../../sdk/driver/embedded-driver.js';
 import type { TableDefinition } from '../../../sdk/table.js';
 

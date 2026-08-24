@@ -4,7 +4,7 @@
  * Tests constructor, connection, auth methods, datetime transformation,
  * live query helpers, and live query lifecycle.
  */
-import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { EmbeddedDriver } from '../embedded-driver.js';
 import { transformDatetimeValues } from '../driver-utils.js';
 

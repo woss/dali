@@ -5,7 +5,7 @@
  * definitions, remove statements, alter statements, and migration generation.
  */
 
-import { beforeEach, describe, expect, it } from 'vite-plus/test';
+import { beforeEach, describe, expect, it } from 'vitest';
 import type { ColumnDefinition } from '../../../sdk/schema/column/types.js';
 import type { AnalyzerDefinition, IndexDefinition, TableDefinition } from '../../../sdk/table.js';
 import type { SurrealEvent, SurrealFunction, SurrealSequence } from '../../ddl/ddl.js';

@@ -15,7 +15,7 @@
  * - WithGraphAliases, wildcard column exclusion
  */
 
-import { describe, expect, it, expectTypeOf } from 'vite-plus/test';
+import { describe, expect, it, expectTypeOf } from 'vitest';
 import { columnRef, isRelationTable, recordId } from '../types.js';
 import type {
   ColumnRef,

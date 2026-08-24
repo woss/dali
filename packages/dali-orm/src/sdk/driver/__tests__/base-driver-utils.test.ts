@@ -5,7 +5,7 @@
  * Extracted from base-driver.test.ts.
  */
 
-import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { mockRecordIdCtor, mockTableCtor, mockDateTimeCtor, state } = vi.hoisted(() => {
   const mockRecordIdCtor = vi.fn();

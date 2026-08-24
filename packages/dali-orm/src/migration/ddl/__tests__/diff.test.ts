@@ -7,7 +7,7 @@
  * access/event/function diffs, SQL generation, statement ordering, and edge cases.
  */
 
-import { describe, expect, it } from 'vite-plus/test';
+import { describe, expect, it } from 'vitest';
 import {
   createEmptyDdl,
   type SurrealAccess,

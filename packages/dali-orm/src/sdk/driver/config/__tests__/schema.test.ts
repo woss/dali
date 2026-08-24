@@ -10,7 +10,7 @@
  * - toAuthConfig: auth config serialization for SurrealDB SDK
  */
 
-import { describe, expect, it } from 'vite-plus/test';
+import { describe, expect, it } from 'vitest';
 import {
   parseAuth,
   parseConfig,

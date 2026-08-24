@@ -4,7 +4,7 @@
 import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import os from 'node:os';
-import { vi } from 'vite-plus/test';
+import { vi } from 'vitest';
 import { EmbeddedDriver } from '../../../sdk/driver/embedded-driver.js';
 import type { Config } from '../../config.js';
 // Import the EmbeddedConfig type for driver construction

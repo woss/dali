@@ -9,7 +9,7 @@
  *   → Use globalThis.sharedMocks pattern to share refs across boundary
  */
 
-import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 // ============================================================================
 // Shared mock containers — populated by vi.mock factories, read by tests

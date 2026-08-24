@@ -6,6 +6,7 @@ export default defineConfig({
     "!src/**/__tests__/**",
     "!**/*.test.ts",
     "!**/*.spec.ts",
+    "!**/*.d.ts",
   ],
   format: ["esm"],
   target: "es2022",
