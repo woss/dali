@@ -10,6 +10,23 @@ import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import { createDebug as debug } from 'obug';
 
+/**
+ * Raw journal entry shape accepted at the load boundary. Older journal
+ * formats used `name`/`version`, `applied_at`, and singular `breakpoint`;
+ * all are normalized into the current entry schema.
+ */
+interface LegacyJournalEntry {
+  idx?: number;
+  tag?: string;
+  name?: string;
+  version?: string;
+  when?: string;
+  applied_at?: string;
+  breakpoints?: boolean[];
+  breakpoint?: boolean;
+  hash?: string;
+}
+
 const log = debug('dali-orm:kit:journal');
 
 /**
@@ -128,7 +145,7 @@ export class MigrationJournalManager {
       // Normalize entries at boundary (Parse Don't Validate)
       // Handle old format: breakpoint (boolean) -> breakpoints (boolean[])
       // Handle old format: name/version -> tag, applied_at -> when
-      journal.entries = journal.entries.map((entry: any) => ({
+      journal.entries = journal.entries.map((entry: LegacyJournalEntry) => ({
         idx: (entry.idx ?? 0) as number,
         tag: (entry.tag ??
           entry.name ??

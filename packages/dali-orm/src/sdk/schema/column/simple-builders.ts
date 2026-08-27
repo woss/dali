@@ -45,7 +45,7 @@ export function createBuilder<const TType extends SurrealColumnType>(
       return this as unknown as Builder<TType>;
     },
     default(value: string | boolean | number): Builder<TType> {
-      config = { ...config, default: String(value) } as ConfigT;
+      config = { ...config, default: value } as ConfigT;
       return this as unknown as Builder<TType>;
     },
     /** Set raw SurrealDB expression as DEFAULT, emitted unquoted (e.g., `crypto::blake3(content)`) */

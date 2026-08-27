@@ -63,7 +63,7 @@ export interface SurrealColumn {
   name: string;
   kind: SurrealColumnType;
   table: string;
-  default?: string;
+  default?: string | number | boolean;
   default_always?: boolean;
   readonly: boolean;
   optional: boolean;

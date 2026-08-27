@@ -98,8 +98,8 @@ describe('UpdateBuilder', () => {
   });
 
   it('update throws on null data object', async () => {
-    expect(() => update(orm, users).data(null as any)).toThrow(
-      'Data object is required',
-    );
+    expect(() =>
+      update(orm, users).data(null as unknown as Record<string, unknown>),
+    ).toThrow('Data object is required');
   });
 });

@@ -285,13 +285,7 @@ describe('loadSchemaFiles', () => {
 describe('generateFullMigration', () => {
   async function getGenerateFullMigration() {
     const mod = await import('../generate.js');
-    return (mod as any).generateFullMigration as (
-      tables: TableDefinition[],
-      generator: SurrealQLGenerator,
-      access?: AccessConfig[],
-      events?: any[],
-      functions?: FunctionConfig[],
-    ) => { upStatements: string[] };
+    return mod.generateFullMigration;
   }
 
   it('generates up statements for tables', async () => {
@@ -499,7 +493,7 @@ describe('printDiffSummary', () => {
 
   async function getPrintDiffSummary() {
     const mod = await import('../generate.js');
-    return (mod as any).printDiffSummary;
+    return mod.printDiffSummary;
   }
 
   it('prints no changes when diff is empty', async () => {
@@ -1640,7 +1634,7 @@ describe('generateMigration', () => {
     const migDir = dirs.find((f) => f.includes('with_definitions'));
     expect(migDir).toBeDefined();
     const content = await fs.readFile(
-      path.join(tmpDir, 'migrations', migDir!, 'migration.surql'),
+      path.join(tmpDir, 'migrations', migDir as string, 'migration.surql'),
       'utf-8',
     );
     expect(content).toContain('DEFINE ACCESS');
@@ -1704,7 +1698,7 @@ describe('loadSchemaFromFile extended patterns', () => {
     expect(result.tables).toHaveLength(1);
     expect(result.access).toBeDefined();
     expect(result.access).toHaveLength(1);
-    expect(result.access![0].name).toBe('account');
+    expect(result.access?.[0].name).toBe('account');
   });
 
   it('loads function definitions from functions export', async () => {
@@ -1725,7 +1719,7 @@ describe('loadSchemaFromFile extended patterns', () => {
     expect(result.tables).toHaveLength(1);
     expect(result.functions).toBeDefined();
     expect(result.functions).toHaveLength(1);
-    expect(result.functions![0].name).toBe('fn::greet');
+    expect(result.functions?.[0].name).toBe('fn::greet');
   });
 
   it('loads tables from schema export (named export)', async () => {
@@ -1802,7 +1796,7 @@ describe('loadSchemaFromFile extended patterns', () => {
 
     expect(result.tables).toHaveLength(1);
     expect(result.access).toHaveLength(1);
-    expect(result.access![0].name).toBe('account');
+    expect(result.access?.[0].name).toBe('account');
   });
 });
 
@@ -1846,10 +1840,10 @@ describe('loadSchemaFiles extended patterns', () => {
     expect(result.tables).toHaveLength(1);
     expect(result.access).toBeDefined();
     expect(result.access).toHaveLength(1);
-    expect(result.access![0].name).toBe('account');
+    expect(result.access?.[0].name).toBe('account');
     expect(result.functions).toBeDefined();
     expect(result.functions).toHaveLength(1);
-    expect(result.functions![0].name).toBe('fn::hello');
+    expect(result.functions?.[0].name).toBe('fn::hello');
   });
 
   it('throws when schema path is a file but not .ts (stat check for non-directory)', async () => {
@@ -1893,7 +1887,7 @@ describe('loadSchemaFiles extended patterns', () => {
     expect(result.tables).toHaveLength(1);
     // Access should be deduplicated — only one entry
     expect(result.access).toHaveLength(1);
-    expect(result.access![0].name).toBe('account');
+    expect(result.access?.[0].name).toBe('account');
   });
 
   it('deduplicates function definitions in loadSchemaFromFile (array)', async () => {
@@ -1976,7 +1970,7 @@ describe('loadSchemaFiles extended patterns', () => {
     expect(result.tables).toHaveLength(1);
     // Functions should be deduplicated — only one entry
     expect(result.functions).toHaveLength(1);
-    expect(result.functions![0].name).toBe('fn::greet');
+    expect(result.functions?.[0].name).toBe('fn::greet');
   });
 
   it('processes single access definition (non-array) from export', async () => {
@@ -1999,6 +1993,6 @@ describe('loadSchemaFiles extended patterns', () => {
     expect(result.tables).toHaveLength(1);
     expect(result.access).toBeDefined();
     expect(result.access).toHaveLength(1);
-    expect(result.access![0].name).toBe('single_access');
+    expect(result.access?.[0].name).toBe('single_access');
   });
 });

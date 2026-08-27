@@ -19,9 +19,17 @@ import { type FunctionConfig, functionToSQL } from '../schema.js';
  *   .build();
  * ```
  */
-export type FunctionBuilder = ReturnType<typeof defineFunction>;
+export interface FunctionBuilder {
+  readonly name: string;
+  args(...args: string[]): FunctionBuilder;
+  body(body: string): FunctionBuilder;
+  comment(text: string): FunctionBuilder;
+  permissions(perms: string): FunctionBuilder;
+  build(): FunctionConfig;
+  toSQL(): string;
+}
 
-export function defineFunction(name: string) {
+export function defineFunction(name: string): FunctionBuilder {
   if (!name) throw new Error('Function name is required');
 
   let config: {

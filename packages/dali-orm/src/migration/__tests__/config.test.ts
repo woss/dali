@@ -14,8 +14,7 @@ const { mockWriteFile } = vi.hoisted(() => ({
 
 vi.mock('obug', () => ({
   createDebug: vi.fn(() => {
-    const fn = vi.fn() as any;
-    fn.extend = vi.fn(() => vi.fn());
+    const fn = Object.assign(vi.fn(), { extend: vi.fn(() => vi.fn()) });
     return fn;
   }),
 }));
@@ -61,8 +60,8 @@ describe('ConfigSchema', () => {
       expect(result.output.auth?.type).toBe('root');
       expect(result.output.migrations?.dir).toBe('./migrations');
       expect(result.output.migrations?.table).toBe('__migrations');
-      expect(result.output.schema!.dir).toBe('./schema');
-      expect(result.output.schema!.pattern).toBe('**/*.ts');
+      expect(result.output.schema?.dir).toBe('./schema');
+      expect(result.output.schema?.pattern).toBe('**/*.ts');
       expect(result.output.snapshots?.dir).toBe('./snapshots');
       expect(result.output.shadow?.namespace).toBe('shadow_ns');
       expect(result.output.shadow?.database).toBe('shadow_db');
@@ -161,7 +160,7 @@ describe('processConfigObject', () => {
   it('parses valid config', () => {
     const result = processConfigObject(validConfig, cfgFile, cfgDir, resolved);
     expect(result.url).toBe('ws://localhost:10101');
-    expect(result.schema!.dir).toBe('/project/config/schema');
+    expect(result.schema?.dir).toBe('/project/config/schema');
   });
 
   it('resolves migrations.dir relative to config dir', () => {
@@ -184,7 +183,7 @@ describe('processConfigObject', () => {
       schema: { dir: './schemas', pattern: '*.ts' },
     };
     const result = processConfigObject(config, cfgFile, cfgDir, resolved);
-    expect(result.schema!.dir).toBe('/project/config/schemas');
+    expect(result.schema?.dir).toBe('/project/config/schemas');
   });
 
   it('resolves snapshots.dir relative to config dir', () => {

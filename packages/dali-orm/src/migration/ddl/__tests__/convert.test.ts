@@ -471,18 +471,24 @@ describe('toSurrealAccess', () => {
   });
 
   it('defaults type to RECORD', () => {
-    const result = toSurrealAccess({ name: 'default' } as any);
+    const result = toSurrealAccess({ name: 'default' } as unknown as Parameters<
+      typeof toSurrealAccess
+    >[0]);
     expect(result.type).toBe('RECORD');
   });
 
   it('throws when config is null', () => {
-    expect(() => toSurrealAccess(null as any)).toThrow('AccessConfig required');
+    expect(() =>
+      toSurrealAccess(null as unknown as Parameters<typeof toSurrealAccess>[0]),
+    ).toThrow('AccessConfig required');
   });
 
   it('throws when name is missing', () => {
-    expect(() => toSurrealAccess({ name: '' } as any)).toThrow(
-      'Access name is required',
-    );
+    expect(() =>
+      toSurrealAccess({ name: '' } as unknown as Parameters<
+        typeof toSurrealAccess
+      >[0]),
+    ).toThrow('Access name is required');
   });
 });
 
@@ -617,7 +623,9 @@ describe('toSurrealEvent', () => {
   });
 
   it('throws when config is null', () => {
-    expect(() => toSurrealEvent(null as any)).toThrow('EventConfig required');
+    expect(() =>
+      toSurrealEvent(null as unknown as Parameters<typeof toSurrealAccess>[0]),
+    ).toThrow('EventConfig required');
   });
 
   it('throws when name missing', () => {
@@ -762,9 +770,11 @@ describe('toSurrealFunction', () => {
   });
 
   it('throws when config is null', () => {
-    expect(() => toSurrealFunction(null as any)).toThrow(
-      'FunctionConfig required',
-    );
+    expect(() =>
+      toSurrealFunction(
+        null as unknown as Parameters<typeof toSurrealAccess>[0],
+      ),
+    ).toThrow('FunctionConfig required');
   });
 
   it('throws when name missing', () => {

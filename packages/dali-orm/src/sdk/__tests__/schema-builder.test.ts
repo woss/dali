@@ -1,14 +1,14 @@
-import { describe, expect, it, vi } from 'vitest';
-import type { ColumnConfig } from '../schema/column/types.js';
+import { describe, expect, it, type Mock, vi } from 'vitest';
 import { createSchemaBuilder } from '../schema-builder.js';
 
 // =============================================================================
 // Mock obug (required by generator internals)
 // =============================================================================
 
+type MockDebugFn = Mock & { extend: (...args: unknown[]) => unknown };
 vi.mock('obug', () => ({
   createDebug: vi.fn(() => {
-    const fn = vi.fn() as any;
+    const fn = vi.fn() as MockDebugFn;
     fn.extend = vi.fn(() => vi.fn());
     return fn;
   }),

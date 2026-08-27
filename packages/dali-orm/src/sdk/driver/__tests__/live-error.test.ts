@@ -9,11 +9,26 @@
  */
 
 import { describe, expect, it, vi } from 'vitest';
-import type { LiveMessageData, LiveSubscriptionHandle } from '../types.js';
+import type {
+  LiveAction,
+  LiveMessageData,
+  LiveSubscriptionHandle,
+} from '../types.js';
 
 // ============================================================================
 // Helpers
 // ============================================================================
+
+/** Minimal shape consumed by the mocked subscription's callbacks */
+interface MockSubscriptionMessage {
+  action: LiveAction;
+  value: unknown;
+}
+
+/** Test-only view of a live handle whose async iterator can be replaced */
+type MutableIteratorHandle = {
+  [Symbol.asyncIterator]: () => AsyncGenerator<never, void, unknown>;
+};
 
 /** Creates a live handle with a controllable async iterator */
 function createTestHandle(opts: {
@@ -58,10 +73,10 @@ function createTestHandle(opts: {
         }
         for (const msg of updates) {
           if (opts.throwAfterYield && callCount === updates.length - 1) {
-            yield { action: msg.action as any, result: msg.value };
+            yield { action: msg.action as LiveAction, result: msg.value };
             throw opts.throwAfterYield;
           }
-          yield { action: msg.action as any, result: msg.value };
+          yield { action: msg.action as LiveAction, result: msg.value };
           callCount++;
         }
       } catch (error) {
@@ -81,14 +96,14 @@ function createMockDriverWithLive(throwOnIterator?: Error) {
   const mockSubscription = {
     isAlive: true,
     kill: vi.fn().mockResolvedValue(undefined),
-    subscribe: vi.fn((cb: any) => {
+    subscribe: vi.fn((cb: (msg: MockSubscriptionMessage) => void) => {
       cb({ action: 'CREATE', value: { id: '1' } });
       return () => {};
     }),
     [Symbol.asyncIterator]() {
       let called = false;
       return {
-        next: (): Promise<IteratorResult<any>> => {
+        next: (): Promise<IteratorResult<MockSubscriptionMessage>> => {
           if (throwOnIterator) {
             return Promise.reject(throwOnIterator);
           }
@@ -124,14 +139,14 @@ function createMockDriverWithLive(throwOnIterator?: Error) {
       await mockSubscription.kill();
     },
     subscribe(callback: (data: LiveMessageData) => void): () => void {
-      return mockSubscription.subscribe((msg: any) => {
+      return mockSubscription.subscribe((msg: MockSubscriptionMessage) => {
         callback({ action: msg.action, result: msg.value });
       });
     },
     async *[Symbol.asyncIterator](): AsyncIterator<LiveMessageData> {
       try {
         for await (const message of mockSubscription) {
-          yield { action: message.action as any, result: message.value as any };
+          yield { action: message.action, result: message.value };
         }
       } catch (error) {
         onErrorCb?.(error instanceof Error ? error : new Error(String(error)));
@@ -176,7 +191,7 @@ describe('LiveSubscriptionHandle.onError', () => {
       handle.onError = onError;
 
       // Consume the async iterator — the try-catch should invoke onError
-      const messages: any[] = [];
+      const messages: LiveMessageData[] = [];
       for await (const msg of handle) {
         messages.push(msg);
       }
@@ -199,7 +214,7 @@ describe('LiveSubscriptionHandle.onError', () => {
       const onError = vi.fn();
       handle.onError = onError;
 
-      const messages: any[] = [];
+      const messages: LiveMessageData[] = [];
       for await (const msg of handle) {
         messages.push(msg);
       }
@@ -218,7 +233,7 @@ describe('LiveSubscriptionHandle.onError', () => {
       const onError = vi.fn();
       handle.onError = onError;
 
-      const messages: any[] = [];
+      const messages: LiveMessageData[] = [];
       for await (const msg of handle) {
         messages.push(msg);
       }
@@ -235,7 +250,7 @@ describe('LiveSubscriptionHandle.onError', () => {
       const handle = createTestHandle({ throwOn: testError });
 
       // Should not throw — the catch block silently handles when onErrorCb is undefined
-      const messages: any[] = [];
+      const messages: LiveMessageData[] = [];
       for await (const msg of handle) {
         messages.push(msg);
       }
@@ -248,7 +263,7 @@ describe('LiveSubscriptionHandle.onError', () => {
       const handle = createMockDriverWithLive(testError);
 
       // No unhandled rejection should occur
-      const messages: any[] = [];
+      const messages: LiveMessageData[] = [];
       for await (const msg of handle) {
         messages.push(msg);
       }
@@ -265,15 +280,16 @@ describe('LiveSubscriptionHandle.onError', () => {
       handle.onError = onError;
 
       // Manually replace the iterator to throw a string
-      (handle as any)[Symbol.asyncIterator] = async function* () {
-        try {
-          throw 'string error'; // eslint-disable-line no-throw-literal
-        } catch (error) {
-          onError(error instanceof Error ? error : new Error(String(error)));
-        }
-      };
+      (handle as unknown as MutableIteratorHandle)[Symbol.asyncIterator] =
+        async function* () {
+          try {
+            throw 'string error'; // eslint-disable-line no-throw-literal
+          } catch (error) {
+            onError(error instanceof Error ? error : new Error(String(error)));
+          }
+        };
 
-      const messages: any[] = [];
+      const messages: LiveMessageData[] = [];
       for await (const msg of handle) {
         messages.push(msg);
       }
@@ -289,15 +305,16 @@ describe('LiveSubscriptionHandle.onError', () => {
       const onError = vi.fn();
       handle.onError = onError;
 
-      (handle as any)[Symbol.asyncIterator] = async function* () {
-        try {
-          throw 42; // eslint-disable-line no-throw-literal
-        } catch (error) {
-          onError(error instanceof Error ? error : new Error(String(error)));
-        }
-      };
+      (handle as unknown as MutableIteratorHandle)[Symbol.asyncIterator] =
+        async function* () {
+          try {
+            throw 42; // eslint-disable-line no-throw-literal
+          } catch (error) {
+            onError(error instanceof Error ? error : new Error(String(error)));
+          }
+        };
 
-      const messages: any[] = [];
+      const messages: LiveMessageData[] = [];
       for await (const msg of handle) {
         messages.push(msg);
       }
@@ -313,15 +330,16 @@ describe('LiveSubscriptionHandle.onError', () => {
       const onError = vi.fn();
       handle.onError = onError;
 
-      (handle as any)[Symbol.asyncIterator] = async function* () {
-        try {
-          throw null; // eslint-disable-line no-throw-literal
-        } catch (error) {
-          onError(error instanceof Error ? error : new Error(String(error)));
-        }
-      };
+      (handle as unknown as MutableIteratorHandle)[Symbol.asyncIterator] =
+        async function* () {
+          try {
+            throw null; // eslint-disable-line no-throw-literal
+          } catch (error) {
+            onError(error instanceof Error ? error : new Error(String(error)));
+          }
+        };
 
-      const messages: any[] = [];
+      const messages: LiveMessageData[] = [];
       for await (const msg of handle) {
         messages.push(msg);
       }

@@ -143,3 +143,14 @@ const schema = createOrmSchema({
 | `schema.getTables()`    | Get all tables as array                                  |
 | `schema.hasTable(name)` | Check if table exists                                    |
 | `schema.tableCount`     | Number of tables                                         |
+
+## Column Rules (SurrealDB 3.x)
+
+- Factories take the column NAME as argument: `string('email')`, `record('projects')`
+  (one arg — linked table; key supplies the column name).
+- `.flexible()` → only on `object()` columns; renderer throws otherwise.
+- `.permissions('FOR select WHERE $auth')` → field perms support select/create/update
+  only; never emit `delete`.
+- `.default(0)` / `.default(false)` stay unquoted in DDL; strings are quoted;
+  `'now()'` becomes `time::now()`. Use `.defaultRaw('crypto::blake3(x)')` for
+  expressions (contains `::` → passes through raw).

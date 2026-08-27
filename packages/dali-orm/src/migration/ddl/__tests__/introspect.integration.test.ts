@@ -92,7 +92,7 @@ describe('introspectDatabase (integration)', () => {
     const table = ddl.tables.find((t) => t.name === tableName);
     expect(table).toBeDefined();
 
-    const cols = table!.columns;
+    const cols = table?.columns;
     expect(cols.find((c) => c.name === 'count')?.kind).toBe('int');
     expect(cols.find((c) => c.name === 'price')?.kind).toBe('float');
     expect(cols.find((c) => c.name === 'active')?.kind).toBe('bool');
@@ -131,7 +131,7 @@ describe('introspectDatabase (integration)', () => {
     expect(table).toBeDefined();
     expect(table?.indexes).toHaveLength(1);
 
-    const idx = table!.indexes[0];
+    const idx = table?.indexes[0];
     expect(idx.name).toBe('idx_email');
     expect(idx.index).toBe('unique');
     expect(idx.cols).toContain('email');

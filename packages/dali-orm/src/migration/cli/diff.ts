@@ -5,6 +5,7 @@ import {
   createEmptyDdl,
   type SurrealColumn,
   type SurrealDbDDL,
+  type SurrealIndex,
 } from '../ddl/ddl.js';
 import { ddlDiff } from '../ddl/diff.js';
 import { introspectDatabase } from '../ddl/introspect.js';
@@ -98,15 +99,29 @@ function tablesToDdl(tables: TableDefinition[]): SurrealDbDDL {
       permissions: table.config.permissions,
     });
 
-    // Extract unique indexes from columns with unique: true
-    for (const col of table.columns) {
-      if (col.config.unique) {
-        ddl.indexes.push({
-          name: `${col.name}_idx`,
-          table: table.name,
-          cols: [col.name],
-          index: 'unique',
-        });
+    // Collect indexes: config-declared plus unique-column derived.
+    // Everything must land in top-level ddl.indexes — that is the single
+    // source diffIndexes() consumes (per-table index diffing was removed).
+    const tableIndexes: SurrealIndex[] = [
+      ...(table.config.indexes || []).map((idx) =>
+        convertIndex(idx, table.name),
+      ),
+      ...table.columns
+        .filter((c) => c.config.unique)
+        .map(
+          (c): SurrealIndex => ({
+            name: `${c.name}_idx`,
+            table: table.name,
+            cols: [c.name],
+            index: 'unique',
+          }),
+        ),
+    ];
+    for (const idx of tableIndexes) {
+      if (
+        !ddl.indexes.some((i) => i.table === idx.table && i.name === idx.name)
+      ) {
+        ddl.indexes.push(idx);
       }
     }
 

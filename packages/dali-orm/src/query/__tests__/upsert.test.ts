@@ -73,9 +73,9 @@ describe('UpsertBuilder', () => {
   });
 
   it('upsert throws on null data object', async () => {
-    expect(() => upsert(orm, users).data(null as any)).toThrow(
-      'Data object is required',
-    );
+    expect(() =>
+      upsert(orm, users).data(null as unknown as Record<string, unknown>),
+    ).toThrow('Data object is required');
   });
 
   it('upsert with set works', async () => {

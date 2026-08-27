@@ -15,7 +15,7 @@ import { defineRelationTable, defineTable } from '../../sdk/table.js';
 import { bindTable } from '../binding.js';
 import { DeleteBuilder } from '../delete.js';
 import { InsertBuilder } from '../insert.js';
-import { SelectBuilder } from '../select.js';
+import { type AnySelectBuilder, SelectBuilder } from '../select.js';
 import { UpdateBuilder } from '../update.js';
 
 // ============================================================================
@@ -96,11 +96,15 @@ describe('bindTable returns a new object', () => {
   it('original table def does NOT gain methods after bind', () => {
     const table = defineTable('temp', { name: string('name') });
 
-    expect(typeof (table as any).select).toBe('undefined');
+    expect(typeof (table as unknown as Record<string, unknown>).select).toBe(
+      'undefined',
+    );
 
     bindTable(table);
 
-    expect(typeof (table as any).select).toBe('undefined');
+    expect(typeof (table as unknown as Record<string, unknown>).select).toBe(
+      'undefined',
+    );
   });
 
   it('returned copy gains builder methods', () => {
@@ -173,9 +177,9 @@ describe('bindTable with relation tables', () => {
 
     const builder = bound.relate(orm);
     expect(builder).toBeDefined();
-    expect(typeof (builder as any).from).toBe('function');
-    expect(typeof (builder as any).to).toBe('function');
-    expect(typeof (builder as any).execute).toBe('function');
+    expect(typeof builder.from).toBe('function');
+    expect(typeof builder.to).toBe('function');
+    expect(typeof builder.execute).toBe('function');
   });
 });
 
@@ -212,7 +216,7 @@ describe('bindTable preserves original properties', () => {
 describe('builder SQL references correct table', () => {
   it('select().toSQL() references table name', () => {
     const bound = bindTable(users);
-    const sql = (bound.select(orm) as SelectBuilder<any, any>).toSQL();
+    const sql = (bound.select(orm) as AnySelectBuilder).toSQL();
 
     expect(sql.sql).toContain('FROM user');
   });

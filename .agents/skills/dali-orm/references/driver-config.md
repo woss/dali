@@ -15,7 +15,7 @@ interface SurrealDriver {
   insert<T>(table: string, data: T | T[]): Promise<T[]>;
   update<T>(thing: string, data: unknown): Promise<T[]>;
   delete<T>(thing: string): Promise<T[]>;
-  transaction<T>(fn: (tx: any) => Promise<T>): Promise<T>;
+  transaction<T>(fn: (tx: DaliORMTransaction) => Promise<T>): Promise<T>;
 }
 ```
 

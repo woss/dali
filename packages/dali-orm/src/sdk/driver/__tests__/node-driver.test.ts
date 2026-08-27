@@ -72,8 +72,7 @@ vi.mock('surrealdb', () => {
 
 vi.mock('obug', () => ({
   createDebug: vi.fn(() => {
-    const fn = vi.fn() as any;
-    fn.extend = vi.fn(() => vi.fn());
+    const fn = Object.assign(vi.fn(), { extend: vi.fn(() => vi.fn()) });
     return fn;
   }),
 }));

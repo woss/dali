@@ -16,7 +16,8 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
-    "typecheck": "pnpm -r typecheck"
+    "typecheck": "pnpm -r typecheck",
+    "release:jsr": "node scripts/publish-jsr.mjs"
   },
   "devDependencies": {
     "@changesets/changelog-github": "^0.7.0",

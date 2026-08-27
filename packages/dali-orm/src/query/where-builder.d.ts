@@ -7,7 +7,7 @@
 
 import type { SqlExpr } from '../sdk/functions/sql.js';
 import type { ConditionOp } from './conditions.js';
-import type { SelectBuilder } from './select.js';
+import type { AnySelectBuilder } from './select.js';
 import type { ColumnRef } from './types.js';
 /** Condition tree node for WHERE clause building */
 export interface ConditionNode {
@@ -76,9 +76,9 @@ export declare class WhereBuilder {
   in(field: string, values: unknown[]): this;
   in(field: SqlExpr, values: unknown[]): this;
   /** Subquery overload: field IN (SELECT ...) */
-  in(field: ColumnRef, subquery: SelectBuilder<any, any>): this;
-  in(field: string, subquery: SelectBuilder<any, any>): this;
-  in(field: SqlExpr, subquery: SelectBuilder<any, any>): this;
+  in(field: ColumnRef, subquery: AnySelectBuilder): this;
+  in(field: string, subquery: AnySelectBuilder): this;
+  in(field: SqlExpr, subquery: AnySelectBuilder): this;
   and(fn: (w: WhereBuilder) => WhereBuilder): this;
   and(...conditions: ConditionNode[]): this;
   or(fn: (w: WhereBuilder) => WhereBuilder): this;

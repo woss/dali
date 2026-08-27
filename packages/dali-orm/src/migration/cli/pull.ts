@@ -335,7 +335,8 @@ function generateTypeScriptSchema(
 
 export function generateColumnDefinition(column: {
   name: string;
-  kind?: SurrealColumnType;
+  /** Column type key resolved through the typeMap (accepts legacy aliases). */
+  kind?: string;
   optional?: boolean;
   default?: unknown;
   defaultRaw?: string;

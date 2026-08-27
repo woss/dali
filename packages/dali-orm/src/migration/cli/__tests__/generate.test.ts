@@ -91,7 +91,7 @@ describe('serializeColumnPermissions', () => {
       create: false,
     });
     // Order should be select, create, update, delete
-    const parts = result!.split(', ');
+    const parts = result?.split(', ');
     expect(parts[0]).toBe('FOR select WHERE active = true');
     expect(parts[1]).toBe('FOR create NONE');
     expect(parts[2]).toBe('FOR update FULL');

@@ -274,8 +274,8 @@ describe('configCache', () => {
     const cached = getCachedConfig();
 
     expect(cached).not.toBeNull();
-    expect(cached!.cached).toBe(true);
-    expect(cached!.config.namespace).toBe('test_ns');
+    expect(cached?.cached).toBe(true);
+    expect(cached?.config.namespace).toBe('test_ns');
   });
 });
 

@@ -11,6 +11,7 @@
  */
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { OrmSchema } from '../../orm-schema.js';
 import { BaseDriver } from '../base-driver.js';
 import type { DriverConfig, EmbeddedConfig } from '../types.js';
 
@@ -164,7 +165,7 @@ type MockDb = ReturnType<typeof createMockDb>;
  * user table: name (string), email (string), profile (record<profile>), owner (record<user>)
  * notes table: title (string), content (string) — no record columns
  */
-function createMockSchema(): any {
+function createMockSchema(): OrmSchema & { name: string } {
   return {
     name: 'test-schema',
     getTable: vi.fn((name: string) => {
@@ -199,7 +200,7 @@ function createMockSchema(): any {
     getTables: vi.fn().mockReturnValue([]),
     hasTable: vi.fn().mockReturnValue(false),
     tableCount: 0,
-  };
+  } as unknown as OrmSchema & { name: string };
 }
 
 /**
@@ -561,7 +562,7 @@ describe('BaseDriver — schema-aware record coercion', () => {
 
       await driver.insert('user', { profile: 'profile:1', name: 'Alice' });
 
-      const data = (mockDb.insert as any).mock.calls[0][1][0];
+      const data = mockDb.insert.mock.calls[0][1][0] as Record<string, unknown>;
       expect(data.profile).toBeInstanceOf(RecordId);
       expect(data.name).toBe('Alice');
     });

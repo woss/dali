@@ -130,8 +130,8 @@ describe('tablesToDdl', () => {
     const ddl = tablesToDdl(tables);
     const emailIdx = ddl.indexes.find((i) => i.name === 'email_idx');
     expect(emailIdx).toBeDefined();
-    expect(emailIdx!.cols).toEqual(['email']);
-    expect(emailIdx!.index).toBe('unique');
+    expect(emailIdx?.cols).toEqual(['email']);
+    expect(emailIdx?.index).toBe('unique');
   });
 
   it('converts access definitions', () => {
@@ -199,11 +199,11 @@ describe('tablesToDdl', () => {
     ];
 
     const ddl = tablesToDdl(tables);
+    // Field-level permissions must NOT include delete (illegal on fields in SurrealDB 3.x)
     expect(ddl.tables[0].columns[0].permissions).toEqual({
       select: 'NONE',
       create: 'NONE',
       update: 'NONE',
-      delete: 'NONE',
     });
   });
 
@@ -230,7 +230,6 @@ describe('tablesToDdl', () => {
       select: 'FOR select FULL, FOR create NONE',
       create: 'FOR select FULL, FOR create NONE',
       update: 'FOR select FULL, FOR create NONE',
-      delete: 'FOR select FULL, FOR create NONE',
     });
   });
 
@@ -252,8 +251,8 @@ describe('tablesToDdl', () => {
     const ddl = tablesToDdl(tables);
     const idx = ddl.indexes.find((i) => i.name === 'idx_email');
     expect(idx).toBeDefined();
-    expect(idx!.cols).toEqual(['email']);
-    expect(idx!.index).toBe('unique');
+    expect(idx?.cols).toEqual(['email']);
+    expect(idx?.index).toBe('unique');
   });
 
   it('sets column defaults from config', () => {

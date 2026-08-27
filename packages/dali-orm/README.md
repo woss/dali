@@ -1,8 +1,33 @@
 # DaliORM
 
+> **SurrealDB 3.x constraints** — column factories take the name as argument
+> (`string('email')`); `record(target)` takes only the linked table;
+> `.flexible()` is `object`-only; field permissions support select/create/update
+> (never `delete`); numeric/bool defaults emit unquoted; bare `now()` normalizes
+> to `time::now()`; table RENAME does not exist (author DEFINE→INSERT→REMOVE by hand);
+> namespace + database must exist before push/migrate.
+
+
 > **Status:** Stable API surface for core CRUD, migrations, and SurrealQL query building. Internal decomposition ongoing — imports from internal paths (e.g., `./migration/ddl/*`) are not part of the stable public API.
 
 A TypeScript ORM for SurrealDB with schema definitions, fluent query builders, and migrations. Built with 100% TypeScript for full type safety.
+
+## Install the Agent Skill
+
+Teach your AI coding agent DaliORM patterns (query builders, migrations,
+SurrealDB 3.x constraints) — works with Claude Code, OpenCode, Codex, Cursor
+and 70+ more via [skills.sh](https://skills.sh):
+
+```bash
+npx skills add woss/dali --skill dali-orm          # project-local
+npx skills add woss/dali --skill dali-orm -g       # global (~/.claude/skills)
+```
+
+Test-authoring patterns live in a second skill:
+
+```bash
+npx skills add https://github.com/woss/dali/tree/main/.agents/skills/dali-orm-test-patterns
+```
 
 ## Table of Contents
 
@@ -273,6 +298,9 @@ string()
   .flexible() // Allow flexible schema
   .unique(); // Create unique index
 ```
+
+Set operations (`union`, `unionAll`, `intersect`, `except`) accept any builder via
+`AnySelectBuilder` — exported from `@woss/dali-orm/query`.
 
 ## Query Builders
 

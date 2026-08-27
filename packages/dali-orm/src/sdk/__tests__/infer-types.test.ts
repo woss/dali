@@ -184,7 +184,7 @@ describe('InferInsertData', () => {
 
   it('falls back to {} when _columns is missing', () => {
     type Result = InferInsertData<TableDefinition>;
-    expectTypeOf<Result>().toEqualTypeOf<{}>();
+    expectTypeOf<Result>().toEqualTypeOf<Record<string, unknown>>();
   });
 });
 

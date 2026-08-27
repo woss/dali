@@ -4,10 +4,6 @@ export class GeometryColumnBuilder extends BaseColumnBuilder<GeometryColumnBuild
   constructor(name: string) {
     super(name, 'geometry');
   }
-
-  protected formatDefault(value: unknown): string {
-    return JSON.stringify(value);
-  }
 }
 
 export function geometry(name: string): GeometryColumnBuilder {

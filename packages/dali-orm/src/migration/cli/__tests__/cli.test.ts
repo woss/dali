@@ -67,7 +67,7 @@ vi.mock('../../cli/pull.js', () => ({
 // ── Imports (after mocks) ───────────────────────────────────────────────────
 
 import { diffSchema } from '../../cli/diff.js';
-import { generateMigration, loadSchemaFiles } from '../../cli/generate.js';
+import { generateMigration } from '../../cli/generate.js';
 import {
   migrateDeploy,
   migrateDev,
@@ -75,10 +75,9 @@ import {
   migrateSync,
   migrateUp,
 } from '../../cli/migrate.js';
-import { createConnection, safeDisconnect } from '../../cli/operations.js';
+import { createConnection } from '../../cli/operations.js';
 import { pullSchema } from '../../cli/pull.js';
 import { main, parseGlobalOptions, slugify } from '../../cli.js';
-import { loadConfig } from '../../config.js';
 
 // ============================================================================
 // slugify

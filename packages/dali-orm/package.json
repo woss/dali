@@ -23,6 +23,8 @@
     "dali-orm": "./dist/migration/cli.mjs"
   },
   "files": [
+    "CHANGELOG.md",
+    "README.md",
     "dist"
   ],
   "type": "module",
@@ -51,6 +53,7 @@
   },
   "scripts": {
     "build": "tsup",
+    "prepublishOnly": "pnpm build && pnpm test",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit"

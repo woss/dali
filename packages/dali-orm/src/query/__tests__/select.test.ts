@@ -1,5 +1,6 @@
 import type { DaliORM } from '../../sdk/dali-orm.js';
 import type { EmbeddedDriver } from '../../sdk/driver/embedded-driver.js';
+import type { AnySelectBuilder } from '../select.js';
 import {
   afterEach,
   beforeEach,
@@ -394,7 +395,7 @@ describe('SelectBuilder - GROUP BY', () => {
     await driver.query("CREATE post:3 SET title = 'Post 3', authorId = 'bob'");
 
     const results = await select(orm, posts)
-      .fields('authorId' as any, 'count() AS postCount' as any)
+      .fields('authorId' as never, 'count() AS postCount' as never)
       .groupBy('authorId')
       .execute();
 
@@ -881,27 +882,27 @@ describe('SelectBuilder - CTE (WITH clause)', () => {
 
 describe('SelectBuilder - Advanced Error Handling', () => {
   it('union throws when query is null', () => {
-    expect(() => select(orm, users).union(null as unknown as any)).toThrow(
-      'Query is required for union',
-    );
+    expect(() =>
+      select(orm, users).union(null as unknown as AnySelectBuilder),
+    ).toThrow('Query is required for union');
   });
 
   it('unionAll throws when query is null', () => {
-    expect(() => select(orm, users).unionAll(null as unknown as any)).toThrow(
-      'Query is required for unionAll',
-    );
+    expect(() =>
+      select(orm, users).unionAll(null as unknown as AnySelectBuilder),
+    ).toThrow('Query is required for unionAll');
   });
 
   it('intersect throws when query is null', () => {
-    expect(() => select(orm, users).intersect(null as unknown as any)).toThrow(
-      'Query is required for intersect',
-    );
+    expect(() =>
+      select(orm, users).intersect(null as unknown as AnySelectBuilder),
+    ).toThrow('Query is required for intersect');
   });
 
   it('except throws when query is null', () => {
-    expect(() => select(orm, users).except(null as unknown as any)).toThrow(
-      'Query is required for except',
-    );
+    expect(() =>
+      select(orm, users).except(null as unknown as AnySelectBuilder),
+    ).toThrow('Query is required for except');
   });
 
   it('with throws when CTEs is empty', () => {

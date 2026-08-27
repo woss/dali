@@ -38,10 +38,14 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
 
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
       - name: Create Release Pull Request or Publish to npm
         uses: changesets/action@v1
         with:
-          publish: pnpm release
+          publish: pnpm release && pnpm release:jsr
           version: pnpm version-packages
           commit: 'chore: version packages'
           title: 'chore: version packages'
@@ -49,3 +53,4 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ github.token }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+          JSR_TOKEN: ${{ secrets.JSR_TOKEN }}

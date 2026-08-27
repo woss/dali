@@ -18,13 +18,13 @@ export type FunctionBuilder = ReturnType<typeof defineFunction>;
 export declare function defineFunction(name: string): {
   readonly name: string;
   /** Set function arguments */
-  args(...args: string[]): /*elided*/ any;
+  args(...args: string[]): ReturnType<typeof defineFunction>;
   /** Set the function body (SurrealQL expression) */
-  body(body: string): /*elided*/ any;
+  body(body: string): ReturnType<typeof defineFunction>;
   /** Optional comment for the function */
-  comment(text: string): /*elided*/ any;
+  comment(text: string): ReturnType<typeof defineFunction>;
   /** Set permissions for the function */
-  permissions(perms: string): /*elided*/ any;
+  permissions(perms: string): ReturnType<typeof defineFunction>;
   /**
    * Return the FunctionConfig object.
    * Validates that required fields are set.

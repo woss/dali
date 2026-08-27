@@ -3,7 +3,11 @@ import os from 'node:os';
 import * as path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { EmbeddedDriver } from '../../sdk/driver/embedded-driver.js';
-import type { ColumnDefinition, TableDefinition } from '../../sdk/table.js';
+import type {
+  ColumnDefinition,
+  SurrealColumnType,
+  TableDefinition,
+} from '../../sdk/table.js';
 import {
   _setTestConfigDir,
   generateAndApplyMigration,
@@ -90,7 +94,7 @@ function buildColumnDef(
   return {
     name,
     tableName: 'user',
-    config: { type: type as any, optional },
+    config: { type: type as SurrealColumnType, optional },
   };
 }
 

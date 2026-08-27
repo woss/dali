@@ -307,3 +307,22 @@ schema.raw('DEFINE ANALYZER my_analyzer TOKENIZERS blank CLASS FILTERS lowercase
 - **TypeScript generics** → Use `typescript-pro` skill for advanced type patterns
 - **Testing query builders** → Use `vitest` skill for writing tests
 - **Test patterns (mocking, record comparison)** → Use `dali-orm-test-patterns` skill
+
+## Hard Rules (verified against SurrealDB 3.1.4)
+
+1. **Column factories are name-carrying**: `string('email')` — the object key in
+   `defineTable` is ignored by simple builders. Always pass the name twice-consistent.
+2. **`record(target)` takes ONE arg** (linked table); the column name comes from the key.
+3. **FLEXIBLE is object-only**: `.flexible()` throws at DDL-render time on any other
+   type (SurrealDB 3.x parse error otherwise). `option<object> FLEXIBLE` is legal.
+4. **Field permissions**: only `select`/`create`/`update`. `FOR delete` on fields is
+   illegal in SurrealDB 3.x and is stripped by tablesToDdl.
+5. **Defaults are raw**: numeric/bool emitted unquoted; `'now()'` normalizes to
+   `time::now()` (bare `now()` was removed in SurrealDB 3.x).
+6. **No table RENAME**: SurrealDB has no ALTER TABLE RENAME. The ORM throws with a
+   DEFINE-new → INSERT-copy → REMOVE-old recipe if you author rename_table.
+7. **Namespace/database must exist** before push/migrations — ensureDatabaseContext
+   fails fast with the exact DEFINE commands (DEFINE FIELD would otherwise silently
+   auto-vivify a SCHEMALESS table).
+8. Set operations accept `AnySelectBuilder` (exported from query/select) — never
+   write `SelectBuilder<any, any>`.

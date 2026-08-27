@@ -20,9 +20,6 @@ export class TupleColumnBuilder extends BaseColumnBuilder<TupleColumnBuilder> {
   }
 
   /** Formats the default value as JSON string. */
-  protected formatDefault(value: unknown): string {
-    return JSON.stringify(value);
-  }
 
   /**
    * Configure all tuple elements at once

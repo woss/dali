@@ -1,5 +1,6 @@
 import type { DaliORM } from '../../sdk/dali-orm.js';
 import type { EmbeddedDriver } from '../../sdk/driver/embedded-driver.js';
+import type { TableDefinition } from '../../sdk/table.js';
 import { InsertBuilder } from '../insert.js';
 import {
   afterEach,
@@ -26,6 +27,16 @@ beforeEach(async () => {
 afterEach(async () => {
   await driver.disconnect();
 });
+
+/**
+ * Widened view of InsertBuilder's data setters, used only to drive the
+ * runtime guard clauses with deliberately invalid argument types.
+ */
+interface LooseInsertBuilder {
+  one(data: unknown): unknown;
+  many(data: unknown): unknown;
+  records(data: unknown): unknown;
+}
 
 // ============================================================================
 // InsertBuilder
@@ -88,27 +99,27 @@ describe('InsertBuilder', () => {
   // -----------------------------------------------------------------------
 
   it('constructor throws when orm is null', () => {
-    expect(() => new InsertBuilder(null as any, users)).toThrow(
+    expect(() => new InsertBuilder(null as unknown as DaliORM, users)).toThrow(
       'DaliORM instance is required',
     );
   });
 
   it('constructor throws when orm is undefined', () => {
-    expect(() => new InsertBuilder(undefined as any, users)).toThrow(
-      'DaliORM instance is required',
-    );
+    expect(
+      () => new InsertBuilder(undefined as unknown as DaliORM, users),
+    ).toThrow('DaliORM instance is required');
   });
 
   it('constructor throws when tableDef has no name', () => {
-    expect(() => new InsertBuilder(orm, {} as any)).toThrow(
-      'Table definition with name is required',
-    );
+    expect(
+      () => new InsertBuilder(orm, {} as unknown as TableDefinition),
+    ).toThrow('Table definition with name is required');
   });
 
   it('constructor throws when tableDef is null', () => {
-    expect(() => new InsertBuilder(orm, null as any)).toThrow(
-      'Table definition with name is required',
-    );
+    expect(
+      () => new InsertBuilder(orm, null as unknown as TableDefinition),
+    ).toThrow('Table definition with name is required');
   });
 
   // -----------------------------------------------------------------------
@@ -122,21 +133,23 @@ describe('InsertBuilder', () => {
   });
 
   it('insert throws on null data object', () => {
-    expect(() => (insert(orm, users) as any).one(null)).toThrow(
-      'Data object is required',
-    );
+    expect(() =>
+      (insert(orm, users) as unknown as LooseInsertBuilder).one(null),
+    ).toThrow('Data object is required');
   });
 
   it('insert throws on string data for one()', () => {
-    expect(() => (insert(orm, users) as any).one('not-an-object')).toThrow(
-      'Data object is required',
-    );
+    expect(() =>
+      (insert(orm, users) as unknown as LooseInsertBuilder).one(
+        'not-an-object',
+      ),
+    ).toThrow('Data object is required');
   });
 
   it('insert throws on number data for one()', () => {
-    expect(() => (insert(orm, users) as any).one(42)).toThrow(
-      'Data object is required',
-    );
+    expect(() =>
+      (insert(orm, users) as unknown as LooseInsertBuilder).one(42),
+    ).toThrow('Data object is required');
   });
 
   // -----------------------------------------------------------------------
@@ -144,27 +157,31 @@ describe('InsertBuilder', () => {
   // -----------------------------------------------------------------------
 
   it('insert throws on empty array for many', async () => {
-    expect(() => (insert(orm, users) as any).many([])).toThrow(
-      'Data array with at least one record is required',
-    );
+    expect(() =>
+      (insert(orm, users) as unknown as LooseInsertBuilder).many([]),
+    ).toThrow('Data array with at least one record is required');
   });
 
   it('insert throws on non-array for many', () => {
     expect(() =>
-      (insert(orm, users) as any).many('not-an-array' as any),
+      (insert(orm, users) as unknown as LooseInsertBuilder).many(
+        'not-an-array',
+      ),
     ).toThrow('Data array with at least one record is required');
   });
 
   it('insert throws on null for many', () => {
-    expect(() => (insert(orm, users) as any).many(null)).toThrow(
-      'Data array with at least one record is required',
-    );
+    expect(() =>
+      (insert(orm, users) as unknown as LooseInsertBuilder).many(null),
+    ).toThrow('Data array with at least one record is required');
   });
 
   it('insert throws on object for many', () => {
-    expect(() => (insert(orm, users) as any).many({ name: 'Alice' })).toThrow(
-      'Data array with at least one record is required',
-    );
+    expect(() =>
+      (insert(orm, users) as unknown as LooseInsertBuilder).many({
+        name: 'Alice',
+      }),
+    ).toThrow('Data array with at least one record is required');
   });
 
   // -----------------------------------------------------------------------
@@ -172,14 +189,16 @@ describe('InsertBuilder', () => {
   // -----------------------------------------------------------------------
 
   it('insert throws on non-array for records', () => {
-    expect(() => (insert(orm, users) as any).records(null)).toThrow(
-      'Data array is required',
-    );
+    expect(() =>
+      (insert(orm, users) as unknown as LooseInsertBuilder).records(null),
+    ).toThrow('Data array is required');
   });
 
   it('insert throws on string for records', () => {
     expect(() =>
-      (insert(orm, users) as any).records('not-an-array' as any),
+      (insert(orm, users) as unknown as LooseInsertBuilder).records(
+        'not-an-array',
+      ),
     ).toThrow('Data array is required');
   });
 

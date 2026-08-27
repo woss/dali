@@ -16,7 +16,10 @@ import type {
   TableDefinition,
   TablePermissions,
 } from '../../sdk/table.js';
-import { SurrealQLGenerator } from '../core/generator.js';
+import {
+  assertFlexibleAllowed,
+  SurrealQLGenerator,
+} from '../core/generator.js';
 import type {
   CreateDatabaseStatement,
   CreateNamespaceStatement,
@@ -139,7 +142,12 @@ export function statementToSql(stmt: SurrealStatement): string {
     case 'drop_table':
       return generator.generateRemoveTable(stmt.name);
     case 'rename_table':
-      return `ALTER TABLE ${stmt.from} RENAME TO ${stmt.to}`;
+      // SurrealDB (incl. 3.x) has no ALTER TABLE ... RENAME — this syntax is a parse error.
+      // Migrate manually: DEFINE TABLE <to> …; INSERT INTO <to> SELECT * FROM <from>; REMOVE TABLE <from>;
+      throw new Error(
+        `rename_table ('${stmt.from}' → '${stmt.to}') is not supported: SurrealDB has no table RENAME statement. ` +
+          `Create the new table, copy rows (INSERT INTO ${stmt.to} SELECT * FROM ${stmt.from}), then remove the old table.`,
+      );
     case 'add_column':
       return generateAddColumn(stmt);
     case 'remove_column':
@@ -198,7 +206,7 @@ export function statementToSql(stmt: SurrealStatement): string {
     case 'drop_sequence':
       return generator.generateRemoveSequence(stmt.def.name);
     default:
-      return `-- Unknown statement type: ${(stmt as any).type}`;
+      return `-- Unknown statement type: ${(stmt as { type: string }).type}`;
   }
 }
 
@@ -234,10 +242,12 @@ function generateCreateTable(stmt: CreateTableStatement): string {
     }
     // Use option<T> syntax for optional fields (SurrealDB syntax)
     // FLEXIBLE only pairs with plain TYPE object, not option<object>
-    if (col.optional && !(col.flex && col.kind === 'object'))
-      line += ` TYPE option<${typeStr}>`;
+    if (col.optional) line += ` TYPE option<${typeStr}>`;
     else line += ` TYPE ${typeStr}`;
     // FLEXIBLE must be specified after TYPE in SurrealDB
+    if (col.flex) {
+      assertFlexibleAllowed(col.kind);
+    }
     if (col.flex) line += ' FLEXIBLE';
     if (col.readonly) line += ' READONLY';
     if (col.default !== undefined)
@@ -270,7 +280,7 @@ function generateAlterColumn(stmt: AlterColumnStatement): string {
     let targetType: string = stmt.change.type;
     // For record types with a target table, include the linked table name
     if (targetType === 'record' && stmt.change.recordTable) {
-      targetType = `record<${stmt.change.recordTable}>` as any;
+      targetType = `record<${stmt.change.recordTable}>`;
     }
     const isOptional = stmt.change.optional ?? stmt.before?.optional ?? false;
     const typeStr = isOptional ? `option<${targetType}>` : targetType;
@@ -283,7 +293,7 @@ function generateAlterColumn(stmt: AlterColumnStatement): string {
     if (baseType) {
       const isRecord = baseType === 'record' && stmt.before?.recordTable;
       const targetType = isRecord
-        ? `record<${stmt.before!.recordTable}>`
+        ? `record<${stmt.before?.recordTable}>`
         : baseType;
       parts.push(`TYPE option<${targetType}>`);
     }

@@ -76,7 +76,7 @@ export type InferInsertData<T extends TableDefinition> = T extends {
         BuilderType<T['_columns'][K]>
       >;
     }
-  : {};
+  : Record<string, unknown>;
 /**
  * Infer the update data type — all fields optional, id excluded.
  */
@@ -88,5 +88,5 @@ export type InferUpdateData<T extends TableDefinition> = T extends {
         BuilderType<T['_columns'][K]>
       >;
     }>
-  : Partial<{}>;
+  : Partial<Record<string, unknown>>;
 //# sourceMappingURL=infer-types.d.ts.map

@@ -218,8 +218,8 @@ describe('BaseDriver', () => {
         builder.content.mock.calls[0] as unknown[]
       )[0] as Array<Record<string, unknown>>;
       expect(Array.isArray(contentArg)).toBe(true);
-      expect((contentArg[0] as any).created_at).toBeInstanceOf(DateTime);
-      expect((contentArg[1] as any).created_at).toBeInstanceOf(DateTime);
+      expect(contentArg[0].created_at).toBeInstanceOf(DateTime);
+      expect(contentArg[1].created_at).toBeInstanceOf(DateTime);
     });
 
     it('preserves non-plain objects (class instances)', async () => {
@@ -409,8 +409,8 @@ describe('BaseDriver', () => {
       const arg = (builder.content.mock.calls[0] as unknown[])[0] as Array<
         Record<string, unknown>
       >;
-      expect((arg[0] as any).owner).toBeInstanceOf(RecordId);
-      expect((arg[1] as any).owner).toBeInstanceOf(RecordId);
+      expect(arg[0].owner).toBeInstanceOf(RecordId);
+      expect(arg[1].owner).toBeInstanceOf(RecordId);
     });
 
     it('converts nested RecordId-like objects with id field', async () => {

@@ -187,21 +187,6 @@ function diffTable(
   const warnings: string[] = [];
   const dataLossOperations: string[] = [];
 
-  const tableName = table1.name;
-
-  // Debug logging for index comparison
-  log('Table %s: DB indexes: %O', tableName, table1.indexes);
-  log('Table %s: Schema indexes: %O', tableName, table2.indexes);
-
-  // Check diffIndexes results
-  const indexChanges = diffIndexes(table1.indexes, table2.indexes, new Map());
-  log('Index changes: %O', indexChanges);
-
-  // Add index changes to statements
-  statements.push(...indexChanges.statements);
-  warnings.push(...indexChanges.warnings);
-  dataLossOperations.push(...indexChanges.dataLossOperations);
-
   // Check schema mode change
   if (table1.schema !== table2.schema) {
     warnings.push(
@@ -422,17 +407,17 @@ function diffColumn(
         default: col2.default,
         optional: col2.optional,
         type: col2.kind,
-      } as any,
+      },
       before: {
         default: col1.default,
         optional: col1.optional,
         type: col1.kind,
-      } as any,
+      },
       after: {
         default: col2.default,
         optional: col2.optional,
         type: col2.kind,
-      } as any,
+      },
     });
   }
 

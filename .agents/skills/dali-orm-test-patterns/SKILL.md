@@ -40,7 +40,10 @@ vi.mock('surrealdb.js', async () => {
     close: vi.fn(),
     send: vi.fn(),
   }));
-  return { ...actual, SurrealWebSocket: MockSocket as any };
+    return {
+      ...actual,
+      SurrealWebSocket: MockSocket as unknown as typeof WebSocket,
+    };
 });
 ```
 
@@ -152,3 +155,14 @@ pnpm test:coverage
 
 - **Vitest setup** → Use `vitest` skill for test configuration patterns
 - **DaliORM driver API** → Use `dali-orm` skill for driver config details
+
+## Type Discipline (biome-enforced)
+
+`noExplicitAny` is at zero — keep it there:
+- Prefer real exported types (`SelectBuilder`, `TableDefinition`, driver types) or
+  `AnySelectBuilder` for set-operation params.
+- Deliberate wrong-type inputs in error-path tests: cast through `unknown`
+  (`null as unknown as DaliORM`), never bare `as any`.
+- Duck-typed mocks: declare a minimal local interface instead.
+- Genuinely intentional vectors (prototype-pollution payloads): inline
+  `// biome-ignore lint/suspicious/noExplicitAny: <concrete reason>` on the prior line.

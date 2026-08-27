@@ -222,7 +222,7 @@ describe('migrateDev', () => {
 
     // Verify migration file content
     const migrationContent = await fs.readFile(
-      path.join(migrationsDir, createUserDir!, 'migration.surql'),
+      path.join(migrationsDir, createUserDir as string, 'migration.surql'),
       'utf-8',
     );
     expect(migrationContent).toContain(
@@ -252,7 +252,7 @@ describe('migrateDev', () => {
     // migrateDev does: createConnectionWithTimeout (live comparison),
     //   then safeDisconnect, then createConnection (target)
     // Each call must return a fresh driver since the first one gets disconnected
-    vi.mocked(connect).mockImplementation(async (opts: any) => {
+    vi.mocked(connect).mockImplementation(async (opts) => {
       const nsFromOpts =
         opts?.nodeDriver?.namespace ?? opts?.embeddedDriver?.namespace ?? ns;
       const dbFromOpts =
@@ -281,7 +281,7 @@ describe('migrateDev', () => {
 
     // Verify migration file content
     const migrationContent = await fs.readFile(
-      path.join(migrationsDir, createUserDir!, 'migration.surql'),
+      path.join(migrationsDir, createUserDir as string, 'migration.surql'),
       'utf-8',
     );
     expect(migrationContent).toContain('DEFINE TABLE');
@@ -350,7 +350,7 @@ describe('migrateDeploy', () => {
     const targetDb = `target_db_${Date.now()}`;
 
     // Mock connect to return a FRESH embedded driver for each call
-    vi.mocked(connect).mockImplementation(async (opts: any) => {
+    vi.mocked(connect).mockImplementation(async (opts) => {
       const ns =
         opts?.nodeDriver?.namespace ?? opts?.embeddedDriver?.namespace ?? '';
       const db =

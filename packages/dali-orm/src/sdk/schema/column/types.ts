@@ -42,7 +42,7 @@ export interface TupleArrayAssert {
 export interface ColumnConfig {
   type: SurrealColumnType;
   optional?: boolean;
-  default?: string;
+  default?: string | number | boolean;
   /** Raw SurrealDB expression for DEFAULT, emitted unquoted (e.g., `crypto::blake3(content)`).
    * Takes precedence over `default` in DDL generation. */
   defaultRaw?: string;

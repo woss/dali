@@ -7,6 +7,7 @@
 
 import {
   boolean,
+  type GenericSchema,
   type InferInput,
   literal,
   number,
@@ -32,22 +33,80 @@ import type {
 // Valibot Schemas
 // ============================================================================
 
-// Auth type union schemas
-// Uses username/password to match SurrealDB SDK field names
-const RootAuthSchema = object({
+type RootAuthInput = {
+  type: 'root';
+  username: string;
+  password: string;
+};
+
+type NamespaceAuthInput = {
+  type: 'namespace';
+  username: string;
+  password: string;
+  namespace: string;
+};
+
+type DatabaseAuthInput = {
+  type: 'database';
+  username: string;
+  password: string;
+  namespace: string;
+  database: string;
+};
+
+type RecordAuthInput = {
+  type: 'record';
+  namespace: string;
+  database: string;
+  access: string;
+  variables?: Record<string, unknown>;
+};
+
+type AuthConfigInput =
+  | RootAuthInput
+  | NamespaceAuthInput
+  | DatabaseAuthInput
+  | RecordAuthInput;
+
+type WsDriverOptions = {
+  pingInterval?: number;
+  pingTimeout?: number;
+};
+
+type HttpDriverOptions = {
+  strict?: boolean;
+  timeout?: number;
+};
+
+type DriverOptionsInput = {
+  ws?: WsDriverOptions;
+  http?: HttpDriverOptions;
+};
+
+type OrmConfigInput = {
+  url: string;
+  namespace: string;
+  database: string;
+  auth?: AuthConfigInput;
+  driver?: DriverOptionsInput;
+  migrations?: { dir: string; table?: string };
+  schema?: { dir: string; pattern: string };
+};
+
+const RootAuthSchema: GenericSchema<RootAuthInput> = object({
   type: literal('root'),
   username: string(),
   password: string(),
 });
 
-const NamespaceAuthSchema = object({
+const NamespaceAuthSchema: GenericSchema<NamespaceAuthInput> = object({
   type: literal('namespace'),
   username: string(),
   password: string(),
   namespace: string(),
 });
 
-const DatabaseAuthSchema = object({
+const DatabaseAuthSchema: GenericSchema<DatabaseAuthInput> = object({
   type: literal('database'),
   username: string(),
   password: string(),
@@ -55,7 +114,7 @@ const DatabaseAuthSchema = object({
   database: string(),
 });
 
-const RecordAuthSchema = object({
+const RecordAuthSchema: GenericSchema<RecordAuthInput> = object({
   type: literal('record'),
   namespace: string(),
   database: string(),
@@ -64,7 +123,7 @@ const RecordAuthSchema = object({
 });
 
 // Union of all auth types
-const AuthConfigSchema = union([
+const AuthConfigSchema: GenericSchema<AuthConfigInput> = union([
   RootAuthSchema,
   NamespaceAuthSchema,
   DatabaseAuthSchema,
@@ -72,25 +131,25 @@ const AuthConfigSchema = union([
 ]);
 
 // WebSocket driver options
-const WsOptionsSchema = object({
+const WsOptionsSchema: GenericSchema<WsDriverOptions> = object({
   pingInterval: optional(number()),
   pingTimeout: optional(number()),
 });
 
 // HTTP driver options
-const HttpOptionsSchema = object({
+const HttpOptionsSchema: GenericSchema<HttpDriverOptions> = object({
   strict: optional(boolean()),
   timeout: optional(number()),
 });
 
 // Driver options
-const DriverOptionsSchema = object({
+const DriverOptionsSchema: GenericSchema<DriverOptionsInput> = object({
   ws: optional(WsOptionsSchema),
   http: optional(HttpOptionsSchema),
 });
 
 // Main config schema
-const OrmConfigSchema = object({
+const OrmConfigSchema: GenericSchema<OrmConfigInput> = object({
   url: string(),
   namespace: string(),
   database: string(),

@@ -45,7 +45,7 @@ export async function loadSchemaFiles(
   }
 
   const tables: TableDefinition[] = [];
-  const access: any[] = [];
+  const access: AccessConfig[] = [];
   const functions: FunctionConfig[] = [];
   const analyzers: AnalyzerDefinition[] = [];
 
@@ -186,8 +186,10 @@ export async function loadSchemaFiles(
                 const hasToSQL = 'toSQL' in item;
                 const hasAccessShape = 'name' in item && 'type' in item;
                 if (hasToSQL || hasAccessShape) {
-                  if (!access.find((a: any) => a.name === item.name)) {
-                    access.push(item);
+                  if (
+                    !access.find((a) => a.name === (item as AccessConfig).name)
+                  ) {
+                    access.push(item as AccessConfig);
                   }
                 }
               }
@@ -200,8 +202,8 @@ export async function loadSchemaFiles(
             const hasAccessShape = 'name' in obj && 'type' in obj;
             if (hasToSQL || hasAccessShape) {
               const name = obj.name as string | undefined;
-              if (name && !access.find((a: any) => a.name === name)) {
-                access.push(exportValue);
+              if (name && !access.find((a) => a.name === name)) {
+                access.push(exportValue as AccessConfig);
               }
             }
           }
@@ -284,7 +286,7 @@ export async function loadSchemaFromFile(
   filePath: string,
 ): Promise<SchemaFilesResult> {
   const tables: TableDefinition[] = [];
-  const access: any[] = [];
+  const access: AccessConfig[] = [];
   const functions: FunctionConfig[] = [];
   const analyzers: AnalyzerDefinition[] = [];
 
@@ -389,8 +391,8 @@ export async function loadSchemaFromFile(
             const hasToSQL = 'toSQL' in item;
             const hasAccessShape = 'name' in item && 'type' in item;
             if (hasToSQL || hasAccessShape) {
-              if (!access.find((a: any) => a.name === item.name)) {
-                access.push(item);
+              if (!access.find((a) => a.name === (item as AccessConfig).name)) {
+                access.push(item as AccessConfig);
               }
             }
           }
@@ -401,8 +403,8 @@ export async function loadSchemaFromFile(
         const hasToSQL = 'toSQL' in exportValue;
         const hasAccessShape = 'name' in exportValue && 'type' in exportValue;
         if (hasToSQL || hasAccessShape) {
-          if (!access.find((a: any) => a.name === exportValue.name)) {
-            access.push(exportValue);
+          if (!access.find((a) => a.name === exportValue.name)) {
+            access.push(exportValue as AccessConfig);
           }
         }
       }

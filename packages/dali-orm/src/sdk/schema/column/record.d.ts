@@ -16,7 +16,7 @@ export declare function record(targetTable: string): {
     build(tableName?: string, columnName?: string): ColumnDefinition;
     reference(opts: {
       onDelete: 'CASCADE' | 'SET NULL' | 'RESTRICT';
-    }): /*elided*/ any;
+    }): import('./simple-builders.js').Builder<'record'>;
     name: string;
     optional(): import('./simple-builders.js').Builder<'record'>;
     default(

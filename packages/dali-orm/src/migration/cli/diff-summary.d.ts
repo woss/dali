@@ -68,7 +68,7 @@ export declare function printDiffSummary(
       }>;
     };
   },
-  _currentAccess?: any[],
+  _currentAccess?: AccessConfig[],
   _lastAccess?: {
     name: string;
   }[],

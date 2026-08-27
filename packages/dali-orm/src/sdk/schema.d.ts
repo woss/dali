@@ -199,29 +199,29 @@ export declare function eventToSQL(config: EventConfig): string;
 export type AccessBuilder = ReturnType<typeof defineAccess>;
 export declare function defineAccess(name: string): {
   readonly name: string;
-  type(type: AccessType): /*elided*/ any;
-  table(tableName: string): /*elided*/ any;
-  signup(sql: string): /*elided*/ any;
-  signin(sql: string): /*elided*/ any;
-  identifier(column: string): /*elided*/ any;
-  algorithm(algo: 'HS256' | 'HS512'): /*elided*/ any;
-  key(key: string): /*elided*/ any;
-  issuer(issuer: string): /*elided*/ any;
-  duration(duration: string): /*elided*/ any;
-  tokenDuration(duration: string): /*elided*/ any;
+  type(type: AccessType): ReturnType<typeof defineAccess>;
+  table(tableName: string): ReturnType<typeof defineAccess>;
+  signup(sql: string): ReturnType<typeof defineAccess>;
+  signin(sql: string): ReturnType<typeof defineAccess>;
+  identifier(column: string): ReturnType<typeof defineAccess>;
+  algorithm(algo: 'HS256' | 'HS512'): ReturnType<typeof defineAccess>;
+  key(key: string): ReturnType<typeof defineAccess>;
+  issuer(issuer: string): ReturnType<typeof defineAccess>;
+  duration(duration: string): ReturnType<typeof defineAccess>;
+  tokenDuration(duration: string): ReturnType<typeof defineAccess>;
   build(): AccessConfig;
   toSQL(): string;
 };
 export type EventBuilder = ReturnType<typeof defineEvent>;
 export declare function defineEvent(name: string): {
   readonly name: string;
-  on(tableName: string): /*elided*/ any;
-  when(condition: string): /*elided*/ any;
-  then(sql: string): /*elided*/ any;
-  comment(text: string): /*elided*/ any;
-  async(): /*elided*/ any;
-  retry(count: number): /*elided*/ any;
-  maxdepth(depth: number): /*elided*/ any;
+  on(tableName: string): ReturnType<typeof defineEvent>;
+  when(condition: string): ReturnType<typeof defineEvent>;
+  then(sql: string): ReturnType<typeof defineEvent>;
+  comment(text: string): ReturnType<typeof defineEvent>;
+  async(): ReturnType<typeof defineEvent>;
+  retry(count: number): ReturnType<typeof defineEvent>;
+  maxdepth(depth: number): ReturnType<typeof defineEvent>;
   build(): EventConfig;
   toSQL(): string;
 };
@@ -256,13 +256,13 @@ export type SequenceConfig = {
  */
 export declare function defineSequence(name: string): {
   readonly name: string;
-  start(n: number): /*elided*/ any;
-  increment(n: number): /*elided*/ any;
-  min(n: number): /*elided*/ any;
-  max(n: number): /*elided*/ any;
-  cache(n: number): /*elided*/ any;
-  cycle(): /*elided*/ any;
-  comment(text: string): /*elided*/ any;
+  start(n: number): ReturnType<typeof defineSequence>;
+  increment(n: number): ReturnType<typeof defineSequence>;
+  min(n: number): ReturnType<typeof defineSequence>;
+  max(n: number): ReturnType<typeof defineSequence>;
+  cache(n: number): ReturnType<typeof defineSequence>;
+  cycle(): ReturnType<typeof defineSequence>;
+  comment(text: string): ReturnType<typeof defineSequence>;
   build(): SurrealSequence;
   toSQL(): string;
 };
@@ -280,8 +280,8 @@ export type DatabaseBuilder = ReturnType<typeof defineDatabase>;
  */
 export declare function defineDatabase(name: string): {
   readonly name: string;
-  comment(text: string): /*elided*/ any;
-  ifNotExists(): /*elided*/ any;
+  comment(text: string): ReturnType<typeof defineDatabase>;
+  ifNotExists(): ReturnType<typeof defineDatabase>;
   build(): {
     comment?: string;
     ifNotExists?: boolean;
@@ -303,8 +303,8 @@ export type NamespaceBuilder = ReturnType<typeof defineNamespace>;
  */
 export declare function defineNamespace(name: string): {
   readonly name: string;
-  comment(text: string): /*elided*/ any;
-  ifNotExists(): /*elided*/ any;
+  comment(text: string): ReturnType<typeof defineNamespace>;
+  ifNotExists(): ReturnType<typeof defineNamespace>;
   build(): {
     comment?: string;
     ifNotExists?: boolean;

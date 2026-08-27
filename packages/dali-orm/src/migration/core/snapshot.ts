@@ -14,7 +14,11 @@ import type {
   ColumnDefinition,
   SurrealColumnType,
 } from '../../sdk/schema/column/types.js';
-import type { EventConfig, FunctionConfig } from '../../sdk/schema.js';
+import type {
+  AccessConfig,
+  EventConfig,
+  FunctionConfig,
+} from '../../sdk/schema.js';
 import type {
   AnalyzerDefinition,
   IndexDefinition,
@@ -118,7 +122,7 @@ export interface SerializedColumnConfig {
   optional?: boolean;
   readonly?: boolean;
   flexible?: boolean;
-  default?: string;
+  default?: string | number | boolean;
   /** Raw SurrealDB expression for DEFAULT (e.g., `crypto::blake3(content)`), emitted unquoted */
   defaultRaw?: string;
   assert?: string;
@@ -264,7 +268,7 @@ export class SnapshotManager {
     tables: TableDefinition[],
     version: string,
     name: string,
-    access?: any[],
+    access?: AccessConfig[],
     events?: EventConfig[],
     functions?: FunctionConfig[],
     analyzers?: AnalyzerDefinition[],
@@ -380,15 +384,45 @@ function serializeIndex(index: IndexDefinition): SerializedIndex {
  * DefineAccessQuery stores config in `acc.config`, so we extract properties
  * from there rather than directly on the object.
  */
-function serializeAccess(access: any[] | undefined): SerializedAccess[] {
-  return (access ?? []).map((a) => ({
-    name: a.config?.name ?? a.name,
-    type: a.config?.type ?? a.type,
-    level: a.config?.level,
-    signup: a.config?.record?.signup,
-    signin: a.config?.record?.signin,
-    duration: a.config?.duration?.session ?? a.config?.duration,
-  }));
+/**
+ * Query-builder output wraps its settings in `.config` (DefineAccessQuery);
+ * plain `AccessConfig` objects carry the same fields directly.
+ */
+type WrappedAccess = {
+  config: {
+    name: string;
+    type: 'RECORD' | 'JWT' | 'OIDC';
+    level?: string;
+    record?: { signup?: string; signin?: string };
+    duration?: string | { session?: string };
+  };
+};
+
+function serializeAccess(
+  access: (AccessConfig | WrappedAccess)[] | undefined,
+): SerializedAccess[] {
+  return (access ?? []).map((a) => {
+    if ('config' in a) {
+      const c = a.config;
+      return {
+        name: c.name,
+        type: c.type,
+        level: c.level,
+        signup: c.record?.signup,
+        signin: c.record?.signin,
+        duration:
+          typeof c.duration === 'string' ? c.duration : c.duration?.session,
+      };
+    }
+    return {
+      name: a.name,
+      type: a.type,
+      level: undefined,
+      signup: a.signup,
+      signin: a.signin,
+      duration: a.duration,
+    };
+  });
 }
 
 /**

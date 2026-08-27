@@ -185,25 +185,25 @@ describe('simple-builders', () => {
     it('sets default value for bool type', () => {
       const b = bool('active');
       const def = b.default(true).build();
-      expect(def.config.default).toBe('true');
+      expect(def.config.default).toBe(true);
     });
 
     it('sets default value for numeric type', () => {
       const b = int('count');
       const def = b.default(42).build();
-      expect(def.config.default).toBe('42');
+      expect(def.config.default).toBe(42);
     });
 
     it('sets default value of false for bool', () => {
       const b = bool('active');
       const def = b.default(false).build();
-      expect(def.config.default).toBe('false');
+      expect(def.config.default).toBe(false);
     });
 
     it('sets default value of 0 for int', () => {
       const b = int('count');
       const def = b.default(0).build();
-      expect(def.config.default).toBe('0');
+      expect(def.config.default).toBe(0);
     });
   });
 

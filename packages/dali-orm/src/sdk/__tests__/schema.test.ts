@@ -1,5 +1,5 @@
 import { safeParse } from 'valibot';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, type Mock, vi } from 'vitest';
 import {
   type AccessConfig,
   AccessConfigSchema,
@@ -53,9 +53,10 @@ function createTable(
 // Mock obug
 // =============================================================================
 
+type MockDebugFn = Mock & { extend: (...args: unknown[]) => unknown };
 vi.mock('obug', () => ({
   createDebug: vi.fn(() => {
-    const fn = vi.fn() as any;
+    const fn = vi.fn() as MockDebugFn;
     fn.extend = vi.fn(() => vi.fn());
     return fn;
   }),

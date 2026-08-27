@@ -4,9 +4,16 @@
  * Tests constructor, connection, auth methods, datetime transformation,
  * live query helpers, and live query lifecycle.
  */
-import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { transformDatetimeValues } from '../driver-utils.js';
 import { EmbeddedDriver } from '../embedded-driver.js';
+import type { EmbeddedConfig } from '../types.js';
+
+/**
+ * Test seam: flips the private connected flag to simulate connection state.
+ */
+function setConnected(d: EmbeddedDriver, value: boolean): void {
+  (d as unknown as { connected: boolean }).connected = value;
+}
 
 // ============================================================================
 // Mock @surrealdb/node
@@ -50,8 +57,7 @@ vi.mock('surrealdb', () => {
 // ============================================================================
 vi.mock('obug', () => ({
   createDebug: vi.fn(() => {
-    const fn = vi.fn() as any;
-    fn.extend = vi.fn(() => vi.fn());
+    const fn = Object.assign(vi.fn(), { extend: vi.fn(() => vi.fn()) });
     return fn;
   }),
 }));
@@ -97,18 +103,22 @@ describe('EmbeddedDriver', () => {
       const d = new EmbeddedDriver({
         namespace: 'myns',
         database: 'mydb',
-      } as any);
+      } as unknown as Partial<EmbeddedConfig>);
       expect(d.config.namespace).toBe('myns');
       expect(d.config.database).toBe('mydb');
     });
 
     it('accepts surrealkv mode', () => {
-      const d = new EmbeddedDriver({ mode: 'surrealkv' } as any);
+      const d = new EmbeddedDriver({
+        mode: 'surrealkv',
+      } as unknown as EmbeddedConfig);
       expect(d.config.mode).toBe('surrealkv');
     });
 
     it('accepts rocksdb mode', () => {
-      const d = new EmbeddedDriver({ mode: 'rocksdb' } as any);
+      const d = new EmbeddedDriver({
+        mode: 'rocksdb',
+      } as unknown as EmbeddedConfig);
       expect(d.config.mode).toBe('rocksdb');
     });
 
@@ -116,17 +126,19 @@ describe('EmbeddedDriver', () => {
       const d = new EmbeddedDriver({
         mode: 'surrealkv',
         path: '/custom/path',
-      } as any);
+      } as unknown as Partial<EmbeddedConfig>);
       expect(d.config.path).toBe('/custom/path');
     });
 
     it('accepts debug flag', () => {
-      const d = new EmbeddedDriver({ debug: true } as any);
+      const d = new EmbeddedDriver({
+        debug: true,
+      } as unknown as EmbeddedConfig);
       expect(d.config.debug).toBe(true);
     });
 
     it('handles empty config object', () => {
-      const d = new EmbeddedDriver({} as any);
+      const d = new EmbeddedDriver({} as unknown as Partial<EmbeddedConfig>);
       expect(d.config).toBeDefined();
       expect(d.config.mode).toBe('memory');
     });
@@ -152,7 +164,7 @@ describe('EmbeddedDriver', () => {
     });
 
     it('returns early if already connected', async () => {
-      (driver as any).connected = true;
+      setConnected(driver, true);
       await driver.connect();
       expect(mockConnect).not.toHaveBeenCalled();
     });
@@ -170,7 +182,7 @@ describe('EmbeddedDriver', () => {
       const d = new EmbeddedDriver({
         mode: 'surrealkv',
         path: '/data/db',
-      } as any);
+      } as unknown as Partial<EmbeddedConfig>);
       await d.connect();
       expect(mockConnect).toHaveBeenCalledWith('surrealkv:///data/db');
     });
@@ -179,7 +191,7 @@ describe('EmbeddedDriver', () => {
       const d = new EmbeddedDriver({
         mode: 'rocksdb',
         path: '/rocks/path',
-      } as any);
+      } as unknown as Partial<EmbeddedConfig>);
       await d.connect();
       expect(mockConnect).toHaveBeenCalledWith('surrealkv:///rocks/path');
     });
@@ -295,14 +307,14 @@ describe('EmbeddedDriver', () => {
 
   describe('kill', () => {
     it('returns early for empty subscription ID', async () => {
-      (driver as any).connected = true;
+      setConnected(driver, true);
       await driver.kill('');
       expect(mockQuery).not.toHaveBeenCalled();
     });
 
     it('executes KILL query for valid subscription', async () => {
       mockQuery.mockReturnValue(thenableResolve([]));
-      (driver as any).connected = true;
+      setConnected(driver, true);
       await driver.kill('live_12345');
       expect(mockQuery).toHaveBeenCalledWith('KILL live_12345');
     });
@@ -326,11 +338,11 @@ describe('EmbeddedDriver', () => {
     }
 
     beforeEach(() => {
-      (driver as any).connected = true;
+      setConnected(driver, true);
     });
 
     it('throws if not connected', async () => {
-      (driver as any).connected = false;
+      setConnected(driver, false);
       await expect(driver.live('table', vi.fn())).rejects.toThrow(
         'Not connected',
       );
@@ -445,11 +457,11 @@ describe('EmbeddedDriver', () => {
     }
 
     beforeEach(() => {
-      (driver as any).connected = true;
+      setConnected(driver, true);
     });
 
     it('throws if not connected', async () => {
-      (driver as any).connected = false;
+      setConnected(driver, false);
       await expect(driver.liveWithOptions('table')).rejects.toThrow(
         'Not connected',
       );

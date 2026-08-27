@@ -24,6 +24,12 @@ type RecordFieldNameOf<TDef extends TableDefinition> = keyof {
     : never]: true;
 } &
   string;
+/**
+ * Set-operation parameter type. Accepts a SelectBuilder of any table or
+ * result shape; compilation only consumes toSQL().
+ */
+export type AnySelectBuilder = SelectBuilder<TableDefinition, unknown>;
+
 export declare class SelectBuilder<
   TDef extends TableDefinition,
   TResult = InferSelectResult<TDef>,
@@ -173,13 +179,13 @@ export declare class SelectBuilder<
    */
   subquery(alias?: string): SqlExpr;
   /** Combine with another SELECT using UNION (deduplicates) */
-  union(query: SelectBuilder<any, any>): this;
+  union(query: AnySelectBuilder): this;
   /** Combine with another SELECT using UNION ALL (keeps duplicates) */
-  unionAll(query: SelectBuilder<any, any>): this;
+  unionAll(query: AnySelectBuilder): this;
   /** Intersect with another SELECT */
-  intersect(query: SelectBuilder<any, any>): this;
+  intersect(query: AnySelectBuilder): this;
   /** Except/minus with another SELECT */
-  except(query: SelectBuilder<any, any>): this;
+  except(query: AnySelectBuilder): this;
   /**
    * Add CTE definitions to this query.
    *
@@ -190,7 +196,7 @@ export declare class SelectBuilder<
    *   .execute();
    * ```
    */
-  with(ctes: Record<string, SelectBuilder<any, any>>): this;
+  with(ctes: Record<string, AnySelectBuilder>): this;
   /**
    * Compile to SurrealQL string + params.
    * Public for subquery/CTE composition.

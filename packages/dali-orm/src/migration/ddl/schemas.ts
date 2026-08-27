@@ -1,3 +1,4 @@
+import type { GenericSchema } from 'valibot';
 import * as v from 'valibot';
 
 // Permission type (info.md lines 84-92)
@@ -36,8 +37,16 @@ export const FieldDefinitionSchema = v.object({
   comment: v.optional(v.string()),
 });
 
-// EventSync (info.md lines 163-171)
-export const EventSyncSchema = v.object({
+/** Parsed output of {@link EventSyncSchema}. */
+export interface EventSync {
+  name: string;
+  what: string;
+  when: string;
+  then: string[];
+  comment?: string;
+}
+
+export const EventSyncSchema: GenericSchema<EventSync> = v.object({
   name: v.string(),
   what: v.string(),
   when: v.string(),
@@ -46,7 +55,19 @@ export const EventSyncSchema = v.object({
 });
 
 // EventAsync (info.md lines 173-183)
-export const EventAsyncSchema = v.object({
+/** Parsed output of {@link EventAsyncSchema}. */
+export interface EventAsync {
+  name: string;
+  what: string;
+  when: string;
+  then: string[];
+  async: true;
+  retry: number;
+  maxdepth: number;
+  comment?: string;
+}
+
+export const EventAsyncSchema: GenericSchema<EventAsync> = v.object({
   name: v.string(),
   what: v.string(),
   when: v.string(),
@@ -58,12 +79,11 @@ export const EventAsyncSchema = v.object({
 });
 
 // EventDefinition — discriminate via 'async' in event
-// Catch-all record schema handles events that don't match sync/async (rare edge case)
-export const EventDefinitionSchema = v.union([
-  EventAsyncSchema,
-  EventSyncSchema,
-  v.record(v.string(), v.any()),
-]);
+export const EventDefinitionSchema: GenericSchema<
+  | EventAsync
+  | EventSync // biome-ignore lint/suspicious/noExplicitAny: INFO STRUCTURE parse boundary — values are coerced into SurrealEvent by consumers
+  | Record<string, any>
+> = v.union([EventAsyncSchema, EventSyncSchema, v.record(v.string(), v.any())]);
 export type EventDefinition = v.InferOutput<typeof EventDefinitionSchema>;
 
 // IndexDefinition (info.md lines 196-204)

@@ -38,6 +38,12 @@ import {
   printDiffSummary,
 } from './diff-summary.js';
 
+/**
+ * Access definition accepted at migration boundaries: the current
+ * `AccessConfig` object shape, or legacy builder objects exposing toSQL().
+ */
+export type AccessLike = AccessConfig & { toSQL?: () => string };
+
 export {
   normalizeSql,
   serializeColumnPermissions,
@@ -213,7 +219,7 @@ export async function getLiveSchema(
 export async function generateMigration(
   tables: TableDefinition[],
   options: GenerateOptions,
-  access?: AccessConfig[],
+  access?: AccessLike[],
   events?: EventConfig[],
   functions?: FunctionConfig[],
   analyzers?: AnalyzerDefinition[],
@@ -239,11 +245,12 @@ export async function generateMigration(
         String(now.getSeconds()).padStart(2, '0'),
       ].join('');
     })();
+  const outputDir = options.outputDir;
+  if (!outputDir) {
+    throw new Error('options.outputDir is required for migration generation');
+  }
   const safeName = options.name.toLowerCase().replace(/\s+/g, '_');
-  const migrationDir = path.join(
-    options.outputDir!,
-    `${timestamp}_${safeName}`,
-  );
+  const migrationDir = path.join(outputDir, `${timestamp}_${safeName}`);
   const migrationFilePath = path.join(migrationDir, 'migration.surql');
   const snapshotFilePath = path.join(migrationDir, 'snapshot.json');
 
@@ -282,7 +289,7 @@ export async function generateMigration(
     ));
   } else {
     // No explicit snapshot dir — try co-located snapshot from latest migration dir
-    const coLocated = await findCoLocatedSnapshot(options.outputDir!);
+    const coLocated = await findCoLocatedSnapshot(outputDir);
     if (coLocated) {
       log(
         'Using co-located snapshot for comparison (from migration directory)',
@@ -357,7 +364,6 @@ export async function generateMigration(
 
   // Check for duplicate migration by comparing hashes
   // Scan existing migration directories for matching content
-  const outputDir = options.outputDir!;
   await fs.mkdir(outputDir, { recursive: true });
 
   try {
@@ -436,7 +442,7 @@ export async function generateSnapshotMigration(
   snapshotDir: string | CoLocatedSnapshot,
   generator: SurrealQLGenerator,
   _version: string,
-  access?: AccessConfig[],
+  access?: AccessLike[],
   events?: EventConfig[],
   functions?: FunctionConfig[],
   analyzers?: AnalyzerDefinition[],
@@ -664,9 +670,9 @@ export async function generateSnapshotMigration(
     if (accessName && !lastAccessNames.has(accessName)) {
       // Handle both AccessConfig objects and legacy objects with toSQL()
       let sql: string | undefined;
-      if (typeof (acc as any).toSQL === 'function') {
+      if (typeof acc.toSQL === 'function') {
         // Legacy: object with toSQL method
-        sql = (acc as any).toSQL();
+        sql = acc.toSQL();
       } else {
         // New: AccessConfig object
         sql = accessToSQL(acc, tablesRecord);
@@ -739,7 +745,7 @@ export async function generateLiveMigration(
   tables: TableDefinition[],
   driver: SurrealDriver,
   generator: SurrealQLGenerator,
-  access?: AccessConfig[],
+  access?: AccessLike[],
   events?: EventConfig[],
   functions?: FunctionConfig[],
   analyzers?: AnalyzerDefinition[],
@@ -1032,8 +1038,8 @@ export async function generateLiveMigration(
       if (accessName && !existingAccessSet.has(accessName)) {
         nonTableCounts.added++;
         let sql: string | undefined;
-        if (typeof (acc as any).toSQL === 'function') {
-          sql = (acc as any).toSQL();
+        if (typeof acc.toSQL === 'function') {
+          sql = acc.toSQL();
         } else if (acc.type) {
           sql = accessToSQL(acc, tablesRecord);
         }
@@ -1147,7 +1153,7 @@ export async function generateLiveMigration(
 export function generateFullMigration(
   tables: TableDefinition[],
   generator: SurrealQLGenerator,
-  access?: AccessConfig[],
+  access?: AccessLike[],
   events?: EventConfig[],
   functions?: FunctionConfig[],
   analyzers?: AnalyzerDefinition[],
@@ -1169,9 +1175,9 @@ export function generateFullMigration(
 
     // Handle both AccessConfig objects and legacy objects with toSQL()
     let sql: string | undefined;
-    if (typeof (acc as any).toSQL === 'function') {
+    if (typeof acc.toSQL === 'function') {
       // Legacy: object with toSQL method
-      sql = (acc as any).toSQL();
+      sql = acc.toSQL();
     } else if (acc.type) {
       // New: AccessConfig object with type
       console.log(

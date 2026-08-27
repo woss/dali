@@ -49,7 +49,7 @@ declare const posts: import('../../index.js').TableDefinition & {
   $id(id: string | number): string;
 };
 declare const wrote: import('../../index.js').TableDefinition & {
-  _columns: {};
+  _columns: Record<string, never>;
   $id(id: string | number): string;
 };
 declare const review: import('../../index.js').TableDefinition & {
@@ -60,15 +60,15 @@ declare const review: import('../../index.js').TableDefinition & {
   $id(id: string | number): string;
 };
 declare const wroteMultiIn: import('../../index.js').TableDefinition & {
-  _columns: {};
+  _columns: Record<string, never>;
   $id(id: string | number): string;
 };
 declare const wroteMultiOut: import('../../index.js').TableDefinition & {
-  _columns: {};
+  _columns: Record<string, never>;
   $id(id: string | number): string;
 };
 declare const wroteMultiBoth: import('../../index.js').TableDefinition & {
-  _columns: {};
+  _columns: Record<string, never>;
   $id(id: string | number): string;
 };
 declare function defineTables(driver: SurrealDriver): Promise<void>;

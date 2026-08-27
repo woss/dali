@@ -4,6 +4,7 @@
  * Converts TableDefinition and ColumnDefinition objects into SurrealQL statements.
  */
 
+import { serializePermissionsFragment } from '../../core/surql.js';
 import type { ColumnDefinition } from '../../sdk/schema/column/types.js';
 import type {
   AnalyzerDefinition,
@@ -256,16 +257,15 @@ export class SurrealQLGenerator {
     }
 
     // FLEXIBLE only pairs with plain TYPE object, not option<object>
-    if (
-      column.config.optional &&
-      !(column.config.flexible && baseType === 'object')
-    ) {
+    // option<T> pairs with FLEXIBLE for object types too (SurrealDB 3.x accepts option<object> FLEXIBLE)
+    if (column.config.optional) {
       typeStr = `option<${typeStr}>`;
     }
     parts.push(`TYPE ${typeStr}`);
 
     // FLEXIBLE must be specified after TYPE in SurrealDB
     if (column.config.flexible) {
+      assertFlexibleAllowed(baseType);
       parts.push('FLEXIBLE');
     }
 
@@ -285,10 +285,10 @@ export class SurrealQLGenerator {
     if (column.config.assert) {
       parts.push(`ASSERT ${column.config.assert}`);
     }
-
-    // PERMISSIONS (column permissions are a direct string expression)
+    // PERMISSIONS (string expression passes through; object renders as FOR-select/create/update fragment)
     if (column.config.permissions) {
-      parts.push(`PERMISSIONS ${column.config.permissions}`);
+      const rendered = renderColumnPermissions(column.config.permissions);
+      if (rendered) parts.push(`PERMISSIONS ${rendered}`);
     }
 
     // REFERENCE ON DELETE for record fields
@@ -322,16 +322,15 @@ export class SurrealQLGenerator {
     }
 
     // FLEXIBLE only pairs with plain TYPE object, not option<object>
-    if (
-      column.config.optional &&
-      !(column.config.flexible && baseType === 'object')
-    ) {
+    // option<T> pairs with FLEXIBLE for object types too (SurrealDB 3.x accepts option<object> FLEXIBLE)
+    if (column.config.optional) {
       typeStr = `option<${typeStr}>`;
     }
     parts.push(`TYPE ${typeStr}`);
 
     // FLEXIBLE must be specified after TYPE in SurrealDB
     if (column.config.flexible) {
+      assertFlexibleAllowed(baseType);
       parts.push('FLEXIBLE');
     }
 
@@ -352,9 +351,10 @@ export class SurrealQLGenerator {
       parts.push(`ASSERT ${column.config.assert}`);
     }
 
-    // PERMISSIONS (column permissions are a direct string expression)
+    // PERMISSIONS (string expression passes through; object renders as FOR-fragment)
     if (column.config.permissions) {
-      parts.push(`PERMISSIONS ${column.config.permissions}`);
+      const rendered = renderColumnPermissions(column.config.permissions);
+      if (rendered) parts.push(`PERMISSIONS ${rendered}`);
     }
 
     // REFERENCE ON DELETE for record fields
@@ -803,7 +803,42 @@ export class SurrealQLGenerator {
     if (perms.create) parts.push(`FOR create ${perms.create}`);
     if (perms.update) parts.push(`FOR update ${perms.update}`);
     if (perms.delete) parts.push(`FOR delete ${perms.delete}`);
-
     return parts.join(' ');
+  }
+}
+
+/**
+ * Render column-level PERMISSIONS clause content.
+ * String expressions pass through untouched; objects render as a
+ * FOR select/create/update fragment (delete is not legal on fields in SurrealDB 3.x).
+ * Returns empty string when nothing should be emitted.
+ */
+export function renderColumnPermissions(
+  perms: string | Record<string, unknown>,
+): string {
+  if (typeof perms === 'string') return perms.trim();
+  const { select, create, update, ...rest } = perms;
+  if (Object.keys(rest).length > 0) {
+    throw new Error(
+      `Unsupported keys in field permissions: ${Object.keys(rest).join(', ')}`,
+    );
+  }
+  return serializePermissionsFragment({
+    select: select as never,
+    create: create as never,
+    update: update as never,
+  });
+}
+
+/**
+ * SurrealDB 3.x only permits FLEXIBLE on object-shaped field types.
+ * Throws with an actionable message for any other type.
+ */
+export function assertFlexibleAllowed(baseType: string): void {
+  if (baseType !== 'object') {
+    throw new Error(
+      `FLEXIBLE is only supported on 'object' fields (got '${baseType}'). ` +
+        `SurrealDB 3.x rejects FLEXIBLE on other types.`,
+    );
   }
 }

@@ -388,7 +388,7 @@ describe('generateFieldRedefine', () => {
       col({
         name: 'email',
         config: {
-          type: 'string',
+          type: 'object',
           optional: true,
           flexible: true,
           readonly: true,
@@ -399,7 +399,7 @@ describe('generateFieldRedefine', () => {
       }),
     );
     expect(sql).toContain(
-      'DEFINE FIELD OVERWRITE email ON TABLE test_table TYPE option<string> FLEXIBLE',
+      'DEFINE FIELD OVERWRITE email ON TABLE test_table TYPE option<object> FLEXIBLE',
     );
     expect(sql).toContain('FLEXIBLE');
     expect(sql).toContain('READONLY');
@@ -1460,7 +1460,7 @@ describe('field type variations', () => {
       col({
         name: 'email',
         config: {
-          type: 'string',
+          type: 'object',
           optional: true,
           readonly: true,
           flexible: true,
@@ -1471,7 +1471,7 @@ describe('field type variations', () => {
       }),
     );
     expect(sql).toBe(
-      'DEFINE FIELD IF NOT EXISTS email ON TABLE test_table TYPE option<string> FLEXIBLE READONLY DEFAULT \'NONE\' ASSERT $value CONTAINS "@" PERMISSIONS FOR select FULL',
+      'DEFINE FIELD IF NOT EXISTS email ON TABLE test_table TYPE option<object> FLEXIBLE READONLY DEFAULT \'NONE\' ASSERT $value CONTAINS "@" PERMISSIONS FOR select FULL',
     );
   });
 });
@@ -1801,5 +1801,91 @@ describe('generateRemoveSequence', () => {
     expect(() => gen.generateRemoveSequence('')).toThrow(
       'Sequence name is required for REMOVE SEQUENCE',
     );
+  });
+});
+
+// ===========================================================================
+// SurrealDB 3.x prod-readiness regressions (live-verified against 3.1.4)
+// ===========================================================================
+describe('SurrealDB 3.x compliance', () => {
+  it('renders object field permissions as FOR-fragment (no [object Object])', () => {
+    const sql = gen.generateFieldDefinition(
+      col({
+        name: 'sec',
+        config: {
+          type: 'string',
+          permissions: { select: true, create: false },
+        },
+      }),
+    );
+    expect(sql).toContain('PERMISSIONS FOR select FULL FOR create NONE');
+    expect(sql).not.toContain('[object Object]');
+  });
+
+  it('never emits FOR delete on fields (illegal in SurrealDB 3.x)', () => {
+    const sql = gen.generateFieldDefinition(
+      col({
+        name: 'sec',
+        config: {
+          type: 'string',
+          permissions: { select: 'FULL', create: 'NONE', update: 'NONE' },
+        },
+      }),
+    );
+    expect(sql).not.toContain('FOR delete');
+  });
+
+  it('passes string permissions through untouched', () => {
+    const sql = gen.generateFieldDefinition(
+      col({
+        name: 'sec',
+        config: { type: 'string', permissions: 'FOR select WHERE $auth' },
+      }),
+    );
+    expect(sql).toContain('PERMISSIONS FOR select WHERE $auth');
+  });
+
+  it('emits nothing for empty permissions object', () => {
+    const sql = gen.generateFieldDefinition(
+      col({ name: 'x', config: { type: 'string', permissions: {} } }),
+    );
+    expect(sql).not.toContain('PERMISSIONS');
+  });
+
+  it('rejects FLEXIBLE on non-object types (3.x parse error)', () => {
+    expect(() =>
+      gen.generateFieldDefinition(
+        col({ name: 'n', config: { type: 'string', flexible: true } }),
+      ),
+    ).toThrow(/FLEXIBLE is only supported on 'object'/);
+  });
+
+  it('keeps option<> on flexible optional objects (option<object> FLEXIBLE is legal)', () => {
+    const sql = gen.generateFieldDefinition(
+      col({
+        name: 'meta',
+        config: { type: 'object', optional: true, flexible: true },
+      }),
+    );
+    expect(sql).toContain('TYPE option<object> FLEXIBLE');
+  });
+
+  it('emits numeric and boolean defaults unquoted', () => {
+    const n = gen.generateFieldDefinition(
+      col({ name: 'score', config: { type: 'float', default: 0 } }),
+    );
+    const b = gen.generateFieldDefinition(
+      col({ name: 'active', config: { type: 'bool', default: false } }),
+    );
+    expect(n).toContain('DEFAULT 0');
+    expect(b).toContain('DEFAULT false');
+  });
+
+  it('normalizes bare now() default to time::now()', () => {
+    const sql = gen.generateFieldDefinition(
+      col({ name: 'ts', config: { type: 'datetime', default: 'now()' } }),
+    );
+    expect(sql).toContain('DEFAULT time::now()');
+    expect(sql).not.toContain('DEFAULT now()');
   });
 });

@@ -1,3 +1,4 @@
+import type { ExprLike } from 'surrealdb';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { DaliORM } from '../../sdk/dali-orm.js';
 import { EmbeddedDriver } from '../../sdk/driver/embedded-driver.js';
@@ -100,7 +101,7 @@ describe('LiveQueryBuilder - Chainable Methods', () => {
 
   it('value throws with empty field', () => {
     const builder = live(orm, users);
-    expect(() => builder.value('' as any)).toThrow(
+    expect(() => builder.value('' as never)).toThrow(
       'Field name is required for value()',
     );
   });
@@ -298,12 +299,12 @@ describe('LiveQueryBuilder - Convenience subscribe', () => {
 describe('LiveQueryBuilder - WHERE with valid condition', () => {
   it('where accepts a string condition', () => {
     const builder = live(orm, users);
-    expect(builder.where('age > 18' as any)).toBe(builder);
+    expect(builder.where('age > 18' as unknown as ExprLike)).toBe(builder);
   });
 
   it('where with string condition creates subscription', async () => {
     const sub = await live(orm, users)
-      .where('age > 18' as any)
+      .where('age > 18' as unknown as ExprLike)
       .start();
 
     expect(sub).toBeDefined();

@@ -9,7 +9,7 @@
  * Schema is optional everywhere for backward compatibility.
  */
 
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, type Mock, vi } from 'vitest';
 
 // ============================================================================
 // Mock surrealdb — needed by BaseDriver import
@@ -57,8 +57,7 @@ vi.mock('surrealdb', () => {
 
 vi.mock('obug', () => ({
   createDebug: vi.fn(() => {
-    const fn = vi.fn() as any;
-    fn.extend = vi.fn(() => vi.fn());
+    const fn = Object.assign(vi.fn(), { extend: vi.fn(() => vi.fn()) });
     return fn;
   }),
 }));
@@ -72,7 +71,7 @@ vi.mock('../node-driver.js', () => {
   const query = vi.fn();
   const getUrl = vi.fn();
   const isConnected = vi.fn().mockReturnValue(true);
-  (globalThis as any).__schemaTestNodeDriver = {
+  (globalThis as unknown as Record<string, unknown>).__schemaTestNodeDriver = {
     connect,
     query,
     getUrl,
@@ -86,7 +85,7 @@ vi.mock('../node-driver.js', () => {
       getUrl = getUrl;
       isConnected = isConnected;
       config = {};
-      schema: any = undefined;
+      schema: unknown = undefined;
     },
   };
 });
@@ -96,7 +95,9 @@ vi.mock('../embedded-driver.js', () => {
   const query = vi.fn();
   const getUrl = vi.fn();
   const isConnected = vi.fn().mockReturnValue(true);
-  (globalThis as any).__schemaTestEmbeddedDriver = {
+  (
+    globalThis as unknown as Record<string, unknown>
+  ).__schemaTestEmbeddedDriver = {
     connect,
     query,
     getUrl,
@@ -109,14 +110,16 @@ vi.mock('../embedded-driver.js', () => {
       query = query;
       getUrl = getUrl;
       isConnected = isConnected;
-      schema: any = undefined;
+      schema: unknown = undefined;
     },
   };
 });
 
 vi.mock('../orm-interfaces.js', () => {
-  const fn = vi.fn() as any;
-  (globalThis as any).__schemaTestIsHttpProtocol = fn;
+  const fn = vi.fn();
+  (
+    globalThis as unknown as Record<string, unknown>
+  ).__schemaTestIsHttpProtocol = fn;
   return { isHttpProtocol: fn };
 });
 
@@ -125,6 +128,8 @@ vi.mock('../orm-interfaces.js', () => {
 // ============================================================================
 
 import { DaliORM } from '../../dali-orm.js';
+import type { OrmSchema } from '../../orm-schema.js';
+
 import { BaseDriver } from '../base-driver.js';
 import { connect as ormConnect } from '../orm-connection.js';
 import type { DriverConfig, EmbeddedConfig } from '../types.js';
@@ -133,16 +138,30 @@ import type { DriverConfig, EmbeddedConfig } from '../types.js';
 // Helpers
 // ============================================================================
 
-function getNodeMocks() {
-  return (globalThis as any).__schemaTestNodeDriver;
+/** Minimal shape of the mocked driver fns stashed on globalThis */
+interface DriverHarnessMocks {
+  connect: Mock;
+  query: Mock;
+  getUrl: Mock;
+  isConnected: Mock;
+  schema: unknown;
 }
 
-function getEmbedMocks() {
-  return (globalThis as any).__schemaTestEmbeddedDriver;
+/** Read a value stashed on globalThis by a vi.mock factory */
+function getStashed(key: string): unknown {
+  return (globalThis as unknown as Record<string, unknown>)[key];
 }
 
-function getIsHttpProtocol() {
-  return (globalThis as any).__schemaTestIsHttpProtocol;
+function getNodeMocks(): DriverHarnessMocks {
+  return getStashed('__schemaTestNodeDriver') as DriverHarnessMocks;
+}
+
+function getEmbedMocks(): DriverHarnessMocks {
+  return getStashed('__schemaTestEmbeddedDriver') as DriverHarnessMocks;
+}
+
+function getIsHttpProtocol(): Mock {
+  return getStashed('__schemaTestIsHttpProtocol') as Mock;
 }
 
 // ============================================================================
@@ -151,7 +170,7 @@ function getIsHttpProtocol() {
 
 class TestDriver extends BaseDriver {
   // @ts-expect-error — mock db
-  public db: Record<string, any>;
+  public db: Record<string, unknown>;
   connected = false;
   subscriptions = new Map<
     string,
@@ -205,7 +224,7 @@ function createMockSchema(name = 'test-schema') {
     getTables: vi.fn().mockReturnValue([]),
     hasTable: vi.fn().mockReturnValue(false),
     tableCount: 0,
-  } as any;
+  } as unknown as OrmSchema & { name: string };
 }
 
 // ============================================================================

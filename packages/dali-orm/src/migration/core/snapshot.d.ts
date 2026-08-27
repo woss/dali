@@ -6,6 +6,7 @@
  * - Compare current code schema vs last snapshot for incremental generation
  * - Fallback to empty schema if no snapshot exists (first migration)
  */
+import type { AccessConfig } from '../../../sdk/schema.js';
 import type { SurrealColumnType } from '../../sdk/schema/column/types.js';
 import type { EventConfig, FunctionConfig } from '../../sdk/schema.js';
 import type { AnalyzerDefinition, TableDefinition } from '../../sdk/table.js';
@@ -172,7 +173,7 @@ export declare class SnapshotManager {
     tables: TableDefinition[],
     version: string,
     name: string,
-    access?: any[],
+    access?: AccessConfig[],
     events?: EventConfig[],
     functions?: FunctionConfig[],
     analyzers?: AnalyzerDefinition[],

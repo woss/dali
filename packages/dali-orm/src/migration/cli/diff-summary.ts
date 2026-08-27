@@ -98,7 +98,7 @@ export function printDiffSummary(
       fields: Array<{ table: string; field: string }>;
     };
   },
-  _currentAccess?: any[],
+  _currentAccess?: AccessConfig[],
   _lastAccess?: { name: string }[],
   nonTable?: NonTableChangeCounts,
 ): void {

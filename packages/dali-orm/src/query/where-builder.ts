@@ -7,7 +7,7 @@
 
 import type { SqlExpr } from '../sdk/functions/sql.js';
 import type { ConditionOp } from './conditions.js';
-import type { SelectBuilder } from './select.js';
+import type { AnySelectBuilder } from './select.js';
 import type { ColumnRef } from './types.js';
 
 // ============================================================================
@@ -185,12 +185,12 @@ export class WhereBuilder {
   in(field: string, values: unknown[]): this;
   in(field: SqlExpr, values: unknown[]): this;
   /** Subquery overload: field IN (SELECT ...) */
-  in(field: ColumnRef, subquery: SelectBuilder<any, any>): this;
-  in(field: string, subquery: SelectBuilder<any, any>): this;
-  in(field: SqlExpr, subquery: SelectBuilder<any, any>): this;
+  in(field: ColumnRef, subquery: AnySelectBuilder): this;
+  in(field: string, subquery: AnySelectBuilder): this;
+  in(field: SqlExpr, subquery: AnySelectBuilder): this;
   in(
     field: string | ColumnRef | SqlExpr,
-    valuesOrSubquery: unknown[] | SelectBuilder<any, any>,
+    valuesOrSubquery: unknown[] | AnySelectBuilder,
   ): this {
     // Duck-type check: SelectBuilder has toSQL()
     if (
@@ -204,7 +204,7 @@ export class WhereBuilder {
           : 'name' in field
             ? field.name
             : String(field);
-      const subResult = (valuesOrSubquery as SelectBuilder<any, any>).toSQL();
+      const subResult = (valuesOrSubquery as AnySelectBuilder).toSQL();
       // Store both SQL and params — serializer will remap param names
       this.root.children?.push({
         type: 'condition',

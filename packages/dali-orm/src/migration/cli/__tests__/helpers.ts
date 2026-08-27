@@ -91,9 +91,9 @@ export function mockConsole(): () => void {
 /** Mock process.exit, returning restore function */
 export function mockProcessExit(): () => void {
   const origExit = process.exit.bind(process);
-  (process as any).exit = vi.fn();
+  process.exit = vi.fn() as unknown as typeof process.exit;
   return () => {
-    (process as any).exit = origExit;
+    process.exit = origExit;
   };
 }
 

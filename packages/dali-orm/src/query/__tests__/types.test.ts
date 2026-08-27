@@ -16,7 +16,6 @@
  */
 
 import { describe, expect, expectTypeOf, it } from 'vitest';
-import type { ColumnConfig } from '../../sdk/schema/column/types.js';
 import type {
   ColumnBuilder,
   TableConfig,
@@ -208,11 +207,13 @@ describe('isRelationTable', () => {
   });
 
   it('throws on null (no guard clause)', () => {
-    expect(() => isRelationTable(null as unknown as any)).toThrow();
+    expect(() => isRelationTable(null as unknown as TableConfig)).toThrow();
   });
 
   it('throws on undefined (no guard clause)', () => {
-    expect(() => isRelationTable(undefined as unknown as any)).toThrow();
+    expect(() =>
+      isRelationTable(undefined as unknown as TableConfig),
+    ).toThrow();
   });
 
   it('returns false if type is relation but missing in/out', () => {
@@ -231,7 +232,7 @@ describe('isRelationTable', () => {
   });
 
   it('returns false for array', () => {
-    expect(isRelationTable([] as any)).toBe(false);
+    expect(isRelationTable([] as unknown as TableConfig)).toBe(false);
   });
 });
 

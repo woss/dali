@@ -221,7 +221,11 @@ describe('ddlDiff — columns', () => {
 
   it('skips schemaless columns (no kind info)', async () => {
     const both = withTables([
-      table('user', { columns: [col('email', { kind: '' as any })] }),
+      table('user', {
+        columns: [
+          col('email', { kind: '' as unknown as SurrealColumn['kind'] }),
+        ],
+      }),
     ]);
     const r = await ddlDiff(both, both);
     expect(r.statements).toHaveLength(0);
@@ -919,6 +923,7 @@ describe('statementToSql', () => {
         schema: 'full',
         columns: [
           col('role', {
+            kind: 'object',
             default: 'admin',
             assert: '$value != "superadmin"',
             readonly: true,
@@ -989,10 +994,10 @@ describe('statementToSql', () => {
   });
 
   describe('rename_table', () => {
-    it('generates ALTER TABLE RENAME TO', () => {
-      expect(
+    it('throws with migration guidance (SurrealDB has no RENAME)', () => {
+      expect(() =>
         statementToSql({ type: 'rename_table', from: 'old', to: 'new' }),
-      ).toBe('ALTER TABLE old RENAME TO new');
+      ).toThrow(/no table RENAME statement/);
     });
   });
 
@@ -1236,7 +1241,9 @@ describe('statementToSql', () => {
 
   describe('unknown statement type', () => {
     it('returns a comment for unknown types', () => {
-      const sql = statementToSql({ type: 'unknown_type' } as any);
+      const sql = statementToSql({
+        type: 'unknown_type',
+      } as unknown as Parameters<typeof statementToSql>[0]);
       expect(sql).toContain('Unknown statement type');
     });
   });
@@ -1436,7 +1443,7 @@ describe('diffSequences', () => {
     const drops = r.statements.filter((s) => s.type === 'drop_sequence');
     expect(creates).toHaveLength(1);
     expect(drops).toHaveLength(0);
-    expect((creates[0] as any).def.name).toBe('my_seq');
+    expect((creates[0] as { def: { name: string } }).def.name).toBe('my_seq');
   });
 
   it('detects changed sequence (drop+recreate)', async () => {
@@ -1448,7 +1455,7 @@ describe('diffSequences', () => {
     const drops = r.statements.filter((s) => s.type === 'drop_sequence');
     expect(creates).toHaveLength(1);
     expect(drops).toHaveLength(1);
-    expect((drops[0] as any).def.name).toBe('my_seq');
+    expect((drops[0] as { def: { name: string } }).def.name).toBe('my_seq');
   });
 
   it('detects no changes for identical sequences', async () => {

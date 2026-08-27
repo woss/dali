@@ -29,7 +29,10 @@ export abstract class BaseColumnBuilder<T extends BaseColumnBuilder<T>> {
   }
 
   default(value: unknown): T {
-    this.config = { ...this.config, default: this.formatDefault(value) };
+    this.config = {
+      ...this.config,
+      default: value as string | number | boolean,
+    };
     return this.self;
   }
 
@@ -64,12 +67,5 @@ export abstract class BaseColumnBuilder<T extends BaseColumnBuilder<T>> {
       config: { ...this.config },
       tableName,
     };
-  }
-
-  /** Formats the default value for this column type.
-   * Default implementation converts value to string.
-   * Override in subclasses for custom formatting (e.g., string needs quotes). */
-  protected formatDefault(value: unknown): string {
-    return String(value);
   }
 }

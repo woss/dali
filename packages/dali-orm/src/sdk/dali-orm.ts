@@ -207,7 +207,7 @@ export class DaliORM {
   /**
    * Get a table definition by name from the schema
    */
-  table(name: string) {
+  table(name: string): TableDefinition | undefined {
     return this.schemaDefinition?.getTable(name);
   }
 
@@ -248,7 +248,7 @@ export class DaliORM {
    * Run operations within a transaction
    */
   async transaction<T>(fn: (tx: DaliORMTransaction) => Promise<T>): Promise<T> {
-    return this.driver.transaction(fn as any);
+    return this.driver.transaction((tx) => fn(tx as DaliORMTransaction));
   }
 
   /**

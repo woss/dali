@@ -52,7 +52,9 @@ vi.mock('node:fs/promises', () => ({
 
 vi.mock('obug', () => ({
   createDebug: vi.fn(() => {
-    const fn = vi.fn() as any;
+    const fn = vi.fn() as import('vitest').Mock & {
+      extend: (...args: unknown[]) => unknown;
+    };
     fn.extend = vi.fn(() => vi.fn());
     return fn;
   }),

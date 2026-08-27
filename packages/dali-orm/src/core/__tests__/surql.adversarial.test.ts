@@ -77,7 +77,7 @@ describe('escapeIdent — adversarial', () => {
   });
 
   it('handles very long identifiers with special chars (10000+ chars)', () => {
-    const long = 'a'.repeat(5000) + ' ' + 'b'.repeat(5000);
+    const long = `${'a'.repeat(5000)} ${'b'.repeat(5000)}`;
     const result = escapeIdent(long);
     expect(result.startsWith('`')).toBe(true);
     expect(result.endsWith('`')).toBe(true);
@@ -275,6 +275,7 @@ describe('serializeValue — adversarial', () => {
   it('handles object with __proto__ key', () => {
     // Use Object.create(null) so __proto__ is a regular key, not prototype setter
     const obj = Object.create(null);
+    // biome-ignore lint/suspicious/noProto: adversarial prototype-pollution payload under test
     obj.__proto__ = { admin: true };
     const result = serializeValue(obj);
     expect(result).toBe('{ __proto__: { admin: true } }');
@@ -490,6 +491,7 @@ describe('surql — adversarial', () => {
 
   it('interpolates object with __proto__ key', () => {
     const obj = Object.create(null);
+    // biome-ignore lint/suspicious/noProto: adversarial prototype-pollution payload under test
     obj.__proto__ = { admin: true };
     const r = surql`INSERT INTO users ${[obj]}`;
     expect(r.sql).toBe('INSERT INTO users [{ __proto__: { admin: true } }]');

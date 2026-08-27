@@ -156,7 +156,7 @@ function createMockDriver(): SurrealDriver & {
     txQuery,
     transaction: vi
       .fn()
-      .mockImplementation(async (fn: (tx: any) => Promise<any>) => {
+      .mockImplementation(async (fn: (tx: unknown) => Promise<unknown>) => {
         const tx = { query: txQuery };
         return fn(tx);
       }),
@@ -212,7 +212,7 @@ function defaultBeforeEach() {
     breakpoints: fullBreakpoints(1),
     hash: 'mock-hash',
     when: '',
-  } as any);
+  } as unknown as Record<string, unknown>);
   mockJournal.isApplied.mockResolvedValue(false);
   mockJournal.getLastSuccessfulStatementIdx.mockResolvedValue(-1);
 }
@@ -570,7 +570,8 @@ describe('MigrationRunner', () => {
 
       const result = await runner.up();
 
-      expect(result.warnings!).toHaveLength(1);
+      const warnings = result.warnings;
+      expect(warnings).toHaveLength(1);
       expect(result.warnings?.[0]).toContain('Journal out-of-sync');
     });
 
@@ -1134,7 +1135,7 @@ describe('MigrationRunner', () => {
       console.log('=== WRITE CALLS ===');
       writeCalls.forEach((call, i) => {
         console.log(
-          `Write #${i}: entries count=${call[0]?.entries?.length}, tags=${JSON.stringify(call[0]?.entries?.map((e: any) => ({ tag: e.tag, bps: e.breakpoints })))}`,
+          `Write #${i}: entries count=${call[0]?.entries?.length}, tags=${JSON.stringify(call[0]?.entries?.map((e: { tag?: string; breakpoints?: boolean[] }) => ({ tag: e.tag, bps: e.breakpoints })))}`,
         );
       });
       console.log('READ CALL count:', mockJournal.read.mock.calls.length);
@@ -1190,7 +1191,7 @@ describe('MigrationRunner', () => {
       const lastWrite = syncCalls[syncCalls.length - 1];
       // Orphan entry should have fallback breakpoints [true] since no matching file
       const orphanEntry = lastWrite[0].entries.find(
-        (e: any) => e.tag === 'orphan',
+        (e: { tag?: string }) => e.tag === 'orphan',
       );
       expect(orphanEntry).toBeTruthy();
       expect(orphanEntry.breakpoints).toEqual([true]);

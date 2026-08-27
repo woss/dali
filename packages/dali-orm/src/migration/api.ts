@@ -34,6 +34,28 @@ import type { DdlDiffResult } from './ddl/ddl.js';
 import { ddlDiff } from './ddl/diff.js';
 import { introspectDatabase } from './ddl/introspect.js';
 
+/**
+ * Fail fast with an actionable error when the driver's namespace/database
+ * does not exist. SurrealDB auto-vivifies databases on some operations (as
+ * SCHEMALESS), which silently corrupts migration state — better to stop.
+ */
+async function ensureDatabaseContext(driver: SurrealDriver): Promise<void> {
+  try {
+    await driver.query('INFO FOR DB;', {});
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    if (/namespace|database.*does not exist/i.test(msg)) {
+      throw new Error(
+        `${msg}\n` +
+          `Create it before migrating, e.g. via root context:\n` +
+          `  DEFINE NAMESPACE <ns>; USE NS <ns>; DEFINE DATABASE <db>;\n` +
+          `or connect with credentials that have permission to do so.`,
+      );
+    }
+    throw err;
+  }
+}
+
 // ============================================================================
 // Re-exports
 // ============================================================================
@@ -147,6 +169,7 @@ export async function pushSchemaFromTableDefs(
   if (!driver.isConnected()) {
     await driver.connect();
   }
+  await ensureDatabaseContext(driver);
 
   // Introspect current database schema
   const currentDdl = await introspectDatabase(driver);
@@ -331,6 +354,7 @@ export async function migrateToDatabase(
   if (!driver.isConnected()) {
     await driver.connect();
   }
+  await ensureDatabaseContext(driver);
 
   const configDir = await resolveConfigDir();
 
@@ -364,6 +388,7 @@ export async function getMigrationStatus(
   if (!driver.isConnected()) {
     await driver.connect();
   }
+  await ensureDatabaseContext(driver);
 
   const configDir = await resolveConfigDir();
 
@@ -413,6 +438,7 @@ export async function generateAndApplyMigration(
   if (!driver.isConnected()) {
     await driver.connect();
   }
+  await ensureDatabaseContext(driver);
 
   const configDir = await resolveConfigDir();
   const outputDir = options.outputDir ?? path.join(configDir, 'migrations');
@@ -478,6 +504,7 @@ export async function pullAndMigrate(
   if (!driver.isConnected()) {
     await driver.connect();
   }
+  await ensureDatabaseContext(driver);
 
   const configDir = await resolveConfigDir();
   const outputDir = options.outputDir ?? path.join(configDir, 'src');
@@ -684,7 +711,7 @@ function generateTypeScriptSchema(
     for (const column of table.columns) {
       const columnDef = generateColumnDefinition({
         name: column.name,
-        kind: column.kind as any,
+        kind: column.kind,
         optional: column.optional,
         default: column.default,
         flexible: column.flexible,

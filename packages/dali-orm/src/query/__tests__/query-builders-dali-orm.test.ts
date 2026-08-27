@@ -14,16 +14,20 @@
 import { describe, expect, it } from 'vitest';
 // Direct runtime import of DaliORM class
 import { DaliORM } from '../../sdk/dali-orm.js';
-import type { SurrealDriver } from '../../sdk/driver/types.js';
+import type {
+  DriverConfig,
+  SurrealDriver,
+  Transaction,
+} from '../../sdk/driver/types.js';
 import { string } from '../../sdk/schema/column/index.js';
-import { defineTable } from '../../sdk/table.js';
+import { defineTable, type TableDefinition } from '../../sdk/table.js';
 import { bindTable } from '../binding.js';
 import { CreateBuilder, create } from '../create.js';
 import { DeleteBuilder, delete_ } from '../delete.js';
 import { InsertBuilder, insert } from '../insert.js';
 import { LiveQueryBuilder, live } from '../live.js';
 import { RelateBuilder, relate } from '../relate.js';
-import { SelectBuilder, select } from '../select.js';
+import { type AnySelectBuilder, SelectBuilder, select } from '../select.js';
 import { UpdateBuilder, update } from '../update.js';
 import { UpsertBuilder, upsert } from '../upsert.js';
 
@@ -43,7 +47,8 @@ function createMockDriver() {
       callCount++;
       return [];
     },
-    transaction: async (_fn: any) => _fn({} as any),
+    transaction: async <T>(fn: (tx: Transaction) => Promise<T>) =>
+      fn({} as unknown as Transaction),
     live: async () => {
       callCount++;
       return 'sub-id';
@@ -99,7 +104,7 @@ function createMockDriver() {
     signup: async () => '',
     authenticate: async () => ({ access: '', refresh: '' }),
     auth: async () => ({}),
-    config: { driver: 'node' } as any,
+    config: { driver: 'node' } as DriverConfig,
     showChanges: async () => [],
   };
   return { driver, getCallCount: () => callCount };
@@ -269,63 +274,63 @@ describe('builders call getDriver() and execute through it', () => {
 
 describe('passing null/undefined throws', () => {
   it('SelectBuilder throws on null', () => {
-    expect(() => new (SelectBuilder as any)(null, users)).toThrow(
+    expect(() => new SelectBuilder(null as unknown as DaliORM, users)).toThrow(
       'DaliORM instance is required',
     );
   });
 
   it('SelectBuilder throws on undefined', () => {
-    expect(() => new (SelectBuilder as any)(undefined, users)).toThrow(
-      'DaliORM instance is required',
-    );
+    expect(
+      () => new SelectBuilder(undefined as unknown as DaliORM, users),
+    ).toThrow('DaliORM instance is required');
   });
 
   it('InsertBuilder throws on null', () => {
-    expect(() => new (InsertBuilder as any)(null, users)).toThrow(
+    expect(() => new InsertBuilder(null as unknown as DaliORM, users)).toThrow(
       'DaliORM instance is required',
     );
   });
 
   it('UpdateBuilder throws on null', () => {
-    expect(() => new (UpdateBuilder as any)(null, users)).toThrow(
+    expect(() => new UpdateBuilder(null as unknown as DaliORM, users)).toThrow(
       'DaliORM instance is required',
     );
   });
 
   it('DeleteBuilder throws on null', () => {
-    expect(() => new (DeleteBuilder as any)(null, users)).toThrow(
+    expect(() => new DeleteBuilder(null as unknown as DaliORM, users)).toThrow(
       'DaliORM instance is required',
     );
   });
 
   it('CreateBuilder throws on null', () => {
-    expect(() => new (CreateBuilder as any)(null, users)).toThrow(
+    expect(() => new CreateBuilder(null as unknown as DaliORM, users)).toThrow(
       'DaliORM instance is required',
     );
   });
 
   it('UpsertBuilder throws on null', () => {
-    expect(() => new (UpsertBuilder as any)(null, users)).toThrow(
+    expect(() => new UpsertBuilder(null as unknown as DaliORM, users)).toThrow(
       'DaliORM instance is required',
     );
   });
 
   it('RelateBuilder throws on null', () => {
-    expect(() => new (RelateBuilder as any)(null, users)).toThrow(
+    expect(() => new RelateBuilder(null as unknown as DaliORM, users)).toThrow(
       'DaliORM instance is required',
     );
   });
 
   it('LiveQueryBuilder throws on null', () => {
-    expect(() => new (LiveQueryBuilder as any)(null, users)).toThrow(
-      'DaliORM instance is required',
-    );
+    expect(
+      () => new LiveQueryBuilder(null as unknown as DaliORM, users),
+    ).toThrow('DaliORM instance is required');
   });
 
   it('LiveQueryBuilder throws on undefined', () => {
-    expect(() => new (LiveQueryBuilder as any)(undefined, users)).toThrow(
-      'DaliORM instance is required',
-    );
+    expect(
+      () => new LiveQueryBuilder(undefined as unknown as DaliORM, users),
+    ).toThrow('DaliORM instance is required');
   });
 });
 
@@ -452,7 +457,7 @@ describe('bindTable() factory methods accept DaliORM', () => {
   it('bound methods delegate to factory — select with DaliORM uses getDriver()', async () => {
     const { orm, getCallCount } = createOrmWithDriverTracker();
     const bound = bindTable(users);
-    const builder = bound.select(orm) as SelectBuilder<any, any>;
+    const builder = bound.select(orm) as AnySelectBuilder;
     const results = await builder.execute();
     expect(results).toEqual([]);
     expect(getCallCount()).toBeGreaterThanOrEqual(1);
@@ -462,7 +467,7 @@ describe('bindTable() factory methods accept DaliORM', () => {
     const orm = createOrm();
     const bound = bindTable(posts);
 
-    const sqlBuilder = bound.select(orm) as SelectBuilder<any, any>;
+    const sqlBuilder = bound.select(orm) as AnySelectBuilder;
     const sql = sqlBuilder.toSQL();
 
     expect(sql.sql).toContain('FROM post');
@@ -489,57 +494,57 @@ describe('DaliORM type re-export from index.ts', () => {
 describe('builder edge cases', () => {
   it('SelectBuilder throws when tableDef has no name', () => {
     const orm = createOrm();
-    expect(() => new SelectBuilder(orm, {} as any)).toThrow(
-      'Table definition with name is required',
-    );
+    expect(
+      () => new SelectBuilder(orm, {} as unknown as TableDefinition),
+    ).toThrow('Table definition with name is required');
   });
 
   it('InsertBuilder throws when tableDef has no name', () => {
     const orm = createOrm();
-    expect(() => new InsertBuilder(orm, {} as any)).toThrow(
-      'Table definition with name is required',
-    );
+    expect(
+      () => new InsertBuilder(orm, {} as unknown as TableDefinition),
+    ).toThrow('Table definition with name is required');
   });
 
   it('UpdateBuilder throws when tableDef has no name', () => {
     const orm = createOrm();
-    expect(() => new UpdateBuilder(orm, {} as any)).toThrow(
-      'Table definition with name is required',
-    );
+    expect(
+      () => new UpdateBuilder(orm, {} as unknown as TableDefinition),
+    ).toThrow('Table definition with name is required');
   });
 
   it('DeleteBuilder throws when tableDef has no name', () => {
     const orm = createOrm();
-    expect(() => new DeleteBuilder(orm, {} as any)).toThrow(
-      'Table definition with name is required',
-    );
+    expect(
+      () => new DeleteBuilder(orm, {} as unknown as TableDefinition),
+    ).toThrow('Table definition with name is required');
   });
 
   it('CreateBuilder throws when tableDef has no name', () => {
     const orm = createOrm();
-    expect(() => new CreateBuilder(orm, {} as any)).toThrow(
-      'Table definition with name is required',
-    );
+    expect(
+      () => new CreateBuilder(orm, {} as unknown as TableDefinition),
+    ).toThrow('Table definition with name is required');
   });
 
   it('UpsertBuilder throws when tableDef has no name', () => {
     const orm = createOrm();
-    expect(() => new UpsertBuilder(orm, {} as any)).toThrow(
-      'Table definition with name is required',
-    );
+    expect(
+      () => new UpsertBuilder(orm, {} as unknown as TableDefinition),
+    ).toThrow('Table definition with name is required');
   });
 
   it('RelateBuilder throws when tableDef has no name', () => {
     const orm = createOrm();
-    expect(() => new RelateBuilder(orm, {} as any)).toThrow(
-      'Edge table definition with name is required',
-    );
+    expect(
+      () => new RelateBuilder(orm, {} as unknown as TableDefinition),
+    ).toThrow('Edge table definition with name is required');
   });
 
   it('LiveQueryBuilder throws when tableDef has no name', () => {
     const orm = createOrm();
-    expect(() => new LiveQueryBuilder(orm, {} as any)).toThrow(
-      'Table definition with name is required',
-    );
+    expect(
+      () => new LiveQueryBuilder(orm, {} as unknown as TableDefinition),
+    ).toThrow('Table definition with name is required');
   });
 });

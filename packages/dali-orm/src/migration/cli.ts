@@ -423,7 +423,7 @@ async function handleDiff(
 
 async function handleQuery(
   args: string[],
-  options: CLIOptions,
+  _options: CLIOptions,
   config: Config,
 ) {
   const query = args[0];

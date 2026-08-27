@@ -29,8 +29,16 @@ export function formatDefaultValue(value: unknown): string {
   if (value === null) return 'NULL';
   if (value === undefined) return 'NONE';
   if (isRaw(value)) return value.sql;
+  if (value instanceof Date) return quoteString(value.toISOString());
   if (typeof value === 'string') {
     if (isNowVariant(value)) return 'time::now()';
+    // Function-call expressions (e.g. `crypto::blake3(x)`) pass through unquoted
+    if (value.includes('::')) return value;
+    // Relative duration / keyword datetimes stay raw
+    if (value === 'now' || value.startsWith('+') || value.startsWith('!'))
+      return value;
+    // Bare ISO datetime literals are valid unquoted SurrealQL
+    if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(value)) return value;
     return quoteString(value);
   }
   if (typeof value === 'boolean') return String(value);

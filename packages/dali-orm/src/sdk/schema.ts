@@ -1,3 +1,4 @@
+import type { GenericSchema } from 'valibot';
 import {
   array,
   boolean,
@@ -25,19 +26,28 @@ export type AccessType = 'RECORD' | 'JWT' | 'OIDC';
  * AccessConfig schema using valibot
  * Defines the configuration structure for access definitions
  */
-export const AccessConfigSchema = object({
-  name: string(),
-  type: union([literal('RECORD'), literal('JWT'), literal('OIDC')]),
-  table: optional(string()),
-  signup: optional(string()),
-  signin: optional(string()),
-  identifier: optional(string()),
-  algorithm: optional(string()),
-  key: optional(string()),
-  issuer: optional(string()),
-  duration: optional(string()),
-  tokenDuration: optional(string()),
-});
+/**
+ * Parsed output of {@link AccessConfigSchema}. Identical to `AccessConfig`
+ * except `algorithm` is validated as a plain string (no literal narrowing).
+ */
+export type AccessConfigSchemaOutput = Omit<AccessConfig, 'algorithm'> & {
+  algorithm?: string;
+};
+
+export const AccessConfigSchema: GenericSchema<AccessConfigSchemaOutput> =
+  object({
+    name: string(),
+    type: union([literal('RECORD'), literal('JWT'), literal('OIDC')]),
+    table: optional(string()),
+    signup: optional(string()),
+    signin: optional(string()),
+    identifier: optional(string()),
+    algorithm: optional(string()),
+    key: optional(string()),
+    issuer: optional(string()),
+    duration: optional(string()),
+    tokenDuration: optional(string()),
+  });
 
 export type AccessConfig = {
   name: string;
@@ -218,7 +228,7 @@ export type FunctionConfig = {
  * FunctionConfig schema using valibot
  * Defines the configuration structure for SurrealDB function definitions
  */
-export const FunctionConfigSchema = object({
+export const FunctionConfigSchema: GenericSchema<FunctionConfig> = object({
   name: string(),
   args: optional(array(string())),
   body: string(),
@@ -275,7 +285,7 @@ export type EventConfig = {
  * EventConfig schema using valibot
  * Defines the configuration structure for SurrealDB event definitions
  */
-export const EventConfigSchema = object({
+export const EventConfigSchema: GenericSchema<EventConfig> = object({
   name: string(),
   on: string(),
   when: string(),
@@ -312,10 +322,22 @@ export function eventToSQL(config: EventConfig): string {
 // =============================================================================
 // FLUENT BUILDERS
 // =============================================================================
-
-export type AccessBuilder = ReturnType<typeof defineAccess>;
-
-export function defineAccess(name: string) {
+export interface AccessBuilder {
+  readonly name: string;
+  type(type: AccessType): AccessBuilder;
+  table(tableName: string): AccessBuilder;
+  signup(sql: string): AccessBuilder;
+  signin(sql: string): AccessBuilder;
+  identifier(column: string): AccessBuilder;
+  algorithm(algo: 'HS256' | 'HS512'): AccessBuilder;
+  key(key: string): AccessBuilder;
+  issuer(issuer: string): AccessBuilder;
+  duration(duration: string): AccessBuilder;
+  tokenDuration(duration: string): AccessBuilder;
+  build(): AccessConfig;
+  toSQL(): string;
+}
+export function defineAccess(name: string): AccessBuilder {
   if (!name) throw new Error('Access name is required');
 
   let config: {
@@ -384,9 +406,20 @@ export function defineAccess(name: string) {
   };
 }
 
-export type EventBuilder = ReturnType<typeof defineEvent>;
+export interface EventBuilder {
+  readonly name: string;
+  on(tableName: string): EventBuilder;
+  when(condition: string): EventBuilder;
+  then(sql: string): EventBuilder;
+  comment(text: string): EventBuilder;
+  async(): EventBuilder;
+  retry(count: number): EventBuilder;
+  maxdepth(depth: number): EventBuilder;
+  build(): EventConfig;
+  toSQL(): string;
+}
 
-export function defineEvent(name: string) {
+export function defineEvent(name: string): EventBuilder {
   if (!name) throw new Error('Event name is required');
 
   let config: {
@@ -467,8 +500,6 @@ export function defineEvent(name: string) {
 // SEQUENCE DEFINITION
 // =============================================================================
 
-export type SequenceBuilder = ReturnType<typeof defineSequence>;
-
 /**
  * Sequence configuration for SurrealDB sequence definitions
  *
@@ -498,7 +529,20 @@ export type SequenceConfig = {
  *   .toSQL()
  * // → DEFINE SEQUENCE IF NOT EXISTS `my_seq` START 1 INCREMENT 2 CYCLE
  */
-export function defineSequence(name: string) {
+export interface SequenceBuilder {
+  readonly name: string;
+  start(n: number): SequenceBuilder;
+  increment(n: number): SequenceBuilder;
+  min(n: number): SequenceBuilder;
+  max(n: number): SequenceBuilder;
+  cache(n: number): SequenceBuilder;
+  cycle(): SequenceBuilder;
+  comment(text: string): SequenceBuilder;
+  build(): SurrealSequence;
+  toSQL(): string;
+}
+
+export function defineSequence(name: string): SequenceBuilder {
   if (!name) throw new Error('Sequence name is required');
 
   let config: SequenceConfig = { name };
@@ -552,20 +596,21 @@ export function defineSequence(name: string) {
 // DATABASE DEFINITION
 // =============================================================================
 
-export type DatabaseBuilder = ReturnType<typeof defineDatabase>;
+export interface DatabaseBuilder {
+  readonly name: string;
+  comment(text: string): DatabaseBuilder;
+  ifNotExists(): DatabaseBuilder;
+  build(): { name: string; comment?: string; ifNotExists?: boolean };
+  toSQL(): string;
+}
 
 /**
  * Create a DEFINE DATABASE fluent builder
  *
- * SurrealDB syntax: DEFINE DATABASE [IF NOT EXISTS] <name> [COMMENT '<str>']
- *
  * @example
- * defineDatabase('testdb')
- *   .comment('Test database')
- *   .toSQL()
- * // → DEFINE DATABASE `testdb` COMMENT "Test database"
+ * defineDatabase('testdb').comment('Test database').toSQL()
  */
-export function defineDatabase(name: string) {
+export function defineDatabase(name: string): DatabaseBuilder {
   if (!name) throw new Error('Database name is required');
 
   let config: {
@@ -585,7 +630,7 @@ export function defineDatabase(name: string) {
       config = { ...config, ifNotExists: true };
       return this;
     },
-    build() {
+    build(): { name: string; comment?: string; ifNotExists?: boolean } {
       return { name, ...config };
     },
     toSQL(): string {
@@ -593,8 +638,6 @@ export function defineDatabase(name: string) {
     },
   };
 }
-
-export type NamespaceBuilder = ReturnType<typeof defineNamespace>;
 
 /**
  * Create a DEFINE NAMESPACE fluent builder
@@ -607,7 +650,15 @@ export type NamespaceBuilder = ReturnType<typeof defineNamespace>;
  *   .toSQL()
  * // → DEFINE NAMESPACE `production` COMMENT "Production namespace"
  */
-export function defineNamespace(name: string) {
+export interface NamespaceBuilder {
+  readonly name: string;
+  comment(text: string): NamespaceBuilder;
+  ifNotExists(): NamespaceBuilder;
+  build(): { name: string; comment?: string; ifNotExists?: boolean };
+  toSQL(): string;
+}
+
+export function defineNamespace(name: string): NamespaceBuilder {
   if (!name) throw new Error('Namespace name is required');
 
   let config: {
@@ -627,7 +678,7 @@ export function defineNamespace(name: string) {
       config = { ...config, ifNotExists: true };
       return this;
     },
-    build() {
+    build(): { name: string; comment?: string; ifNotExists?: boolean } {
       return { name, ...config };
     },
     toSQL(): string {

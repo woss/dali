@@ -11,6 +11,7 @@
 
 import { parse } from 'valibot';
 import { describe, expect, it } from 'vitest';
+import type { ValidatedAuthConfig } from '../validate.js';
 import {
   AuthConfigSchema,
   convertValibotErrors,
@@ -118,8 +119,13 @@ describe('validateAuthConfig', () => {
       variables: { email: 'user@test.com' },
     });
 
-    expect(result.valid).toBe(true);
-    expect((result.data as any)?.variables).toEqual({ email: 'user@test.com' });
+    // validateAuthConfig returns the full union; only the record variant
+    // carries `variables`, which this config was validated as having.
+    const recordData = result.data as Extract<
+      ValidatedAuthConfig,
+      { type: 'record' }
+    >;
+    expect(recordData.variables).toEqual({ email: 'user@test.com' });
   });
 
   it('returns invalid for root auth missing username', () => {
@@ -373,8 +379,9 @@ describe('AuthConfigSchema', () => {
       password: 'secret',
     });
 
-    expect(result.type).toBe('root');
-    expect((result as any).username).toBe('admin');
+    // Parsed output is the validated root variant of the union.
+    const parsedRoot = result as { type: 'root'; username: string };
+    expect(parsedRoot.username).toBe('admin');
   });
 
   it('rejects config missing required field', () => {
@@ -392,8 +399,12 @@ describe('AuthConfigSchema', () => {
       variables: { email: 'user@test.com' },
     });
 
-    expect(result.type).toBe('record');
-    expect((result as any).variables).toEqual({ email: 'user@test.com' });
+    // Parsed output is the validated record variant of the union.
+    const parsedRecord = result as {
+      type: 'record';
+      variables?: Record<string, unknown>;
+    };
+    expect(parsedRecord.variables).toEqual({ email: 'user@test.com' });
   });
 
   it('rejects invalid type string', () => {

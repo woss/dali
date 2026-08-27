@@ -66,8 +66,9 @@ describe('formatDefaultValue', () => {
     expect(formatDefaultValue('rand()')).toBe("'rand()'");
   });
 
-  it('formats "foo::bar()" as quoted string (not raw SQL)', () => {
-    expect(formatDefaultValue('foo::bar()')).toBe("'foo::bar()'");
+  it('passes function-call expressions containing :: through unquoted', () => {
+    // Matches DatetimeColumnBuilder semantics: `::` signals a DB-side expression
+    expect(formatDefaultValue('foo::bar()')).toBe('foo::bar()');
   });
 
   it('formats "some_func(a, b)" as quoted string', () => {

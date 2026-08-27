@@ -88,29 +88,41 @@ describe('Model builder methods return correct types', () => {
 
     // RelateBuilder is not exported as a class-name import in Model,
     // so duck-check its API surface
-    expect(typeof (builder as RelateBuilder<any>).from).toBe('function');
-    expect(typeof (builder as RelateBuilder<any>).to).toBe('function');
+    expect(typeof (builder as RelateBuilder<typeof users>).from).toBe(
+      'function',
+    );
+    expect(typeof (builder as RelateBuilder<typeof users>).to).toBe('function');
   });
 
   it('create() returns CreateBuilder', () => {
     const builder = model.create();
 
-    expect(typeof (builder as CreateBuilder<any>).id).toBe('function');
-    expect(typeof (builder as CreateBuilder<any>).set).toBe('function');
+    expect(typeof (builder as CreateBuilder<typeof users>).id).toBe('function');
+    expect(typeof (builder as CreateBuilder<typeof users>).set).toBe(
+      'function',
+    );
   });
 
   it('upsert() returns UpsertBuilder', () => {
     const builder = model.upsert();
 
-    expect(typeof (builder as UpsertBuilder<any>).set).toBe('function');
-    expect(typeof (builder as UpsertBuilder<any>).data).toBe('function');
+    expect(typeof (builder as UpsertBuilder<typeof users>).set).toBe(
+      'function',
+    );
+    expect(typeof (builder as UpsertBuilder<typeof users>).data).toBe(
+      'function',
+    );
   });
 
   it('live() returns LiveQueryBuilder', () => {
     const builder = model.live();
 
-    expect(typeof (builder as LiveQueryBuilder<any>).fields).toBe('function');
-    expect(typeof (builder as LiveQueryBuilder<any>).start).toBe('function');
+    expect(typeof (builder as LiveQueryBuilder<typeof users>).fields).toBe(
+      'function',
+    );
+    expect(typeof (builder as LiveQueryBuilder<typeof users>).start).toBe(
+      'function',
+    );
   });
 });
 
@@ -170,7 +182,7 @@ describe('Model with relation tables', () => {
   });
 
   it('relate() returns RelateBuilder with chainable API', () => {
-    const builder = model.relate() as RelateBuilder<any>;
+    const builder = model.relate() as RelateBuilder<typeof wrote>;
 
     expect(typeof builder.from).toBe('function');
     expect(typeof builder.to).toBe('function');

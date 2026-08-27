@@ -50,6 +50,12 @@ interface GraphTraversal {
 // SelectBuilder
 // ============================================================================
 
+/**
+ * Set-operation parameter type. Accepts a SelectBuilder of any table or
+ * result shape; compilation only consumes toSQL().
+ */
+export type AnySelectBuilder = SelectBuilder<TableDefinition, unknown>;
+
 export class SelectBuilder<
   TDef extends TableDefinition,
   TResult = InferSelectResult<TDef>,
@@ -68,9 +74,9 @@ export class SelectBuilder<
   private _parallel = false;
   private setOperations: {
     type: 'UNION' | 'UNION ALL' | 'INTERSECT' | 'EXCEPT';
-    query: SelectBuilder<any, any>;
+    query: AnySelectBuilder;
   }[] = [];
-  private _cteQueries?: { name: string; query: SelectBuilder<any, any> }[];
+  private _cteQueries?: { name: string; query: AnySelectBuilder }[];
   private omitFields?: string[];
   private splitFields?: string[];
   private indexHint?: { type: 'noindex' | 'index'; names?: string[] };
@@ -416,28 +422,28 @@ export class SelectBuilder<
   // ==================== Set Operations ====================
 
   /** Combine with another SELECT using UNION (deduplicates) */
-  union(query: SelectBuilder<any, any>): this {
+  union(query: AnySelectBuilder): this {
     if (!query) throw new Error('Query is required for union');
     this.setOperations.push({ type: 'UNION', query });
     return this;
   }
 
   /** Combine with another SELECT using UNION ALL (keeps duplicates) */
-  unionAll(query: SelectBuilder<any, any>): this {
+  unionAll(query: AnySelectBuilder): this {
     if (!query) throw new Error('Query is required for unionAll');
     this.setOperations.push({ type: 'UNION ALL', query });
     return this;
   }
 
   /** Intersect with another SELECT */
-  intersect(query: SelectBuilder<any, any>): this {
+  intersect(query: AnySelectBuilder): this {
     if (!query) throw new Error('Query is required for intersect');
     this.setOperations.push({ type: 'INTERSECT', query });
     return this;
   }
 
   /** Except/minus with another SELECT */
-  except(query: SelectBuilder<any, any>): this {
+  except(query: AnySelectBuilder): this {
     if (!query) throw new Error('Query is required for except');
     this.setOperations.push({ type: 'EXCEPT', query });
     return this;
@@ -455,7 +461,7 @@ export class SelectBuilder<
    *   .execute();
    * ```
    */
-  with(ctes: Record<string, SelectBuilder<any, any>>): this {
+  with(ctes: Record<string, AnySelectBuilder>): this {
     const entries = Object.entries(ctes);
     if (entries.length === 0)
       throw new Error('At least one CTE definition is required');
@@ -503,7 +509,7 @@ export class SelectBuilder<
     if (this._cteQueries && this._cteQueries.length > 0) {
       const cteParts: string[] = [];
       for (let i = 0; i < this._cteQueries.length; i++) {
-        const cte: { name: string; query: SelectBuilder<any, any> } =
+        const cte: { name: string; query: AnySelectBuilder } =
           this._cteQueries[i];
         const childSQL: { sql: string; params: Record<string, unknown> } =
           cte.query.toSQL();
@@ -536,7 +542,7 @@ export class SelectBuilder<
     if (this.indexHint?.type === 'noindex') {
       sql += ' WITH NOINDEX';
     } else if (this.indexHint?.type === 'index') {
-      sql += ` WITH INDEX ${this.indexHint.names!.join(' ')}`;
+      sql += ` WITH INDEX ${this.indexHint.names?.join(' ')}`;
     }
 
     // WHERE

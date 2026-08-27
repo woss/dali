@@ -18,7 +18,6 @@ jobs:
       pull-requests: write
     env:
       DEBUG: dali-orm:*
-      VP_HOME: .vite-plus
     steps:
       - uses: actions/checkout@v6
         with:
@@ -36,19 +35,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pnpm-
 
-      - run: mkdir -p ~/.vite-plus/cache
-      - name: Cache vite-plus task cache
-        uses: actions/cache@v5
-        with:
-          path: ~/.vite-plus/cache
-          key: ${{ runner.os }}-vp-${{ hashFiles('pnpm-lock.yaml') }}-${{ github.run_id }}
-          restore-keys: |
-            ${{ runner.os }}-vp-${{ hashFiles('pnpm-lock.yaml') }}-
-            ${{ runner.os }}-vp-
-      - run: pnpm install --frozen-lockfile
-      - run: pnpm vp run ci
-      - run: pnpm test:coverage
-      - run: pnpm lint
+      - run: pnpm build && pnpm test:coverage && pnpm lint
 
       - name: Report Coverage
         if: always()

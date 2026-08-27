@@ -11,6 +11,7 @@ vi.mock('../../../sdk/driver/orm-connection.js', () => ({
   connect: vi.fn(),
 }));
 
+import type { SurrealDriver } from '../../../sdk/driver/types.js';
 import type { Config } from '../../config.js';
 import {
   createConnectionWithTimeout,
@@ -108,7 +109,7 @@ describe('safeDisconnect', () => {
 
   it('disconnects successfully', async () => {
     const driver = { disconnect: vi.fn().mockResolvedValue(undefined) };
-    await safeDisconnect(driver as any);
+    await safeDisconnect(driver as unknown as SurrealDriver);
     expect(driver.disconnect).toHaveBeenCalledTimes(1);
   });
 
@@ -116,7 +117,7 @@ describe('safeDisconnect', () => {
     const driver = {
       disconnect: vi.fn().mockRejectedValue(new Error('connection lost')),
     };
-    await safeDisconnect(driver as any);
+    await safeDisconnect(driver as unknown as SurrealDriver);
     expect(console.log).toHaveBeenCalledWith(
       'Disconnect error (non-fatal):',
       'connection lost',
@@ -127,7 +128,7 @@ describe('safeDisconnect', () => {
     const driver = {
       disconnect: vi.fn().mockRejectedValue('raw error string'),
     };
-    await safeDisconnect(driver as any);
+    await safeDisconnect(driver as unknown as SurrealDriver);
     expect(console.log).toHaveBeenCalledWith(
       'Disconnect error (non-fatal):',
       'raw error string',
