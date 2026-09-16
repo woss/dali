@@ -1,7 +1,11 @@
 {
   "$schema": "https://biomejs.dev/schemas/2.5.10/schema.json",
   "files": {
-    "includes": ["packages/dali-orm/**", "!packages/dali-orm/dist"]
+    "includes": [
+      "packages/dali-orm/**",
+      "!packages/dali-orm/dist",
+      "!packages/dali-orm/.tsup"
+    ]
   },
   "formatter": {
     "enabled": true,
