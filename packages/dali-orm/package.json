@@ -1,6 +1,6 @@
 {
   "name": "@woss/dali-orm",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "description": "Type-safe ORM for SurrealDB with migration support",
   "keywords": [
     "migrations",
@@ -30,21 +30,66 @@
   "type": "module",
   "types": "./dist/index.d.ts",
   "exports": {
-    ".": "./dist/index.mjs",
-    "./core/errors": "./dist/core/errors.mjs",
-    "./core/surql": "./dist/core/surql.mjs",
-    "./migration/api": "./dist/migration/api.mjs",
-    "./migration/cli": "./dist/migration/cli.mjs",
-    "./migration/config": "./dist/migration/config.mjs",
-    "./query": "./dist/query/index.mjs",
-    "./sdk/dali-orm": "./dist/sdk/dali-orm.mjs",
-    "./sdk/driver/config/types": "./dist/sdk/driver/config/types.mjs",
-    "./sdk/functions": "./dist/sdk/functions/index.mjs",
-    "./sdk/orm-schema": "./dist/sdk/orm-schema.mjs",
-    "./sdk/schema": "./dist/sdk/schema.mjs",
-    "./sdk/schema/column/record": "./dist/sdk/schema/column/record.mjs",
-    "./sdk/schema/column/simple-builders": "./dist/sdk/schema/column/simple-builders.mjs",
-    "./sdk/table": "./dist/sdk/table.mjs",
+    ".": {
+      "import": "./dist/index.mjs",
+      "types": "./dist/index.d.ts"
+    },
+    "./core/errors": {
+      "import": "./dist/core/errors.mjs",
+      "types": "./dist/core/errors.d.ts"
+    },
+    "./core/surql": {
+      "import": "./dist/core/surql.mjs",
+      "types": "./dist/core/surql.d.ts"
+    },
+    "./migration/api": {
+      "import": "./dist/migration/api.mjs",
+      "types": "./dist/migration/api.d.ts"
+    },
+    "./migration/cli": {
+      "import": "./dist/migration/cli.mjs",
+      "types": "./dist/migration/cli.d.ts"
+    },
+    "./migration/config": {
+      "import": "./dist/migration/config.mjs",
+      "types": "./dist/migration/config.d.ts"
+    },
+    "./query": {
+      "import": "./dist/query/index.mjs",
+      "types": "./dist/query/index.d.ts"
+    },
+    "./sdk/dali-orm": {
+      "import": "./dist/sdk/dali-orm.mjs",
+      "types": "./dist/sdk/dali-orm.d.ts"
+    },
+    "./sdk/driver/config/types": {
+      "import": "./dist/sdk/driver/config/types.mjs",
+      "types": "./dist/sdk/driver/config/types.d.ts"
+    },
+    "./sdk/functions": {
+      "import": "./dist/sdk/functions/index.mjs",
+      "types": "./dist/sdk/functions/index.d.ts"
+    },
+    "./sdk/orm-schema": {
+      "import": "./dist/sdk/orm-schema.mjs",
+      "types": "./dist/sdk/orm-schema.d.ts"
+    },
+    "./sdk/schema": {
+      "import": "./dist/sdk/schema.mjs",
+      "types": "./dist/sdk/schema.d.ts"
+    },
+    "./sdk/schema/column/record": {
+      "import": "./dist/sdk/schema/column/record.mjs",
+      "types": "./dist/sdk/schema/column/record.d.ts"
+    },
+    "./sdk/schema/column/simple-builders": {
+      "import": "./dist/sdk/schema/column/simple-builders.mjs",
+      "types": "./dist/sdk/schema/column/simple-builders.d.ts"
+    },
+    "./sdk/table": {
+      "import": "./dist/sdk/table.mjs",
+      "types": "./dist/sdk/table.d.ts"
+    },
     "./package.json": "./package.json"
   },
   "publishConfig": {

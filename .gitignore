@@ -17,3 +17,4 @@ history.txt
 .code-review-graph/
 .svelte-kit
 logs/
+.omp/
