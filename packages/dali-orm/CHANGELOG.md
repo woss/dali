@@ -1,5 +1,19 @@
 # @woss/dali-orm
 
+## 0.4.0
+
+### Minor Changes
+
+- [#7](https://github.com/woss/dali/pull/7) [`d6de9a3`](https://github.com/woss/dali/commit/d6de9a32d73e094488ba6d3a5b1c555449ba41e4) Thanks [@woss](https://github.com/woss)! - Add DELETE WHERE/LIMIT support, graph traversal depth parameter, and runtime SchemaBuilder DDL API
+
+  - **DELETE WHERE/LIMIT**: Added `where()` and `limit()` methods to DeleteBuilder with full graph path expression support (e.g., `->knows->person`)
+  - **Graph Depth**: Added optional depth/range parameter to `traverseIn`, `traverseOut`, and `traverseBoth` methods for bounded graph traversal
+  - **SchemaBuilder DDL API**: New `schema()` method on DaliORM returns a chainable builder for runtime DDL operations: `defineTable`, `defineField`, `defineIndex`, `removeTable`, `removeField`, `removeIndex`, `raw`, `toSQL`, `execute`
+  - Fixed pre-existing test type errors (missing analyzers field, wrong argument counts, incorrect Partial types)
+  - Removed unsupported `drop_view` code paths from DDL migration pipeline
+
+- [#7](https://github.com/woss/dali/pull/7) [`e89a3c8`](https://github.com/woss/dali/commit/e89a3c860908a500ab8c71ff05d85870405ae6ff) Thanks [@woss](https://github.com/woss)! - new parity with the surrealdb, overhaul of the classes
+
 ## [Unreleased]
 
 ### Added
