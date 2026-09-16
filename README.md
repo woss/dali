@@ -79,25 +79,26 @@ pnpm --filter @woss/dali-orm exec dali-orm --help
 
 ### Deploy
 
-Bump version on a branch, merge to main — CI auto-detects and publishes.
+Versioning and publishing use [Changesets](https://github.com/changesets/changesets). Each PR that should trigger a release includes a changeset file describing the version bump and changelog entry.
 
 ```bash
-# On your feature branch, bump version (patch/minor/major)
-pnpm bump patch   # 0.1.0 → 0.1.1
-pnpm bump minor   # 0.1.0 → 0.2.0
-pnpm bump major   # 0.1.0 → 1.0.0
+# Create a changeset for your PR (select packages + bump type)
+pnpm changeset
 
-# This creates a commit via `but` with the version bump.
-# Push the branch and merge to main — CI handles the rest.
+# Preview what the version bump will look like
+pnpm version-packages
+
+# Publish (CI does this automatically on merge to main)
+pnpm release
 ```
 
-On every push to `main`, the [Publish workflow](.github/workflows/publish.yml) reads the version from `packages/dali-orm/package.json`. If the `v*` tag for that version doesn't exist yet, it:
+On every push to `main`, the [Publish workflow](.github/workflows/publish.yml) runs `changesets/action`:
 
-- Builds both packages
-- Publishes `@woss/dali-orm` and `@woss/dali-memory` to npm
-- Creates a GitHub Release (with tag) with auto-generated notes
+- Creates or updates a "Version Packages" PR with aggregated version bumps and changelog entries
+- When that PR merges, publishes `@woss/dali-orm` and `@woss/dali-memory` to npm
+- Creates GitHub Releases with auto-generated changelog notes
 
-No manual tag management needed.
+No manual tag management needed. To include a change in the next release, run `pnpm changeset` on your branch and commit the generated file.
 
 ## License
 

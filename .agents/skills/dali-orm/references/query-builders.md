@@ -204,7 +204,7 @@ const subscription = await live(driver, usersTable)
 subscription.kill();
 
 // Handlers receive:
-// { action: 'CREATE' | 'UPDATE' | 'DELETE', id: string, result?: any }
+// { action: 'CREATE' | 'UPDATE' | 'DELETE', id: string, result?: unknown }
 ```
 
 ## Table Binding
@@ -229,3 +229,9 @@ type User = InferSelectResult<typeof usersTable>;
 type NewUser = InferInsertInput<typeof usersTable>;
 type UserUpdate = InferUpdateInput<typeof usersTable>;
 ```
+
+## Set Operations Typing
+
+`union`/`unionAll`/`intersect`/`except` accept `AnySelectBuilder`
+(`import { type AnySelectBuilder } from '@woss/dali-orm/query'`) — never
+`SelectBuilder<any, any>`.

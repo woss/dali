@@ -5,9 +5,16 @@
  * All private methods tested through public API.
  */
 
-import { describe, expect, it } from 'vite-plus/test';
-import type { ColumnConfig, ColumnDefinition } from '../../../sdk/schema/column/types.js';
-import type { IndexDefinition, TableConfig, TableDefinition } from '../../../sdk/table.js';
+import { describe, expect, it } from 'vitest';
+import type {
+  ColumnConfig,
+  ColumnDefinition,
+} from '../../../sdk/schema/column/types.js';
+import type {
+  IndexDefinition,
+  TableConfig,
+  TableDefinition,
+} from '../../../sdk/table.js';
 import type { SchemaDiff } from '../diff.js';
 import { SchemaDiffer } from '../diff.js';
 
@@ -17,7 +24,10 @@ import { SchemaDiffer } from '../diff.js';
 
 const differ = new SchemaDiffer();
 
-function col(name: string, overrides: Partial<ColumnConfig> = {}): ColumnDefinition {
+function col(
+  name: string,
+  overrides: Partial<ColumnConfig> = {},
+): ColumnDefinition {
   return {
     name,
     config: { type: 'string', ...overrides },
@@ -137,7 +147,9 @@ describe('SchemaDiffer.diff', () => {
     const newSchema = [table('user', [], { schema: 'full' })];
     const result = differ.diff(oldSchema, newSchema);
     expect(result.changed.tables).toHaveLength(1);
-    expect(result.changed.tables[0].breakingChanges[0]).toContain('Schema mode changed');
+    expect(result.changed.tables[0].breakingChanges[0]).toContain(
+      'Schema mode changed',
+    );
   });
 
   it('detects table type change (breaking)', () => {
@@ -145,7 +157,9 @@ describe('SchemaDiffer.diff', () => {
     const newSchema = [table('user', [], { type: 'relation' })];
     const result = differ.diff(oldSchema, newSchema);
     expect(result.changed.tables).toHaveLength(1);
-    expect(result.changed.tables[0].breakingChanges[0]).toContain('Table type changed');
+    expect(result.changed.tables[0].breakingChanges[0]).toContain(
+      'Table type changed',
+    );
   });
 
   it('detects both schema mode and type changes', () => {
@@ -179,7 +193,9 @@ describe('SchemaDiffer.diff', () => {
 
   it('detects multiple added fields', () => {
     const oldSchema = [table('user', [col('name')])];
-    const newSchema = [table('user', [col('name'), col('email'), col('age', { type: 'int' })])];
+    const newSchema = [
+      table('user', [col('name'), col('email'), col('age', { type: 'int' })]),
+    ];
     const result = differ.diff(oldSchema, newSchema);
     expect(result.added.fields).toHaveLength(2);
   });
@@ -198,7 +214,9 @@ describe('SchemaDiffer.diff', () => {
   });
 
   it('detects multiple removed fields', () => {
-    const oldSchema = [table('user', [col('name'), col('email'), col('age', { type: 'int' })])];
+    const oldSchema = [
+      table('user', [col('name'), col('email'), col('age', { type: 'int' })]),
+    ];
     const newSchema = [table('user', [col('name')])];
     const result = differ.diff(oldSchema, newSchema);
     expect(result.removed.fields).toHaveLength(2);
@@ -214,7 +232,9 @@ describe('SchemaDiffer.diff', () => {
     const result = differ.diff(oldSchema, newSchema);
     expect(result.changed.fields).toHaveLength(1);
     expect(result.changed.fields[0].field).toBe('age');
-    expect(result.changed.fields[0].breakingChanges[0]).toContain('Type changed');
+    expect(result.changed.fields[0].breakingChanges[0]).toContain(
+      'Type changed',
+    );
   });
 
   it('detects optional to required change (breaking)', () => {
@@ -223,7 +243,9 @@ describe('SchemaDiffer.diff', () => {
     const result = differ.diff(oldSchema, newSchema);
     expect(result.changed.fields).toHaveLength(1);
     expect(
-      result.changed.fields[0].breakingChanges.some((b) => b.includes('optional to required')),
+      result.changed.fields[0].breakingChanges.some((b) =>
+        b.includes('optional to required'),
+      ),
     ).toBe(true);
   });
 
@@ -232,7 +254,11 @@ describe('SchemaDiffer.diff', () => {
     const newSchema = [table('user', [col('name', { readonly: true })])];
     const result = differ.diff(oldSchema, newSchema);
     expect(result.changed.fields).toHaveLength(1);
-    expect(result.changed.fields[0].breakingChanges.some((b) => b.includes('readonly'))).toBe(true);
+    expect(
+      result.changed.fields[0].breakingChanges.some((b) =>
+        b.includes('readonly'),
+      ),
+    ).toBe(true);
   });
 
   it('no change from readonly true to false (not tracked as breaking)', () => {
@@ -248,16 +274,24 @@ describe('SchemaDiffer.diff', () => {
     const newSchema = [table('user', [col('name', { flexible: false })])];
     const result = differ.diff(oldSchema, newSchema);
     expect(result.changed.fields).toHaveLength(1);
-    expect(result.changed.fields[0].breakingChanges.some((b) => b.includes('flexible'))).toBe(true);
+    expect(
+      result.changed.fields[0].breakingChanges.some((b) =>
+        b.includes('flexible'),
+      ),
+    ).toBe(true);
   });
 
   it('detects default value change', () => {
     const oldSchema = [table('user', [col('status', { default: "'active'" })])];
-    const newSchema = [table('user', [col('status', { default: "'inactive'" })])];
+    const newSchema = [
+      table('user', [col('status', { default: "'inactive'" })]),
+    ];
     const result = differ.diff(oldSchema, newSchema);
     expect(result.changed.fields).toHaveLength(1);
     expect(
-      result.changed.fields[0].breakingChanges.some((b) => b.includes('Default changed')),
+      result.changed.fields[0].breakingChanges.some((b) =>
+        b.includes('Default changed'),
+      ),
     ).toBe(true);
   });
 
@@ -275,9 +309,11 @@ describe('SchemaDiffer.diff', () => {
     const newSchema = [table('user', [col('score', { type: 'float' })])];
     const result = differ.diff(oldSchema, newSchema);
     expect(result.changed.fields).toHaveLength(1);
-    expect(result.changed.fields[0].breakingChanges.some((b) => b.includes('data migration'))).toBe(
-      true,
-    );
+    expect(
+      result.changed.fields[0].breakingChanges.some((b) =>
+        b.includes('data migration'),
+      ),
+    ).toBe(true);
   });
 
   it('detects int to string type widening', () => {
@@ -286,20 +322,28 @@ describe('SchemaDiffer.diff', () => {
     const result = differ.diff(oldSchema, newSchema);
     expect(result.changed.fields).toHaveLength(1);
     expect(result.changed.fields[0].field).toBe('score');
-    expect(result.changed.fields[0].breakingChanges.some((b) => b.includes('data migration'))).toBe(
-      true,
-    );
+    expect(
+      result.changed.fields[0].breakingChanges.some((b) =>
+        b.includes('data migration'),
+      ),
+    ).toBe(true);
   });
 
   it('detects multiple changes on same field', () => {
     const oldSchema = [
-      table('user', [col('name', { type: 'int', optional: true, default: "'0'" })]),
+      table('user', [
+        col('name', { type: 'int', optional: true, default: "'0'" }),
+      ]),
     ];
-    const newSchema = [table('user', [col('name', { type: 'string', optional: false })])];
+    const newSchema = [
+      table('user', [col('name', { type: 'string', optional: false })]),
+    ];
     const result = differ.diff(oldSchema, newSchema);
     expect(result.changed.fields).toHaveLength(1);
     // Should have at least type change + optional→required + maybe widening
-    expect(result.changed.fields[0].breakingChanges.length).toBeGreaterThanOrEqual(2);
+    expect(
+      result.changed.fields[0].breakingChanges.length,
+    ).toBeGreaterThanOrEqual(2);
   });
 
   // ============================================================================
@@ -308,8 +352,12 @@ describe('SchemaDiffer.diff', () => {
 
   it('filters "id" field from comparison (auto-created by SurrealDB)', () => {
     // Both have an 'id' column with different types — should be ignored
-    const oldSchema = [table('user', [col('id', { type: 'string' }), col('name')])];
-    const newSchema = [table('user', [col('id', { type: 'int' }), col('name')])];
+    const oldSchema = [
+      table('user', [col('id', { type: 'string' }), col('name')]),
+    ];
+    const newSchema = [
+      table('user', [col('id', { type: 'int' }), col('name')]),
+    ];
     const result = differ.diff(oldSchema, newSchema);
     expect(result.changed.fields).toHaveLength(0);
     expect(result.added.fields).toHaveLength(0);
@@ -318,7 +366,9 @@ describe('SchemaDiffer.diff', () => {
 
   it('does not filter non-id fields', () => {
     const oldSchema = [table('user', [col('name')])];
-    const newSchema = [table('user', [col('name'), col('id_str', { type: 'int' })])];
+    const newSchema = [
+      table('user', [col('name'), col('id_str', { type: 'int' })]),
+    ];
     const result = differ.diff(oldSchema, newSchema);
     // 'id_str' is not in the auto-created list
     expect(result.added.fields).toHaveLength(1);
@@ -332,7 +382,9 @@ describe('SchemaDiffer.diff', () => {
   it('detects added index', () => {
     const oldSchema = [table('user', [col('email')], { indexes: [] })];
     const newSchema = [
-      table('user', [col('email')], { indexes: [index('idx_email', ['email'], 'unique')] }),
+      table('user', [col('email')], {
+        indexes: [index('idx_email', ['email'], 'unique')],
+      }),
     ];
     const result = differ.diff(oldSchema, newSchema);
     expect(result.added.indexes).toHaveLength(1);
@@ -342,7 +394,9 @@ describe('SchemaDiffer.diff', () => {
 
   it('detects removed index', () => {
     const oldSchema = [
-      table('user', [col('email')], { indexes: [index('idx_email', ['email'], 'unique')] }),
+      table('user', [col('email')], {
+        indexes: [index('idx_email', ['email'], 'unique')],
+      }),
     ];
     const newSchema = [table('user', [col('email')], { indexes: [] })];
     const result = differ.diff(oldSchema, newSchema);
@@ -353,13 +407,17 @@ describe('SchemaDiffer.diff', () => {
 
   it('handles undefined indexes in old config', () => {
     const oldSchema = [table('user', [col('name')])]; // indexes not set
-    const newSchema = [table('user', [col('name')], { indexes: [index('idx_name', ['name'])] })];
+    const newSchema = [
+      table('user', [col('name')], { indexes: [index('idx_name', ['name'])] }),
+    ];
     const result = differ.diff(oldSchema, newSchema);
     expect(result.added.indexes).toHaveLength(1);
   });
 
   it('handles undefined indexes in new config', () => {
-    const oldSchema = [table('user', [col('name')], { indexes: [index('idx_name', ['name'])] })];
+    const oldSchema = [
+      table('user', [col('name')], { indexes: [index('idx_name', ['name'])] }),
+    ];
     const newSchema = [table('user', [col('name')])]; // indexes not set
     const result = differ.diff(oldSchema, newSchema);
     expect(result.removed.indexes).toHaveLength(1);
@@ -379,7 +437,11 @@ describe('SchemaDiffer.diff', () => {
   // ============================================================================
 
   it('handles add, remove, and change simultaneously', () => {
-    const oldSchema = [table('a', [col('name')]), table('b', [col('x')]), table('c', [col('z')])];
+    const oldSchema = [
+      table('a', [col('name')]),
+      table('b', [col('x')]),
+      table('c', [col('z')]),
+    ];
     const newSchema = [
       table('a', [col('name'), col('email')]), // added field
       table('b', [col('y')]), // changed field (x → y)
@@ -468,7 +530,11 @@ describe('SchemaDiffer.hasBreakingChanges', () => {
   it('returns true when fields are removed', () => {
     const diff: SchemaDiff = {
       added: { tables: [], fields: [], indexes: [] },
-      removed: { tables: [], fields: [{ table: 'user', field: 'name' }], indexes: [] },
+      removed: {
+        tables: [],
+        fields: [{ table: 'user', field: 'name' }],
+        indexes: [],
+      },
       changed: { tables: [], fields: [] },
     };
     expect(differ.hasBreakingChanges(diff)).toBe(true);
@@ -486,7 +552,11 @@ describe('SchemaDiffer.summarize', () => {
 
   it('includes added tables', () => {
     const diff: SchemaDiff = {
-      added: { tables: [table('user'), table('post')], fields: [], indexes: [] },
+      added: {
+        tables: [table('user'), table('post')],
+        fields: [],
+        indexes: [],
+      },
       removed: { tables: [], fields: [], indexes: [] },
       changed: { tables: [], fields: [] },
     };
@@ -496,7 +566,11 @@ describe('SchemaDiffer.summarize', () => {
 
   it('includes added fields', () => {
     const diff: SchemaDiff = {
-      added: { tables: [], fields: [{ table: 'user', column: col('email') }], indexes: [] },
+      added: {
+        tables: [],
+        fields: [{ table: 'user', column: col('email') }],
+        indexes: [],
+      },
       removed: { tables: [], fields: [], indexes: [] },
       changed: { tables: [], fields: [] },
     };
@@ -517,7 +591,11 @@ describe('SchemaDiffer.summarize', () => {
   it('includes removed fields', () => {
     const diff: SchemaDiff = {
       added: { tables: [], fields: [], indexes: [] },
-      removed: { tables: [], fields: [{ table: 'user', field: 'old_field' }], indexes: [] },
+      removed: {
+        tables: [],
+        fields: [{ table: 'user', field: 'old_field' }],
+        indexes: [],
+      },
       changed: { tables: [], fields: [] },
     };
     const summary = differ.summarize(diff);
@@ -574,7 +652,11 @@ describe('SchemaDiffer.summarize', () => {
         fields: [{ table: 'post', column: col('title') }],
         indexes: [],
       },
-      removed: { tables: ['legacy'], fields: [{ table: 'legacy', field: 'data' }], indexes: [] },
+      removed: {
+        tables: ['legacy'],
+        fields: [{ table: 'legacy', field: 'data' }],
+        indexes: [],
+      },
       changed: { tables: [], fields: [] },
     };
     const summary = differ.summarize(diff);

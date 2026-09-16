@@ -10,9 +10,20 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { createDebug as debug } from 'obug';
-import type { ColumnDefinition, SurrealColumnType } from '../../sdk/schema/column/types.js';
-import type { EventConfig, FunctionConfig } from '../../sdk/schema.js';
-import type { IndexDefinition, TableDefinition } from '../../sdk/table.js';
+import type {
+  ColumnDefinition,
+  SurrealColumnType,
+} from '../../sdk/schema/column/types.js';
+import type {
+  AccessConfig,
+  EventConfig,
+  FunctionConfig,
+} from '../../sdk/schema.js';
+import type {
+  AnalyzerDefinition,
+  IndexDefinition,
+  TableDefinition,
+} from '../../sdk/table.js';
 
 const log = debug('dali-orm:migrations:snapshot');
 
@@ -35,6 +46,8 @@ export interface SchemaSnapshot {
   events: SerializedEvent[];
   /** Serialized function definitions */
   functions: SerializedFunction[];
+  /** Serialized analyzer definitions */
+  analyzers: SerializedAnalyzer[];
 }
 
 /**
@@ -75,6 +88,15 @@ export interface SerializedFunction {
 }
 
 /**
+ * Serializable analyzer definition
+ */
+export interface SerializedAnalyzer {
+  name: string;
+  tokenizers?: string;
+  filters?: string;
+}
+
+/**
  * Serializable table definition
  */
 export interface SerializedTable {
@@ -100,7 +122,7 @@ export interface SerializedColumnConfig {
   optional?: boolean;
   readonly?: boolean;
   flexible?: boolean;
-  default?: string;
+  default?: string | number | boolean;
   /** Raw SurrealDB expression for DEFAULT (e.g., `crypto::blake3(content)`), emitted unquoted */
   defaultRaw?: string;
   assert?: string;
@@ -246,9 +268,10 @@ export class SnapshotManager {
     tables: TableDefinition[],
     version: string,
     name: string,
-    access?: any[],
+    access?: AccessConfig[],
     events?: EventConfig[],
     functions?: FunctionConfig[],
+    analyzers?: AnalyzerDefinition[],
   ): SchemaSnapshot {
     return {
       version,
@@ -258,6 +281,7 @@ export class SnapshotManager {
       access: serializeAccess(access),
       events: serializeEvent(events),
       functions: serializeFunction(functions),
+      analyzers: serializeAnalyzer(analyzers),
     };
   }
 
@@ -266,6 +290,13 @@ export class SnapshotManager {
    */
   restoreAccess(snapshot: SchemaSnapshot): SerializedAccess[] {
     return snapshot.access ?? [];
+  }
+
+  /**
+   * Convert SchemaSnapshot to SerializedAnalyzer[]
+   */
+  restoreAnalyzer(snapshot: SchemaSnapshot): SerializedAnalyzer[] {
+    return snapshot.analyzers ?? [];
   }
 
   /**
@@ -301,7 +332,9 @@ function serializeColumn(column: ColumnDefinition): SerializedColumn {
 /**
  * Serialize column config
  */
-function serializeColumnConfig(config: ColumnDefinition['config']): SerializedColumnConfig {
+function serializeColumnConfig(
+  config: ColumnDefinition['config'],
+): SerializedColumnConfig {
   return {
     type: config.type,
     optional: config.optional,
@@ -317,7 +350,9 @@ function serializeColumnConfig(config: ColumnDefinition['config']): SerializedCo
 /**
  * Serialize table config
  */
-function serializeTableConfig(config: TableDefinition['config']): SerializedTableConfig {
+function serializeTableConfig(
+  config: TableDefinition['config'],
+): SerializedTableConfig {
   return {
     schema: config.schema,
     type: config.type,
@@ -349,15 +384,45 @@ function serializeIndex(index: IndexDefinition): SerializedIndex {
  * DefineAccessQuery stores config in `acc.config`, so we extract properties
  * from there rather than directly on the object.
  */
-function serializeAccess(access: any[] | undefined): SerializedAccess[] {
-  return (access ?? []).map((a) => ({
-    name: a.config?.name ?? a.name,
-    type: a.config?.type ?? a.type,
-    level: a.config?.level,
-    signup: a.config?.record?.signup,
-    signin: a.config?.record?.signin,
-    duration: a.config?.duration?.session,
-  }));
+/**
+ * Query-builder output wraps its settings in `.config` (DefineAccessQuery);
+ * plain `AccessConfig` objects carry the same fields directly.
+ */
+type WrappedAccess = {
+  config: {
+    name: string;
+    type: 'RECORD' | 'JWT' | 'OIDC';
+    level?: string;
+    record?: { signup?: string; signin?: string };
+    duration?: string | { session?: string };
+  };
+};
+
+function serializeAccess(
+  access: (AccessConfig | WrappedAccess)[] | undefined,
+): SerializedAccess[] {
+  return (access ?? []).map((a) => {
+    if ('config' in a) {
+      const c = a.config;
+      return {
+        name: c.name,
+        type: c.type,
+        level: c.level,
+        signup: c.record?.signup,
+        signin: c.record?.signin,
+        duration:
+          typeof c.duration === 'string' ? c.duration : c.duration?.session,
+      };
+    }
+    return {
+      name: a.name,
+      type: a.type,
+      level: undefined,
+      signup: a.signup,
+      signin: a.signin,
+      duration: a.duration,
+    };
+  });
 }
 
 /**
@@ -382,13 +447,34 @@ function serializeEvent(events: EventConfig[] | undefined): SerializedEvent[] {
 /**
  * Serialize function definitions from FunctionConfig objects
  */
-function serializeFunction(functions: FunctionConfig[] | undefined): SerializedFunction[] {
+function serializeFunction(
+  functions: FunctionConfig[] | undefined,
+): SerializedFunction[] {
   return (functions ?? []).map((f) => ({
     name: f.name,
     args: f.args ? [...f.args] : undefined,
     body: f.body,
     comment: f.comment,
     permissions: f.permissions,
+  }));
+}
+
+/**
+ * Serialize analyzer definitions from AnalyzerDefinition objects
+ */
+function serializeAnalyzer(
+  analyzers: AnalyzerDefinition[] | undefined,
+): SerializedAnalyzer[] {
+  return (analyzers ?? []).map((a) => ({
+    name: a.name,
+    tokenizers: Array.isArray(a.tokenizers)
+      ? a.tokenizers.join(', ')
+      : a.tokenizers,
+    filters: a.filters
+      ? Array.isArray(a.filters)
+        ? a.filters.join(', ')
+        : a.filters
+      : undefined,
   }));
 }
 
@@ -417,7 +503,9 @@ function restoreColumn(column: SerializedColumn): ColumnDefinition {
 /**
  * Restore column config
  */
-function restoreColumnConfig(config: SerializedColumnConfig): ColumnDefinition['config'] {
+function restoreColumnConfig(
+  config: SerializedColumnConfig,
+): ColumnDefinition['config'] {
   return {
     type: config.type,
     optional: config.optional,
@@ -433,7 +521,9 @@ function restoreColumnConfig(config: SerializedColumnConfig): ColumnDefinition['
 /**
  * Restore table config
  */
-function restoreTableConfig(config: SerializedTableConfig): TableDefinition['config'] {
+function restoreTableConfig(
+  config: SerializedTableConfig,
+): TableDefinition['config'] {
   return {
     schema: config.schema ?? 'full',
     type: config.type ?? 'normal',

@@ -10,7 +10,7 @@
     "editor.defaultFormatter": "svelte.svelte-vscode"
   },
   "[javascript]": {
-    "editor.defaultFormatter": "oxc.oxc",
+    "editor.defaultFormatter": "oxc.oxc-vscode",
     // Optional: Auto-format on save
     "editor.formatOnSave": true,
     // Use "modifications" to format only changed lines
@@ -18,7 +18,7 @@
   },
   // Disable built-in TypeScript formatter (critical!)
   "[typescript]": {
-    "editor.defaultFormatter": "oxc.oxc",
+    "editor.defaultFormatter": "oxc.oxc-vscode",
     // Optional: Auto-format on save
     "editor.formatOnSave": true,
     // Use "modifications" to format only changed lines
@@ -28,7 +28,7 @@
     "editor.defaultFormatter": "oliversturm.fix-json"
   },
   "[yaml]": {
-    "editor.defaultFormatter": "oxc.oxc",
+    "editor.defaultFormatter": "oxc.oxc-vscode",
     "editor.autoIndent": "advanced"
   },
   "[dockercompose]": {

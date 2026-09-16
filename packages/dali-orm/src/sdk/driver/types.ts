@@ -5,6 +5,7 @@
  * query results, and transaction support.
  */
 
+import type { OrmSchema } from '../orm-schema.js';
 import type { ConfigAuth } from './config/types.js';
 
 // ============================================================================
@@ -112,7 +113,12 @@ export interface Transaction<_T = unknown> {
   /** Delete a record using native SDK */
   delete<T = unknown>(thing: string): Promise<T[]>;
   /** Create a graph relation using native SDK */
-  relate<T = unknown>(from: string, edge: string, to: string, data?: T): Promise<T[]>;
+  relate<T = unknown>(
+    from: string,
+    edge: string,
+    to: string,
+    data?: T,
+  ): Promise<T[]>;
 }
 
 // ============================================================================
@@ -183,6 +189,8 @@ export interface LiveSubscriptionHandle<T = unknown> {
   subscribe(callback: (data: LiveMessageData<T>) => void): () => void;
   /** Async iterator for live updates */
   [Symbol.asyncIterator](): AsyncIterator<LiveMessageData<T>>;
+  /** Optional callback for subscription errors */
+  onError?: (error: Error) => void;
 }
 
 // ============================================================================
@@ -212,7 +220,10 @@ export interface SurrealDriver {
   transaction<T>(fn: (tx: Transaction) => Promise<T>): Promise<T>;
 
   /** Subscribe to live queries on a table */
-  live<T>(table: string, callback: (data: LiveData<T>) => void): Promise<string>;
+  live<T>(
+    table: string,
+    callback: (data: LiveData<T>) => void,
+  ): Promise<string>;
 
   /** Subscribe to live queries with advanced options (diff, fields, where, fetch) */
   liveWithOptions<T = unknown>(
@@ -248,10 +259,19 @@ export interface SurrealDriver {
   upsert<T = unknown>(table: string, data: unknown): Promise<T[]>;
 
   /** Upsert by field condition (field-based WHERE, not record ID) using native SDK */
-  upsertWhere<T = unknown>(table: string, whereClause: string, data: unknown): Promise<T[]>;
+  upsertWhere<T = unknown>(
+    table: string,
+    whereClause: string,
+    data: unknown,
+  ): Promise<T[]>;
 
   /** Create a graph relation using native SDK */
-  relate<T = unknown>(from: string, edge: string, to: string, data?: unknown): Promise<T[]>;
+  relate<T = unknown>(
+    from: string,
+    edge: string,
+    to: string,
+    data?: unknown,
+  ): Promise<T[]>;
 
   /** Sign in with credentials */
   signin(credentials: ConfigAuth): Promise<string>;
@@ -269,6 +289,9 @@ export interface SurrealDriver {
 
   /** Get the driver configuration */
   config: DriverConfig | EmbeddedConfig;
+
+  /** Schema definition for column metadata (recordTable, etc.) */
+  schema?: OrmSchema;
 
   /** Show changes for a table since a given point */
   showChanges<T = unknown>(

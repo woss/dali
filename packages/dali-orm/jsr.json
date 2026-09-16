@@ -1,0 +1,26 @@
+{
+  "$schema": "https://jsr.io/schema/config-file.v1.json",
+  "name": "@woss/dali-orm",
+  "version": "0.3.1",
+  "license": "GPL-3.0-only",
+  "exports": {
+    ".": "./src/index.ts",
+    "./core/errors": "./src/core/errors.ts",
+    "./core/surql": "./src/core/surql.ts",
+    "./migration/api": "./src/migration/api.ts",
+    "./migration/cli": "./src/migration/cli.ts",
+    "./query": "./src/query/index.ts",
+    "./sdk/dali-orm": "./src/sdk/dali-orm.ts",
+    "./sdk/schema": "./src/sdk/schema.ts",
+    "./sdk/table": "./src/sdk/table.ts"
+  },
+  "publish": {
+    "include": ["src/**/*.ts", "README.md", "CHANGELOG.md"],
+    "exclude": [
+      "src/**/__tests__/**",
+      "src/**/*.test.ts",
+      "src/**/*.d.ts",
+      "tmp"
+    ]
+  }
+}

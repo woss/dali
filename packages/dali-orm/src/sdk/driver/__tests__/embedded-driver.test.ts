@@ -4,8 +4,16 @@
  * Tests constructor, connection, auth methods, datetime transformation,
  * live query helpers, and live query lifecycle.
  */
-import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
+import { transformDatetimeValues } from '../driver-utils.js';
 import { EmbeddedDriver } from '../embedded-driver.js';
+import type { EmbeddedConfig } from '../types.js';
+
+/**
+ * Test seam: flips the private connected flag to simulate connection state.
+ */
+function setConnected(d: EmbeddedDriver, value: boolean): void {
+  (d as unknown as { connected: boolean }).connected = value;
+}
 
 // ============================================================================
 // Mock @surrealdb/node
@@ -49,8 +57,7 @@ vi.mock('surrealdb', () => {
 // ============================================================================
 vi.mock('obug', () => ({
   createDebug: vi.fn(() => {
-    const fn = vi.fn() as any;
-    fn.extend = vi.fn(() => vi.fn());
+    const fn = Object.assign(vi.fn(), { extend: vi.fn(() => vi.fn()) });
     return fn;
   }),
 }));
@@ -93,33 +100,45 @@ describe('EmbeddedDriver', () => {
     });
 
     it('accepts custom namespace and database', () => {
-      const d = new EmbeddedDriver({ namespace: 'myns', database: 'mydb' } as any);
+      const d = new EmbeddedDriver({
+        namespace: 'myns',
+        database: 'mydb',
+      } as unknown as Partial<EmbeddedConfig>);
       expect(d.config.namespace).toBe('myns');
       expect(d.config.database).toBe('mydb');
     });
 
     it('accepts surrealkv mode', () => {
-      const d = new EmbeddedDriver({ mode: 'surrealkv' } as any);
+      const d = new EmbeddedDriver({
+        mode: 'surrealkv',
+      } as unknown as EmbeddedConfig);
       expect(d.config.mode).toBe('surrealkv');
     });
 
     it('accepts rocksdb mode', () => {
-      const d = new EmbeddedDriver({ mode: 'rocksdb' } as any);
+      const d = new EmbeddedDriver({
+        mode: 'rocksdb',
+      } as unknown as EmbeddedConfig);
       expect(d.config.mode).toBe('rocksdb');
     });
 
     it('accepts custom path', () => {
-      const d = new EmbeddedDriver({ mode: 'surrealkv', path: '/custom/path' } as any);
+      const d = new EmbeddedDriver({
+        mode: 'surrealkv',
+        path: '/custom/path',
+      } as unknown as Partial<EmbeddedConfig>);
       expect(d.config.path).toBe('/custom/path');
     });
 
     it('accepts debug flag', () => {
-      const d = new EmbeddedDriver({ debug: true } as any);
+      const d = new EmbeddedDriver({
+        debug: true,
+      } as unknown as EmbeddedConfig);
       expect(d.config.debug).toBe(true);
     });
 
     it('handles empty config object', () => {
-      const d = new EmbeddedDriver({} as any);
+      const d = new EmbeddedDriver({} as unknown as Partial<EmbeddedConfig>);
       expect(d.config).toBeDefined();
       expect(d.config.mode).toBe('memory');
     });
@@ -145,7 +164,7 @@ describe('EmbeddedDriver', () => {
     });
 
     it('returns early if already connected', async () => {
-      (driver as any).connected = true;
+      setConnected(driver, true);
       await driver.connect();
       expect(mockConnect).not.toHaveBeenCalled();
     });
@@ -153,17 +172,26 @@ describe('EmbeddedDriver', () => {
     it('connects with memory connection string', async () => {
       await driver.connect();
       expect(mockConnect).toHaveBeenCalledWith('mem://');
-      expect(mockUse).toHaveBeenCalledWith({ namespace: 'default', database: 'default' });
+      expect(mockUse).toHaveBeenCalledWith({
+        namespace: 'default',
+        database: 'default',
+      });
     });
 
     it('connects with surrealkv connection string', async () => {
-      const d = new EmbeddedDriver({ mode: 'surrealkv', path: '/data/db' } as any);
+      const d = new EmbeddedDriver({
+        mode: 'surrealkv',
+        path: '/data/db',
+      } as unknown as Partial<EmbeddedConfig>);
       await d.connect();
       expect(mockConnect).toHaveBeenCalledWith('surrealkv:///data/db');
     });
 
     it('connects with rocksdb mode also uses surrealkv://', async () => {
-      const d = new EmbeddedDriver({ mode: 'rocksdb', path: '/rocks/path' } as any);
+      const d = new EmbeddedDriver({
+        mode: 'rocksdb',
+        path: '/rocks/path',
+      } as unknown as Partial<EmbeddedConfig>);
       await d.connect();
       expect(mockConnect).toHaveBeenCalledWith('surrealkv:///rocks/path');
     });
@@ -174,28 +202,40 @@ describe('EmbeddedDriver', () => {
     });
 
     it('wraps connection errors with descriptive message', async () => {
-      mockConnect.mockReturnValue(Promise.reject(new Error('connection refused')));
-      await expect(driver.connect()).rejects.toThrow('Failed to connect to embedded SurrealDB');
+      mockConnect.mockReturnValue(
+        Promise.reject(new Error('connection refused')),
+      );
+      await expect(driver.connect()).rejects.toThrow(
+        'Failed to connect to embedded SurrealDB',
+      );
       expect(driver.isConnected()).toBe(false);
     });
 
     it('handles non-Error rejection', async () => {
       mockConnect.mockReturnValue(Promise.reject('just a string'));
-      await expect(driver.connect()).rejects.toThrow('Failed to connect to embedded SurrealDB');
+      await expect(driver.connect()).rejects.toThrow(
+        'Failed to connect to embedded SurrealDB',
+      );
     });
   });
 
   describe('authentication methods', () => {
     it('signin throws not supported', async () => {
-      await expect(driver.signin({})).rejects.toThrow('not supported in embedded mode');
+      await expect(driver.signin({})).rejects.toThrow(
+        'not supported in embedded mode',
+      );
     });
 
     it('signup throws not supported', async () => {
-      await expect(driver.signup({})).rejects.toThrow('not supported in embedded mode');
+      await expect(driver.signup({})).rejects.toThrow(
+        'not supported in embedded mode',
+      );
     });
 
     it('authenticate throws not supported', async () => {
-      await expect(driver.authenticate('token')).rejects.toThrow('not supported in embedded mode');
+      await expect(driver.authenticate('token')).rejects.toThrow(
+        'not supported in embedded mode',
+      );
     });
 
     it('authenticate with object also throws', async () => {
@@ -207,29 +247,29 @@ describe('EmbeddedDriver', () => {
 
   describe('transformDatetimeValues', () => {
     it('returns null as null', () => {
-      expect((driver as any).transformDatetimeValues(null)).toBeNull();
+      expect(transformDatetimeValues(null)).toBeNull();
     });
 
     it('returns undefined as undefined', () => {
-      expect((driver as any).transformDatetimeValues(undefined)).toBeUndefined();
+      expect(transformDatetimeValues(undefined)).toBeUndefined();
     });
 
     it('returns primitives unchanged', () => {
-      expect((driver as any).transformDatetimeValues('hello')).toBe('hello');
-      expect((driver as any).transformDatetimeValues(42)).toBe(42);
-      expect((driver as any).transformDatetimeValues(true)).toBe(true);
+      expect(transformDatetimeValues('hello')).toBe('hello');
+      expect(transformDatetimeValues(42)).toBe(42);
+      expect(transformDatetimeValues(true)).toBe(true);
     });
 
     it('transforms plain object properties recursively', () => {
       const input = { a: '2024-01-01T00:00:00Z', b: { c: 'nested' } };
-      const result = (driver as any).transformDatetimeValues(input);
+      const result = transformDatetimeValues(input);
       expect(result).toEqual(input);
       expect(result).not.toBe(input); // different reference
     });
 
     it('transforms array items', () => {
       const input = [{ name: 'item1' }, { name: 'item2' }];
-      const result = (driver as any).transformDatetimeValues(input);
+      const result = transformDatetimeValues(input);
       expect(result).toEqual(input);
       expect(result).not.toBe(input);
     });
@@ -239,42 +279,42 @@ describe('EmbeddedDriver', () => {
         x = 1;
       }
       const instance = new CustomClass();
-      const result = (driver as any).transformDatetimeValues(instance);
+      const result = transformDatetimeValues(instance);
       expect(result).toBe(instance); // same reference
     });
 
     it('handles null prototype objects', () => {
       const input = Object.create(null);
       input.a = 1;
-      const result = (driver as any).transformDatetimeValues(input);
+      const result = transformDatetimeValues(input);
       expect(result).toEqual({ a: 1 });
     });
 
     it('handles empty objects', () => {
-      expect((driver as any).transformDatetimeValues({})).toEqual({});
+      expect(transformDatetimeValues({})).toEqual({});
     });
 
     it('handles empty arrays', () => {
-      expect((driver as any).transformDatetimeValues([])).toEqual([]);
+      expect(transformDatetimeValues([])).toEqual([]);
     });
 
     it('handles deeply nested structures', () => {
       const input = { a: [{ b: { c: [1, { d: 2 }] } }] };
-      const result = (driver as any).transformDatetimeValues(input);
+      const result = transformDatetimeValues(input);
       expect(result).toEqual(input);
     });
   });
 
   describe('kill', () => {
     it('returns early for empty subscription ID', async () => {
-      (driver as any).connected = true;
+      setConnected(driver, true);
       await driver.kill('');
       expect(mockQuery).not.toHaveBeenCalled();
     });
 
     it('executes KILL query for valid subscription', async () => {
       mockQuery.mockReturnValue(thenableResolve([]));
-      (driver as any).connected = true;
+      setConnected(driver, true);
       await driver.kill('live_12345');
       expect(mockQuery).toHaveBeenCalledWith('KILL live_12345');
     });
@@ -298,20 +338,26 @@ describe('EmbeddedDriver', () => {
     }
 
     beforeEach(() => {
-      (driver as any).connected = true;
+      setConnected(driver, true);
     });
 
     it('throws if not connected', async () => {
-      (driver as any).connected = false;
-      await expect(driver.live('table', vi.fn())).rejects.toThrow('Not connected');
+      setConnected(driver, false);
+      await expect(driver.live('table', vi.fn())).rejects.toThrow(
+        'Not connected',
+      );
     });
 
     it('throws if table is empty string', async () => {
-      await expect(driver.live('', vi.fn())).rejects.toThrow('Table name is required');
+      await expect(driver.live('', vi.fn())).rejects.toThrow(
+        'Table name is required',
+      );
     });
 
     it('throws if table is whitespace only', async () => {
-      await expect(driver.live('   ', vi.fn())).rejects.toThrow('Table name is required');
+      await expect(driver.live('   ', vi.fn())).rejects.toThrow(
+        'Table name is required',
+      );
     });
 
     it('sanitizes invalid chars in table name', async () => {
@@ -319,7 +365,9 @@ describe('EmbeddedDriver', () => {
       try {
         mockQuery.mockReturnValue(thenableResolve(createAsyncIterable([])));
         await driver.live('bad table!', vi.fn());
-        expect(warnSpy).toHaveBeenCalledWith('Table name contains invalid characters, sanitized');
+        expect(warnSpy).toHaveBeenCalledWith(
+          'Table name contains invalid characters, sanitized',
+        );
       } finally {
         warnSpy.mockRestore();
       }
@@ -384,8 +432,13 @@ describe('EmbeddedDriver', () => {
       const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
       try {
         mockQuery.mockReturnValue(Promise.reject(new Error('query failed')));
-        await expect(driver.live('test', vi.fn())).rejects.toThrow('query failed');
-        expect(errorSpy).toHaveBeenCalledWith('Live query setup failed:', expect.any(Error));
+        await expect(driver.live('test', vi.fn())).rejects.toThrow(
+          'query failed',
+        );
+        expect(errorSpy).toHaveBeenCalledWith(
+          'Live query setup failed:',
+          expect.any(Error),
+        );
       } finally {
         errorSpy.mockRestore();
       }
@@ -404,16 +457,20 @@ describe('EmbeddedDriver', () => {
     }
 
     beforeEach(() => {
-      (driver as any).connected = true;
+      setConnected(driver, true);
     });
 
     it('throws if not connected', async () => {
-      (driver as any).connected = false;
-      await expect(driver.liveWithOptions('table')).rejects.toThrow('Not connected');
+      setConnected(driver, false);
+      await expect(driver.liveWithOptions('table')).rejects.toThrow(
+        'Not connected',
+      );
     });
 
     it('throws if table is empty', async () => {
-      await expect(driver.liveWithOptions('')).rejects.toThrow('Table name is required');
+      await expect(driver.liveWithOptions('')).rejects.toThrow(
+        'Table name is required',
+      );
     });
 
     it('success with no options', async () => {
@@ -427,22 +484,31 @@ describe('EmbeddedDriver', () => {
     it('builds fields correctly', async () => {
       mockQuery.mockReturnValue(thenableResolve(createAsyncIterable([])));
       await driver.liveWithOptions('test', { fields: ['id', 'name', 'age'] });
-      expect(mockQuery).toHaveBeenCalledWith('LIVE SELECT id, name, age FROM test', {});
+      expect(mockQuery).toHaveBeenCalledWith(
+        'LIVE SELECT id, name, age FROM test',
+        {},
+      );
     });
 
     it('WHERE clause via expr', async () => {
       mockQuery.mockReturnValue(thenableResolve(createAsyncIterable([])));
       const where = { name: { EQUALS: 'foo' } };
       await driver.liveWithOptions('test', { where });
-      expect(mockQuery).toHaveBeenCalledWith('LIVE SELECT * FROM test WHERE name = $name', {
-        name: { EQUALS: 'foo' },
-      });
+      expect(mockQuery).toHaveBeenCalledWith(
+        'LIVE SELECT * FROM test WHERE name = $name',
+        {
+          name: { EQUALS: 'foo' },
+        },
+      );
     });
 
     it('FETCH clause', async () => {
       mockQuery.mockReturnValue(thenableResolve(createAsyncIterable([])));
       await driver.liveWithOptions('test', { fetch: ['author', 'editor'] });
-      expect(mockQuery).toHaveBeenCalledWith('LIVE SELECT * FROM test FETCH author, editor', {});
+      expect(mockQuery).toHaveBeenCalledWith(
+        'LIVE SELECT * FROM test FETCH author, editor',
+        {},
+      );
     });
 
     it('DIFF mode logs warning', async () => {

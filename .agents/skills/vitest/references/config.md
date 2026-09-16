@@ -81,9 +81,7 @@ defineConfig({
 ```ts
 export default defineConfig(({ mode }) => ({
   plugins: mode === 'test' ? [] : [myPlugin()],
-  test: {
-    /* options */
-  },
+  test: {/* options */},
 }));
 ```
 

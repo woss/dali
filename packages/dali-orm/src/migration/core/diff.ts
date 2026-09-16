@@ -136,9 +136,14 @@ export class SchemaDiffer {
 
         // Index changes
         const indexChanges = this.diffIndexes(oldTable, newTable);
-        diff.added.indexes.push(...indexChanges.added.map((idx) => ({ table: name, index: idx })));
+        diff.added.indexes.push(
+          ...indexChanges.added.map((idx) => ({ table: name, index: idx })),
+        );
         diff.removed.indexes.push(
-          ...indexChanges.removed.map((idxName) => ({ table: name, name: idxName })),
+          ...indexChanges.removed.map((idxName) => ({
+            table: name,
+            name: idxName,
+          })),
         );
       }
     }
@@ -174,7 +179,9 @@ export class SchemaDiffer {
     const parts: string[] = [];
 
     if (diff.added.tables.length > 0) {
-      parts.push(`Added tables: ${diff.added.tables.map((t) => t.name).join(', ')}`);
+      parts.push(
+        `Added tables: ${diff.added.tables.map((t) => t.name).join(', ')}`,
+      );
     }
 
     if (diff.added.fields.length > 0) {
@@ -194,7 +201,9 @@ export class SchemaDiffer {
     }
 
     for (const table of diff.changed.tables) {
-      parts.push(`Changed table ${table.name}: ${table.breakingChanges.join('; ')}`);
+      parts.push(
+        `Changed table ${table.name}: ${table.breakingChanges.join('; ')}`,
+      );
     }
 
     for (const field of diff.changed.fields) {
@@ -237,7 +246,12 @@ export class SchemaDiffer {
     }
 
     return breakingChanges.length > 0
-      ? { name: newTable.name, oldDef: oldTable, newDef: newTable, breakingChanges }
+      ? {
+          name: newTable.name,
+          oldDef: oldTable,
+          newDef: newTable,
+          breakingChanges,
+        }
       : null;
   }
 
@@ -351,27 +365,38 @@ export class SchemaDiffer {
   /**
    * Compare two column definitions
    */
-  private diffColumn(oldColumn: ColumnDefinition, newColumn: ColumnDefinition): string[] {
+  private diffColumn(
+    oldColumn: ColumnDefinition,
+    newColumn: ColumnDefinition,
+  ): string[] {
     const changes: string[] = [];
 
     // Type change
     if (oldColumn.config.type !== newColumn.config.type) {
-      changes.push(`Type changed from ${oldColumn.config.type} to ${newColumn.config.type}`);
+      changes.push(
+        `Type changed from ${oldColumn.config.type} to ${newColumn.config.type}`,
+      );
     }
 
     // Nullable to non-nullable (breaking)
     if (oldColumn.config.optional && !newColumn.config.optional) {
-      changes.push('Field changed from optional to required - may break existing records');
+      changes.push(
+        'Field changed from optional to required - may break existing records',
+      );
     }
 
     // Readonly change
     if (!oldColumn.config.readonly && newColumn.config.readonly) {
-      changes.push('Field changed to readonly - existing data cannot be updated');
+      changes.push(
+        'Field changed to readonly - existing data cannot be updated',
+      );
     }
 
     // Flexible schema change
     if (oldColumn.config.flexible !== newColumn.config.flexible) {
-      changes.push(`Field flexible mode ${oldColumn.config.flexible ? 'removed' : 'added'}`);
+      changes.push(
+        `Field flexible mode ${oldColumn.config.flexible ? 'removed' : 'added'}`,
+      );
     }
 
     // Type coercion changes (e.g., int to string could lose precision)
@@ -381,13 +406,17 @@ export class SchemaDiffer {
       decimal: ['string'],
     };
 
-    if (coercibleTypes[oldColumn.config.type]?.includes(newColumn.config.type)) {
+    if (
+      coercibleTypes[oldColumn.config.type]?.includes(newColumn.config.type)
+    ) {
       changes.push(`Type widened - may require data migration`);
     }
 
     // Default value change (compare effective default: defaultRaw takes precedence)
-    const oldEffective = oldColumn.config.defaultRaw ?? oldColumn.config.default;
-    const newEffective = newColumn.config.defaultRaw ?? newColumn.config.default;
+    const oldEffective =
+      oldColumn.config.defaultRaw ?? oldColumn.config.default;
+    const newEffective =
+      newColumn.config.defaultRaw ?? newColumn.config.default;
     if (oldEffective !== newEffective) {
       changes.push(
         `Default changed from '${oldEffective ?? 'NONE'}' to '${newEffective ?? 'NONE'}'`,

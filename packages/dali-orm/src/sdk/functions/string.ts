@@ -43,7 +43,11 @@ export function stringRepeat(str: SqlExpr, n: SqlExpr): SqlExpr {
   return `string::repeat(${str}, ${n})` as SqlExpr;
 }
 
-export function stringReplace(str: SqlExpr, search: SqlExpr, replace: SqlExpr): SqlExpr {
+export function stringReplace(
+  str: SqlExpr,
+  search: SqlExpr,
+  replace: SqlExpr,
+): SqlExpr {
   return `string::replace(${str}, ${search}, ${replace})` as SqlExpr;
 }
 
@@ -51,7 +55,11 @@ export function stringReverse(str: SqlExpr): SqlExpr {
   return `string::reverse(${str})` as SqlExpr;
 }
 
-export function stringSlice(str: SqlExpr, start: SqlExpr, end?: SqlExpr): SqlExpr {
+export function stringSlice(
+  str: SqlExpr,
+  start: SqlExpr,
+  end?: SqlExpr,
+): SqlExpr {
   return end
     ? (`string::slice(${str}, ${start}, ${end})` as SqlExpr)
     : (`string::slice(${str}, ${start})` as SqlExpr);
@@ -69,7 +77,11 @@ export function stringStartsWith(str: SqlExpr, prefix: SqlExpr): SqlExpr {
   return `string::starts_with(${str}, ${prefix})` as SqlExpr;
 }
 
-export function stringSubstring(str: SqlExpr, start: SqlExpr, length?: SqlExpr): SqlExpr {
+export function stringSubstring(
+  str: SqlExpr,
+  start: SqlExpr,
+  length?: SqlExpr,
+): SqlExpr {
   return length
     ? (`string::substring(${str}, ${start}, ${length})` as SqlExpr)
     : (`string::substring(${str}, ${start})` as SqlExpr);

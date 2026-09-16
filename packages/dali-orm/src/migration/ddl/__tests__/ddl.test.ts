@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vite-plus/test';
+import { describe, expect, it } from 'vitest';
 import { createEmptyDdl, isDdlEmpty } from '../ddl.js';
 
 describe('DDL helpers', () => {
@@ -21,7 +21,15 @@ describe('DDL helpers', () => {
 
   it('isDdlEmpty returns false when tables exist', () => {
     const ddl = createEmptyDdl();
-    ddl.tables = [{ name: 'test', schema: 'full', type: 'normal', columns: [], indexes: [] }];
+    ddl.tables = [
+      {
+        name: 'test',
+        schema: 'full',
+        type: 'normal',
+        columns: [],
+        indexes: [],
+      },
+    ];
     expect(isDdlEmpty(ddl)).toBe(false);
   });
 

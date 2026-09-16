@@ -1,5 +1,5 @@
 import { safeParse } from 'valibot';
-import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   ConfigSchema,
   createConfigFile,
@@ -14,8 +14,7 @@ const { mockWriteFile } = vi.hoisted(() => ({
 
 vi.mock('obug', () => ({
   createDebug: vi.fn(() => {
-    const fn = vi.fn() as any;
-    fn.extend = vi.fn(() => vi.fn());
+    const fn = Object.assign(vi.fn(), { extend: vi.fn(() => vi.fn()) });
     return fn;
   }),
 }));
@@ -61,8 +60,8 @@ describe('ConfigSchema', () => {
       expect(result.output.auth?.type).toBe('root');
       expect(result.output.migrations?.dir).toBe('./migrations');
       expect(result.output.migrations?.table).toBe('__migrations');
-      expect(result.output.schema!.dir).toBe('./schema');
-      expect(result.output.schema!.pattern).toBe('**/*.ts');
+      expect(result.output.schema?.dir).toBe('./schema');
+      expect(result.output.schema?.pattern).toBe('**/*.ts');
       expect(result.output.snapshots?.dir).toBe('./snapshots');
       expect(result.output.shadow?.namespace).toBe('shadow_ns');
       expect(result.output.shadow?.database).toBe('shadow_db');
@@ -122,7 +121,9 @@ describe('defineConfig', () => {
   });
 
   it('throws for invalid config', () => {
-    expect(() => defineConfig({ url: 123 } as unknown as Partial<never>)).toThrow();
+    expect(() =>
+      defineConfig({ url: 123 } as unknown as Partial<never>),
+    ).toThrow();
   });
 
   it('throws when required fields missing', () => {
@@ -139,25 +140,27 @@ describe('processConfigObject', () => {
   const resolved = '/project/config/dali-orm.config.ts';
 
   it('throws for null', () => {
-    expect(() => processConfigObject(null, cfgFile, cfgDir, resolved)).toThrow('must be an object');
+    expect(() => processConfigObject(null, cfgFile, cfgDir, resolved)).toThrow(
+      'must be an object',
+    );
   });
 
   it('throws for undefined', () => {
-    expect(() => processConfigObject(undefined, cfgFile, cfgDir, resolved)).toThrow(
-      'must be an object',
-    );
+    expect(() =>
+      processConfigObject(undefined, cfgFile, cfgDir, resolved),
+    ).toThrow('must be an object');
   });
 
   it('throws for non-object', () => {
-    expect(() => processConfigObject('string', cfgFile, cfgDir, resolved)).toThrow(
-      'must be an object',
-    );
+    expect(() =>
+      processConfigObject('string', cfgFile, cfgDir, resolved),
+    ).toThrow('must be an object');
   });
 
   it('parses valid config', () => {
     const result = processConfigObject(validConfig, cfgFile, cfgDir, resolved);
     expect(result.url).toBe('ws://localhost:10101');
-    expect(result.schema!.dir).toBe('/project/config/schema');
+    expect(result.schema?.dir).toBe('/project/config/schema');
   });
 
   it('resolves migrations.dir relative to config dir', () => {
@@ -180,7 +183,7 @@ describe('processConfigObject', () => {
       schema: { dir: './schemas', pattern: '*.ts' },
     };
     const result = processConfigObject(config, cfgFile, cfgDir, resolved);
-    expect(result.schema!.dir).toBe('/project/config/schemas');
+    expect(result.schema?.dir).toBe('/project/config/schemas');
   });
 
   it('resolves snapshots.dir relative to config dir', () => {
@@ -212,7 +215,10 @@ describe('createConfigFile', () => {
   it('writes template content', async () => {
     await createConfigFile('tmp-test-config.js');
     expect(mockWriteFile).toHaveBeenCalledTimes(1);
-    const [calledPath, content] = mockWriteFile.mock.calls[0] as unknown as [string, string];
+    const [calledPath, content] = mockWriteFile.mock.calls[0] as unknown as [
+      string,
+      string,
+    ];
     expect(calledPath).toContain('tmp-test-config.js');
     expect(content).toContain('defineConfig');
   });

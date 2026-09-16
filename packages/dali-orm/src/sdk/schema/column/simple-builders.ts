@@ -1,4 +1,8 @@
-import type { ColumnConfig, ColumnDefinition, SurrealColumnType } from './types.js';
+import type {
+  ColumnConfig,
+  ColumnDefinition,
+  SurrealColumnType,
+} from './types.js';
 
 export type Builder<TType extends SurrealColumnType> = {
   readonly name: string;
@@ -28,15 +32,20 @@ export function createBuilder<const TType extends SurrealColumnType>(
     get name() {
       return name;
     },
-    build(tableName?: string, _columnName?: string): ColumnDefinition & { config: ConfigT } {
-      return { name, config: { ...config }, tableName } as ColumnDefinition & { config: ConfigT };
+    build(
+      tableName?: string,
+      _columnName?: string,
+    ): ColumnDefinition & { config: ConfigT } {
+      return { name, config: { ...config }, tableName } as ColumnDefinition & {
+        config: ConfigT;
+      };
     },
     optional(): Builder<TType> {
       config = { ...config, optional: true } as ConfigT;
       return this as unknown as Builder<TType>;
     },
     default(value: string | boolean | number): Builder<TType> {
-      config = { ...config, default: String(value) } as ConfigT;
+      config = { ...config, default: value } as ConfigT;
       return this as unknown as Builder<TType>;
     },
     /** Set raw SurrealDB expression as DEFAULT, emitted unquoted (e.g., `crypto::blake3(content)`) */
@@ -100,4 +109,40 @@ export function object(name: string) {
 }
 export function uuid(name: string) {
   return createBuilder(name, 'uuid');
+}
+
+/**
+ * Create a set builder (unique unordered values, SurrealDB type).
+ *
+ * @example
+ * defineTable('posts', {
+ *   tags: set('tags'),
+ * })
+ */
+export function set(name: string) {
+  return createBuilder(name, 'set');
+}
+
+/**
+ * Create a bytes builder (binary data).
+ *
+ * @example
+ * defineTable('files', {
+ *   content: bytes('content'),
+ * })
+ */
+export function bytes(name: string) {
+  return createBuilder(name, 'bytes');
+}
+
+/**
+ * Create a literal builder (quoted string literal type).
+ *
+ * @example
+ * defineTable('config', {
+ *   color: literal('color'),
+ * })
+ */
+export function literal(name: string) {
+  return createBuilder(name, 'literal');
 }

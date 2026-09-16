@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vite-plus/test';
-import { defineEvent } from '../schema/event-builder.js';
+import { describe, expect, it } from 'vitest';
+import { defineEvent } from '../schema.js';
 
 describe('defineEvent builder', () => {
   it('creates event with name and required fields', () => {
@@ -16,12 +16,20 @@ describe('defineEvent builder', () => {
   });
 
   it('sets table via on()', () => {
-    const evt = defineEvent('evt').on('user').when('$before').then('DELETE *').build();
+    const evt = defineEvent('evt')
+      .on('user')
+      .when('$before')
+      .then('DELETE *')
+      .build();
     expect(evt.on).toBe('user');
   });
 
   it('sets when condition', () => {
-    const evt = defineEvent('evt').on('user').when('$before OR $after').then('DELETE *').build();
+    const evt = defineEvent('evt')
+      .on('user')
+      .when('$before OR $after')
+      .then('DELETE *')
+      .build();
     expect(evt.when).toBe('$before OR $after');
   });
 
@@ -51,7 +59,12 @@ describe('defineEvent builder', () => {
   });
 
   it('sets async', () => {
-    const evt = defineEvent('evt').on('user').when('$before').then('DELETE *').async().build();
+    const evt = defineEvent('evt')
+      .on('user')
+      .when('$before')
+      .then('DELETE *')
+      .async()
+      .build();
     expect(evt.async).toBe(true);
   });
 
@@ -104,15 +117,15 @@ describe('defineEvent builder', () => {
   });
 
   it('throws on missing table in build()', () => {
-    expect(() => defineEvent('evt').when('$before').then('DELETE *').build()).toThrow(
-      'Table name is required',
-    );
+    expect(() =>
+      defineEvent('evt').when('$before').then('DELETE *').build(),
+    ).toThrow('Table name is required');
   });
 
   it('throws on missing when in build()', () => {
-    expect(() => defineEvent('evt').on('user').then('DELETE *').build()).toThrow(
-      'WHEN condition is required',
-    );
+    expect(() =>
+      defineEvent('evt').on('user').then('DELETE *').build(),
+    ).toThrow('WHEN condition is required');
   });
 
   it('throws on missing then in build()', () => {

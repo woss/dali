@@ -20,9 +20,6 @@ export class TupleColumnBuilder extends BaseColumnBuilder<TupleColumnBuilder> {
   }
 
   /** Formats the default value as JSON string. */
-  protected formatDefault(value: unknown): string {
-    return JSON.stringify(value);
-  }
 
   /**
    * Configure all tuple elements at once
@@ -35,7 +32,11 @@ export class TupleColumnBuilder extends BaseColumnBuilder<TupleColumnBuilder> {
   /**
    * Configure a single element at the given index
    */
-  element(index: number, type: SurrealColumnType, assert?: string): TupleColumnBuilder {
+  element(
+    index: number,
+    type: SurrealColumnType,
+    assert?: string,
+  ): TupleColumnBuilder {
     while (this._elements.length <= index) {
       this._elements.push({ type: 'string' });
     }

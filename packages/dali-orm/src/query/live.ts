@@ -10,6 +10,7 @@
  */
 
 import type { ExprLike } from 'surrealdb';
+import type { DaliORM } from '../sdk/dali-orm.js';
 import type {
   LiveMessageData,
   LiveQueryOptions,
@@ -65,7 +66,7 @@ export class LiveSubscription<T = unknown> {
       return this.handle.subscribe((data) => {
         const id = (data.result as { id?: string } | undefined)?.id;
         const recordStr = id ?? '';
-        if (recordStr.includes(filter)) {
+        if (recordStr === filter) {
           callback(data);
         }
       });
@@ -110,17 +111,21 @@ export class LiveSubscription<T = unknown> {
  * }
  * ```
  */
-export class LiveQueryBuilder<TDef extends TableDefinition, TResult = InferSelectResult<TDef>> {
+export class LiveQueryBuilder<
+  TDef extends TableDefinition,
+  TResult = InferSelectResult<TDef>,
+> {
   private readonly driver: SurrealDriver;
   private readonly tableDef: TDef;
   private readonly options: LiveQueryOptions = {};
   private recordId?: string;
 
-  constructor(driver: SurrealDriver, tableDef: TDef) {
-    if (!driver) throw new Error('Driver is required');
-    if (!tableDef?.name) throw new Error('Table definition with name is required');
+  constructor(orm: DaliORM, tableDef: TDef) {
+    if (!orm) throw new Error('DaliORM instance is required');
+    if (!tableDef?.name)
+      throw new Error('Table definition with name is required');
 
-    this.driver = driver;
+    this.driver = orm.getDriver();
     this.tableDef = tableDef;
   }
 
@@ -142,7 +147,8 @@ export class LiveQueryBuilder<TDef extends TableDefinition, TResult = InferSelec
    * Provides autocomplete from TableDefinition columns.
    */
   fields(...names: (keyof TResult)[]): this {
-    if (names.length === 0) throw new Error('At least one field name is required');
+    if (names.length === 0)
+      throw new Error('At least one field name is required');
     this.options.fields = names as string[];
     return this;
   }
@@ -171,7 +177,8 @@ export class LiveQueryBuilder<TDef extends TableDefinition, TResult = InferSelec
    * ```
    */
   where(condition: ExprLike): this {
-    if (condition == null) throw new Error('WHERE condition cannot be null or undefined');
+    if (condition == null)
+      throw new Error('WHERE condition cannot be null or undefined');
     this.options.where = condition;
     return this;
   }
@@ -182,7 +189,8 @@ export class LiveQueryBuilder<TDef extends TableDefinition, TResult = InferSelec
    * Fetch record link contents for the specified fields.
    */
   fetch(...fields: string[]): this {
-    if (fields.length === 0) throw new Error('At least one field name is required for fetch');
+    if (fields.length === 0)
+      throw new Error('At least one field name is required for fetch');
     this.options.fetch = fields;
     return this;
   }
@@ -217,7 +225,10 @@ export class LiveQueryBuilder<TDef extends TableDefinition, TResult = InferSelec
    * ```
    */
   async start(): Promise<LiveSubscription<TResult>> {
-    const handle = await this.driver.liveWithOptions<TResult>(this.tableDef.name, this.options);
+    const handle = await this.driver.liveWithOptions<TResult>(
+      this.tableDef.name,
+      this.options,
+    );
     return new LiveSubscription(handle, this.recordId);
   }
 
@@ -257,8 +268,8 @@ export class LiveQueryBuilder<TDef extends TableDefinition, TResult = InferSelec
  * ```
  */
 export function live<TDef extends TableDefinition>(
-  driver: SurrealDriver,
+  orm: DaliORM,
   tableDef: TDef,
 ): LiveQueryBuilder<TDef> {
-  return new LiveQueryBuilder(driver, tableDef);
+  return new LiveQueryBuilder(orm, tableDef);
 }

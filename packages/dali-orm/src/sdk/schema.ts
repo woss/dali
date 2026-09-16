@@ -1,4 +1,16 @@
-import { array, boolean, literal, number, object, optional, string, union } from 'valibot';
+import type { GenericSchema } from 'valibot';
+import {
+  array,
+  boolean,
+  literal,
+  number,
+  object,
+  optional,
+  string,
+  union,
+} from 'valibot';
+import { SurrealQLGenerator } from '../migration/core/generator.js';
+import type { SurrealSequence } from '../migration/ddl/ddl.js';
 import type { TableDefinition } from './table.js';
 
 // =============================================================================
@@ -14,19 +26,28 @@ export type AccessType = 'RECORD' | 'JWT' | 'OIDC';
  * AccessConfig schema using valibot
  * Defines the configuration structure for access definitions
  */
-export const AccessConfigSchema = object({
-  name: string(),
-  type: union([literal('RECORD'), literal('JWT'), literal('OIDC')]),
-  table: optional(string()),
-  signup: optional(string()),
-  signin: optional(string()),
-  identifier: optional(string()),
-  algorithm: optional(string()),
-  key: optional(string()),
-  issuer: optional(string()),
-  duration: optional(string()),
-  tokenDuration: optional(string()),
-});
+/**
+ * Parsed output of {@link AccessConfigSchema}. Identical to `AccessConfig`
+ * except `algorithm` is validated as a plain string (no literal narrowing).
+ */
+export type AccessConfigSchemaOutput = Omit<AccessConfig, 'algorithm'> & {
+  algorithm?: string;
+};
+
+export const AccessConfigSchema: GenericSchema<AccessConfigSchemaOutput> =
+  object({
+    name: string(),
+    type: union([literal('RECORD'), literal('JWT'), literal('OIDC')]),
+    table: optional(string()),
+    signup: optional(string()),
+    signin: optional(string()),
+    identifier: optional(string()),
+    algorithm: optional(string()),
+    key: optional(string()),
+    issuer: optional(string()),
+    duration: optional(string()),
+    tokenDuration: optional(string()),
+  });
 
 export type AccessConfig = {
   name: string;
@@ -74,7 +95,10 @@ export function generateSignupFromTable(table: TableDefinition): string {
     // this is a bit of a heuristic to identify password fields - looking for common names like 'password', 'pass', 'password_hash'
     const passwordCol =
       table.columns.find(
-        (c) => c.name === 'password_hash' || c.name === 'pass' || c.name === 'password',
+        (c) =>
+          c.name === 'password_hash' ||
+          c.name === 'pass' ||
+          c.name === 'password',
       )?.name ?? 'password';
     if (col.name === passwordCol) {
       return `${passwordCol} = crypto::argon2::generate($${passwordCol})`;
@@ -87,7 +111,10 @@ export function generateSignupFromTable(table: TableDefinition): string {
 /**
  * Generate SIGNUP SQL from table
  */
-export function generateSignupFromSQL(tableName: string, table: TableDefinition): string {
+export function generateSignupFromSQL(
+  tableName: string,
+  table: TableDefinition,
+): string {
   const setClause = generateSignupFromTable(table);
   return `CREATE ${tableName} SET ${setClause}`;
 }
@@ -106,7 +133,10 @@ export function generateSigninFromSQL(
 
   const passwordCol =
     table.columns.find(
-      (c) => c.name === 'password_hash' || c.name === 'pass' || c.name === 'password',
+      (c) =>
+        c.name === 'password_hash' ||
+        c.name === 'pass' ||
+        c.name === 'password',
     )?.name ?? 'password';
 
   const explicitIdentifier = identifier;
@@ -115,12 +145,18 @@ export function generateSigninFromSQL(
   }
 
   const authColumn = table.columns.find(
-    (col) => col.name === 'identifier' || col.name === 'email' || col.name === 'username',
+    (col) =>
+      col.name === 'identifier' ||
+      col.name === 'email' ||
+      col.name === 'username',
   );
 
-  const identifierCol = authColumn?.name ?? table.columns[0]?.name ?? 'identifier';
+  const identifierCol =
+    authColumn?.name ?? table.columns[0]?.name ?? 'identifier';
   if (!identifierCol) {
-    throw new Error(`Table '${tableName}' has no columns for signin identifier`);
+    throw new Error(
+      `Table '${tableName}' has no columns for signin identifier`,
+    );
   }
 
   return `SELECT * FROM ${tableName} WHERE ${identifierCol} = $${identifierCol} AND crypto::argon2::compare(${passwordCol}, $${passwordCol})`;
@@ -137,7 +173,9 @@ export function accessToSQL(
     throw new Error('AccessConfig is required');
   }
 
-  const parts = [`DEFINE ACCESS ${config.name} ON DATABASE TYPE ${config.type}`];
+  const parts = [
+    `DEFINE ACCESS ${config.name} ON DATABASE TYPE ${config.type}`,
+  ];
 
   let signup = config.signup;
   if (!signup && config.table && tables) {
@@ -162,7 +200,8 @@ export function accessToSQL(
   if (config.issuer) parts.push(`ISSUER ${config.issuer}`);
   if (config.duration || config.tokenDuration) {
     const durationParts = [];
-    if (config.tokenDuration) durationParts.push(`FOR TOKEN ${config.tokenDuration}`);
+    if (config.tokenDuration)
+      durationParts.push(`FOR TOKEN ${config.tokenDuration}`);
     if (config.duration) durationParts.push(`FOR SESSION ${config.duration}`);
     parts.push(`DURATION ${durationParts.join(', ')}`);
   }
@@ -189,7 +228,7 @@ export type FunctionConfig = {
  * FunctionConfig schema using valibot
  * Defines the configuration structure for SurrealDB function definitions
  */
-export const FunctionConfigSchema = object({
+export const FunctionConfigSchema: GenericSchema<FunctionConfig> = object({
   name: string(),
   args: optional(array(string())),
   body: string(),
@@ -246,7 +285,7 @@ export type EventConfig = {
  * EventConfig schema using valibot
  * Defines the configuration structure for SurrealDB event definitions
  */
-export const EventConfigSchema = object({
+export const EventConfigSchema: GenericSchema<EventConfig> = object({
   name: string(),
   on: string(),
   when: string(),
@@ -265,7 +304,8 @@ export function eventToSQL(config: EventConfig): string {
   if (!config.name) throw new Error('Event name is required');
   if (!config.on) throw new Error('Event table (on) is required');
   if (!config.when) throw new Error('Event condition (when) is required');
-  if (!config.then || config.then.length === 0) throw new Error('Event action (then) is required');
+  if (!config.then || config.then.length === 0)
+    throw new Error('Event action (then) is required');
 
   const parts = [
     `DEFINE EVENT IF NOT EXISTS ${config.name} ON TABLE ${config.on} WHEN (${config.when}) THEN { ${config.then.join('; ')} }`,
@@ -277,4 +317,372 @@ export function eventToSQL(config: EventConfig): string {
   if (config.maxdepth !== undefined) parts.push(`MAXDEPTH ${config.maxdepth}`);
 
   return parts.join(' ');
+}
+
+// =============================================================================
+// FLUENT BUILDERS
+// =============================================================================
+export interface AccessBuilder {
+  readonly name: string;
+  type(type: AccessType): AccessBuilder;
+  table(tableName: string): AccessBuilder;
+  signup(sql: string): AccessBuilder;
+  signin(sql: string): AccessBuilder;
+  identifier(column: string): AccessBuilder;
+  algorithm(algo: 'HS256' | 'HS512'): AccessBuilder;
+  key(key: string): AccessBuilder;
+  issuer(issuer: string): AccessBuilder;
+  duration(duration: string): AccessBuilder;
+  tokenDuration(duration: string): AccessBuilder;
+  build(): AccessConfig;
+  toSQL(): string;
+}
+export function defineAccess(name: string): AccessBuilder {
+  if (!name) throw new Error('Access name is required');
+
+  let config: {
+    type?: 'RECORD' | 'JWT' | 'OIDC';
+    table?: string;
+    signup?: string;
+    signin?: string;
+    identifier?: string;
+    algorithm?: 'HS256' | 'HS512';
+    key?: string;
+    issuer?: string;
+    duration?: string;
+    tokenDuration?: string;
+  } = { type: 'RECORD' };
+
+  return {
+    get name() {
+      return name;
+    },
+    type(type: AccessType) {
+      config = { ...config, type };
+      return this;
+    },
+    table(tableName: string) {
+      config = { ...config, table: tableName };
+      return this;
+    },
+    signup(sql: string) {
+      config = { ...config, signup: sql };
+      return this;
+    },
+    signin(sql: string) {
+      config = { ...config, signin: sql };
+      return this;
+    },
+    identifier(column: string) {
+      config = { ...config, identifier: column };
+      return this;
+    },
+    algorithm(algo: 'HS256' | 'HS512') {
+      config = { ...config, algorithm: algo };
+      return this;
+    },
+    key(key: string) {
+      config = { ...config, key };
+      return this;
+    },
+    issuer(issuer: string) {
+      config = { ...config, issuer };
+      return this;
+    },
+    duration(duration: string) {
+      config = { ...config, duration };
+      return this;
+    },
+    tokenDuration(duration: string) {
+      config = { ...config, tokenDuration: duration };
+      return this;
+    },
+    build(): AccessConfig {
+      return { name, ...config, type: config.type ?? 'RECORD' };
+    },
+    toSQL(): string {
+      return new SurrealQLGenerator().generateAccessDefinition(this.build());
+    },
+  };
+}
+
+export interface EventBuilder {
+  readonly name: string;
+  on(tableName: string): EventBuilder;
+  when(condition: string): EventBuilder;
+  then(sql: string): EventBuilder;
+  comment(text: string): EventBuilder;
+  async(): EventBuilder;
+  retry(count: number): EventBuilder;
+  maxdepth(depth: number): EventBuilder;
+  build(): EventConfig;
+  toSQL(): string;
+}
+
+export function defineEvent(name: string): EventBuilder {
+  if (!name) throw new Error('Event name is required');
+
+  let config: {
+    on?: string;
+    when?: string;
+    then?: string[];
+    comment?: string;
+    async?: boolean;
+    retry?: number;
+    maxdepth?: number;
+  } = {};
+
+  return {
+    get name() {
+      return name;
+    },
+    on(tableName: string) {
+      config = { ...config, on: tableName };
+      return this;
+    },
+    when(condition: string) {
+      config = { ...config, when: condition };
+      return this;
+    },
+    then(sql: string) {
+      config = { ...config, then: [...(config.then ?? []), sql] };
+      return this;
+    },
+    comment(text: string) {
+      config = { ...config, comment: text };
+      return this;
+    },
+    async() {
+      config = { ...config, async: true };
+      return this;
+    },
+    retry(count: number) {
+      config = { ...config, retry: count };
+      return this;
+    },
+    maxdepth(depth: number) {
+      config = { ...config, maxdepth: depth };
+      return this;
+    },
+    build(): EventConfig {
+      const on = config.on;
+      if (!on) throw new Error('Table name is required (use .on())');
+      const when = config.when;
+      if (!when) throw new Error('WHEN condition is required (use .when())');
+      const then = config.then;
+      if (!then || then.length === 0) {
+        throw new Error(
+          'At least one THEN statement is required (use .then())',
+        );
+      }
+      return {
+        name,
+        on,
+        when,
+        then,
+        comment: config.comment,
+        async: config.async,
+        retry: config.retry,
+        maxdepth: config.maxdepth,
+      };
+    },
+    toSQL(): string {
+      const built = this.build();
+      return new SurrealQLGenerator().generateEventDefinition({
+        ...built,
+        what: built.on,
+      });
+    },
+  };
+}
+
+// =============================================================================
+// SEQUENCE DEFINITION
+// =============================================================================
+
+/**
+ * Sequence configuration for SurrealDB sequence definitions
+ *
+ * SurrealDB syntax: DEFINE SEQUENCE [IF NOT EXISTS] <name>
+ *   [START <n>] [INCREMENT <n>] [MIN <n>] [MAX <n>] [CACHE <n>] [CYCLE]
+ *   [COMMENT '<str>']
+ */
+export type SequenceConfig = {
+  name: string;
+  start?: number;
+  increment?: number;
+  min?: number;
+  max?: number;
+  cache?: number;
+  cycle?: boolean;
+  comment?: string;
+};
+
+/**
+ * Create a DEFINE SEQUENCE fluent builder
+ *
+ * @example
+ * defineSequence('my_seq')
+ *   .start(1)
+ *   .increment(2)
+ *   .cycle()
+ *   .toSQL()
+ * // → DEFINE SEQUENCE IF NOT EXISTS `my_seq` START 1 INCREMENT 2 CYCLE
+ */
+export interface SequenceBuilder {
+  readonly name: string;
+  start(n: number): SequenceBuilder;
+  increment(n: number): SequenceBuilder;
+  min(n: number): SequenceBuilder;
+  max(n: number): SequenceBuilder;
+  cache(n: number): SequenceBuilder;
+  cycle(): SequenceBuilder;
+  comment(text: string): SequenceBuilder;
+  build(): SurrealSequence;
+  toSQL(): string;
+}
+
+export function defineSequence(name: string): SequenceBuilder {
+  if (!name) throw new Error('Sequence name is required');
+
+  let config: SequenceConfig = { name };
+
+  return {
+    get name() {
+      return name;
+    },
+    start(n: number) {
+      config = { ...config, start: n };
+      return this;
+    },
+    increment(n: number) {
+      config = { ...config, increment: n };
+      return this;
+    },
+    min(n: number) {
+      config = { ...config, min: n };
+      return this;
+    },
+    max(n: number) {
+      config = { ...config, max: n };
+      return this;
+    },
+    cache(n: number) {
+      config = { ...config, cache: n };
+      return this;
+    },
+    cycle() {
+      config = { ...config, cycle: true };
+      return this;
+    },
+    comment(text: string) {
+      config = { ...config, comment: text };
+      return this;
+    },
+    build(): SurrealSequence {
+      return { ...config };
+    },
+    toSQL(): string {
+      return new SurrealQLGenerator().generateSequenceDefinition(this.build());
+    },
+  };
+}
+
+// =============================================================================
+// NAMESPACE DEFINITION
+// =============================================================================
+
+// =============================================================================
+// DATABASE DEFINITION
+// =============================================================================
+
+export interface DatabaseBuilder {
+  readonly name: string;
+  comment(text: string): DatabaseBuilder;
+  ifNotExists(): DatabaseBuilder;
+  build(): { name: string; comment?: string; ifNotExists?: boolean };
+  toSQL(): string;
+}
+
+/**
+ * Create a DEFINE DATABASE fluent builder
+ *
+ * @example
+ * defineDatabase('testdb').comment('Test database').toSQL()
+ */
+export function defineDatabase(name: string): DatabaseBuilder {
+  if (!name) throw new Error('Database name is required');
+
+  let config: {
+    comment?: string;
+    ifNotExists?: boolean;
+  } = {};
+
+  return {
+    get name() {
+      return name;
+    },
+    comment(text: string) {
+      config = { ...config, comment: text };
+      return this;
+    },
+    ifNotExists() {
+      config = { ...config, ifNotExists: true };
+      return this;
+    },
+    build(): { name: string; comment?: string; ifNotExists?: boolean } {
+      return { name, ...config };
+    },
+    toSQL(): string {
+      return new SurrealQLGenerator().generateDatabaseDefinition(name, config);
+    },
+  };
+}
+
+/**
+ * Create a DEFINE NAMESPACE fluent builder
+ *
+ * SurrealDB syntax: DEFINE NAMESPACE [IF NOT EXISTS] <name> [COMMENT '<str>']
+ *
+ * @example
+ * defineNamespace('production')
+ *   .comment('Production namespace')
+ *   .toSQL()
+ * // → DEFINE NAMESPACE `production` COMMENT "Production namespace"
+ */
+export interface NamespaceBuilder {
+  readonly name: string;
+  comment(text: string): NamespaceBuilder;
+  ifNotExists(): NamespaceBuilder;
+  build(): { name: string; comment?: string; ifNotExists?: boolean };
+  toSQL(): string;
+}
+
+export function defineNamespace(name: string): NamespaceBuilder {
+  if (!name) throw new Error('Namespace name is required');
+
+  let config: {
+    comment?: string;
+    ifNotExists?: boolean;
+  } = {};
+
+  return {
+    get name() {
+      return name;
+    },
+    comment(text: string) {
+      config = { ...config, comment: text };
+      return this;
+    },
+    ifNotExists() {
+      config = { ...config, ifNotExists: true };
+      return this;
+    },
+    build(): { name: string; comment?: string; ifNotExists?: boolean } {
+      return { name, ...config };
+    },
+    toSQL(): string {
+      return new SurrealQLGenerator().generateNamespaceDefinition(name, config);
+    },
+  };
 }

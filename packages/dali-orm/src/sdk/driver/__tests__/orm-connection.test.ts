@@ -9,7 +9,7 @@
  *   → Use globalThis.sharedMocks pattern to share refs across boundary
  */
 
-import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
+import { beforeEach, describe, expect, it, type Mock, vi } from 'vitest';
 
 // ============================================================================
 // Shared mock containers — populated by vi.mock factories, read by tests
@@ -17,8 +17,7 @@ import { beforeEach, describe, expect, it, vi } from 'vite-plus/test';
 
 vi.mock('obug', () => ({
   createDebug: vi.fn(() => {
-    const fn = vi.fn() as any;
-    fn.extend = vi.fn(() => vi.fn());
+    const fn = Object.assign(vi.fn(), { extend: vi.fn(() => vi.fn()) });
     return fn;
   }),
 }));
@@ -27,7 +26,11 @@ vi.mock('../node-driver.js', () => {
   const connect = vi.fn();
   const query = vi.fn();
   const getUrl = vi.fn();
-  (globalThis as any).__ormTestNodeDriver = { connect, query, getUrl };
+  (globalThis as unknown as Record<string, unknown>).__ormTestNodeDriver = {
+    connect,
+    query,
+    getUrl,
+  };
   return {
     NodeDriver: class {
       connect = connect;
@@ -42,7 +45,11 @@ vi.mock('../embedded-driver.js', () => {
   const connect = vi.fn();
   const query = vi.fn();
   const getUrl = vi.fn();
-  (globalThis as any).__ormTestEmbeddedDriver = { connect, query, getUrl };
+  (globalThis as unknown as Record<string, unknown>).__ormTestEmbeddedDriver = {
+    connect,
+    query,
+    getUrl,
+  };
   return {
     EmbeddedDriver: class {
       connect = connect;
@@ -53,8 +60,9 @@ vi.mock('../embedded-driver.js', () => {
 });
 
 vi.mock('../orm-interfaces.js', () => {
-  const fn = vi.fn() as any;
-  (globalThis as any).__ormTestIsHttpProtocol = fn;
+  const fn = vi.fn();
+  (globalThis as unknown as Record<string, unknown>).__ormTestIsHttpProtocol =
+    fn;
   return { isHttpProtocol: fn };
 });
 
@@ -62,23 +70,33 @@ vi.mock('../orm-interfaces.js', () => {
 // Imports
 // ============================================================================
 
-import { connect, execute, resolveDriverOptions, showChanges } from '../orm-connection.js';
+import {
+  connect,
+  execute,
+  resolveDriverOptions,
+  showChanges,
+} from '../orm-connection.js';
+
+/** Read a value stashed on globalThis by a vi.mock factory */
+function getStashed(key: string): unknown {
+  return (globalThis as unknown as Record<string, unknown>)[key];
+}
+
+function getNodeMocks(): DriverMocks {
+  return getStashed('__ormTestNodeDriver') as DriverMocks;
+}
+
+function getEmbedMocks(): DriverMocks {
+  return getStashed('__ormTestEmbeddedDriver') as DriverMocks;
+}
+
+function getIsHttpProtocol(): Mock {
+  return getStashed('__ormTestIsHttpProtocol') as Mock;
+}
 
 // ============================================================================
 // Helpers
 // ============================================================================
-
-function getNodeMocks() {
-  return (globalThis as any).__ormTestNodeDriver;
-}
-
-function getEmbedMocks() {
-  return (globalThis as any).__ormTestEmbeddedDriver;
-}
-
-function getIsHttpProtocol() {
-  return (globalThis as any).__ormTestIsHttpProtocol;
-}
 
 // ============================================================================
 // Setup
@@ -142,7 +160,7 @@ describe('resolveDriverOptions', () => {
     const result = resolveDriverOptions(explicit, fromFile);
 
     expect(result).toHaveProperty('auth');
-    expect((result as any).auth).toEqual(fromFile.auth);
+    expect('auth' in result ? result.auth : undefined).toEqual(fromFile.auth);
   });
 
   it('preserves configFromFile values when explicitOptions lacks them', () => {
@@ -192,7 +210,9 @@ describe('connect', () => {
   });
 
   it('throws when neither nodeDriver nor embeddedDriver is provided', async () => {
-    await expect(connect({})).rejects.toThrow('Must provide nodeDriver or embeddedDriver config');
+    await expect(connect({})).rejects.toThrow(
+      'Must provide nodeDriver or embeddedDriver config',
+    );
   });
 
   it('loads config from file when config is true (throws if no config found)', async () => {
@@ -267,9 +287,12 @@ describe('execute', () => {
 
     const result = await execute(driver as never, queryObj);
 
-    expect(driver.query).toHaveBeenCalledWith('SELECT * FROM person WHERE name = $name', {
-      name: 'John',
-    });
+    expect(driver.query).toHaveBeenCalledWith(
+      'SELECT * FROM person WHERE name = $name',
+      {
+        name: 'John',
+      },
+    );
     expect(result).toEqual(['result']);
   });
 
@@ -295,7 +318,9 @@ describe('showChanges', () => {
     const driver = { query: vi.fn().mockResolvedValue([]) };
     const result = await showChanges(driver as never, 'person');
 
-    expect(driver.query).toHaveBeenCalledWith('SHOW CHANGES FOR TABLE person SINCE 0 LIMIT 10');
+    expect(driver.query).toHaveBeenCalledWith(
+      'SHOW CHANGES FOR TABLE person SINCE 0 LIMIT 10',
+    );
     expect(result).toEqual([]);
   });
 
@@ -317,6 +342,8 @@ describe('showChanges', () => {
 
     await showChanges(driver as never, 'my-table');
 
-    expect(driver.query).toHaveBeenCalledWith('SHOW CHANGES FOR TABLE mytable SINCE 0 LIMIT 10');
+    expect(driver.query).toHaveBeenCalledWith(
+      'SHOW CHANGES FOR TABLE mytable SINCE 0 LIMIT 10',
+    );
   });
 });

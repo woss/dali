@@ -31,4 +31,7 @@ export interface SurrealORMConfig {
 
   /** Reconnect options for automatic reconnection */
   reconnect?: boolean | ReconnectOptions;
+
+  /** Schema definition for table/column metadata */
+  schema?: import('../orm-schema.js').OrmSchema;
 }

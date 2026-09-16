@@ -42,7 +42,7 @@ export interface TupleArrayAssert {
 export interface ColumnConfig {
   type: SurrealColumnType;
   optional?: boolean;
-  default?: string;
+  default?: string | number | boolean;
   /** Raw SurrealDB expression for DEFAULT, emitted unquoted (e.g., `crypto::blake3(content)`).
    * Takes precedence over `default` in DDL generation. */
   defaultRaw?: string;
@@ -55,6 +55,8 @@ export interface ColumnConfig {
   linksTo?: string;
   /** Used to specify the record type (e.g., record<user>) */
   recordTable?: string;
+  /** REFERENCE ON DELETE action for record columns */
+  onDelete?: 'CASCADE' | 'SET NULL' | 'RESTRICT';
   /** Size for tuple/fixed-size arrays */
   size?: number;
   /** Element configurations for tuple arrays */

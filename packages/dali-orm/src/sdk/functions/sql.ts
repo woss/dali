@@ -22,7 +22,10 @@ export function as_(expr: SqlExpr, alias: string): SqlExpr {
 
 /** Build a raw SqlExpr from a template literal.
  * Values are embedded directly (no parameterization) — use for static fragments only. */
-export function expr(strings: TemplateStringsArray, ...values: unknown[]): SqlExpr {
+export function expr(
+  strings: TemplateStringsArray,
+  ...values: unknown[]
+): SqlExpr {
   if (strings.length === 0) return '' as SqlExpr;
   const result = strings.reduce((acc, str, i) => {
     const val = i < values.length ? String(values[i]) : '';
@@ -33,6 +36,7 @@ export function expr(strings: TemplateStringsArray, ...values: unknown[]): SqlEx
 
 /** Create a column reference as SqlExpr for use in function arguments */
 export function col(name: string): SqlExpr {
-  if (!name || typeof name !== 'string') throw new Error('Column name is required');
+  if (!name || typeof name !== 'string')
+    throw new Error('Column name is required');
   return name as SqlExpr;
 }

@@ -84,7 +84,9 @@ export type SelectField = ColumnRef;
  * ```
  */
 export type InferSelection<TSelection extends Record<string, SelectField>> = {
-  [K in keyof TSelection]: TSelection[K] extends ColumnRef<string, infer T> ? T : unknown;
+  [K in keyof TSelection]: TSelection[K] extends ColumnRef<string, infer T>
+    ? T
+    : unknown;
 };
 
 /**
@@ -98,7 +100,9 @@ export type InferSelection<TSelection extends Record<string, SelectField>> = {
  * ```
  */
 export type ColumnsToRecord<TDef extends TableDefinition> = {
-  [K in TDef['columns'][number] as K['name']]: K extends { config: infer C extends ColumnConfig }
+  [K in TDef['columns'][number] as K['name']]: K extends {
+    config: infer C extends ColumnConfig;
+  }
     ? ColumnRef<K['name'], ColumnType<C>>
     : ColumnRef<K['name'], unknown>;
 };
@@ -108,13 +112,18 @@ export type ColumnsToRecord<TDef extends TableDefinition> = {
 // ============================================================================
 
 /** Infer select result type from TableDefinition columns */
-export type InferSelectResult<TDef extends TableDefinition> = InferTypedRecord<TDef>;
+export type InferSelectResult<TDef extends TableDefinition> =
+  InferTypedRecord<TDef>;
 
 /** Infer insert input type (partial of columns, no id required) */
-export type InferInsertInput<TDef extends TableDefinition> = Partial<InferTypedRecord<TDef>>;
+export type InferInsertInput<TDef extends TableDefinition> = Partial<
+  InferTypedRecord<TDef>
+>;
 
 /** Infer update input type (partial, no id) */
-export type InferUpdateInput<TDef extends TableDefinition> = Partial<InferTypedRecord<TDef>>;
+export type InferUpdateInput<TDef extends TableDefinition> = Partial<
+  InferTypedRecord<TDef>
+>;
 
 /** Graph traversal result type with aliased fields */
 export type WithGraphAliases<TBase, TAliases> = TBase & TAliases;
@@ -124,25 +133,26 @@ export type WithGraphAliases<TBase, TAliases> = TBase & TAliases;
 // ============================================================================
 
 /** Map column config to TypeScript type */
-export type ColumnType<TConfig extends ColumnConfig> = TConfig['type'] extends 'string'
-  ? string
-  : TConfig['type'] extends 'int' | 'float' | 'decimal' | 'number'
-    ? number
-    : TConfig['type'] extends 'bool'
-      ? boolean
-      : TConfig['type'] extends 'datetime'
-        ? Date | string
-        : TConfig['type'] extends 'duration'
-          ? string
-          : TConfig['type'] extends 'array'
-            ? unknown[]
-            : TConfig['type'] extends 'object'
-              ? Record<string, unknown>
-              : TConfig['type'] extends 'record'
-                ? string
-                : TConfig['type'] extends 'null'
-                  ? null
-                  : unknown;
+export type ColumnType<TConfig extends ColumnConfig> =
+  TConfig['type'] extends 'string'
+    ? string
+    : TConfig['type'] extends 'int' | 'float' | 'decimal' | 'number'
+      ? number
+      : TConfig['type'] extends 'bool'
+        ? boolean
+        : TConfig['type'] extends 'datetime'
+          ? Date | string
+          : TConfig['type'] extends 'duration'
+            ? string
+            : TConfig['type'] extends 'array'
+              ? unknown[]
+              : TConfig['type'] extends 'object'
+                ? Record<string, unknown>
+                : TConfig['type'] extends 'record'
+                  ? string
+                  : TConfig['type'] extends 'null'
+                    ? null
+                    : unknown;
 
 /** Extract ColumnConfig from a ColumnBuilder's build() return type */
 type BuilderColumnConfig<T extends ColumnBuilder> =
@@ -207,16 +217,19 @@ export type InferRelateInput<TDef extends TableDefinition> = TDef extends {
  * Infer relate result type from an edge table definition.
  * Extends InferTypedRecord with SurrealDB's standard 'in' and 'out' relation fields.
  */
-export type InferRelateResult<TDef extends TableDefinition> = InferTypedRecord<TDef> & {
-  in: string;
-  out: string;
-};
+export type InferRelateResult<TDef extends TableDefinition> =
+  InferTypedRecord<TDef> & {
+    in: string;
+    out: string;
+  };
 
 // ============================================================================
 // Type Guards
 // ============================================================================
 
 /** Check if table config is a relation table */
-export function isRelationTable(config: TableConfig): config is RelationTableConfig {
+export function isRelationTable(
+  config: TableConfig,
+): config is RelationTableConfig {
   return config.type === 'relation' && 'in' in config && 'out' in config;
 }

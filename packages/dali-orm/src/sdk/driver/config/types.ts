@@ -18,7 +18,11 @@ export type { ConfigAuth, DriverOptions, OrmConfig } from './schema.js';
 /**
  * Supported config file names (without extension)
  */
-export const CONFIG_FILE_NAMES = ['.dali-orm', 'dali-orm.config', 'dali-orm'] as const;
+export const CONFIG_FILE_NAMES = [
+  '.dali-orm',
+  'dali-orm.config',
+  'dali-orm',
+] as const;
 
 /**
  * Supported config file extensions

@@ -6,9 +6,13 @@
  * Uses real embedded SurrealDB (memory mode).
  * Mocks connect for pushSchema tests so we retain driver control for verification.
  */
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { EmbeddedDriver } from '../../../sdk/driver/embedded-driver.js';
-import type { AccessConfig, EventConfig, FunctionConfig } from '../../../sdk/schema.js';
+import type {
+  AccessConfig,
+  EventConfig,
+  FunctionConfig,
+} from '../../../sdk/schema.js';
 import type { TableDefinition } from '../../../sdk/table.js';
 
 // Mock connect before importing pushSchema
@@ -16,8 +20,8 @@ vi.mock('../../../sdk/driver/orm-connection.js', () => ({
   connect: vi.fn(),
 }));
 
-import { pushSchema, tablesToDdl } from '../push.js';
 import type { Config } from '../../config.js';
+import { pushSchema, tablesToDdl } from '../push.js';
 
 // ============================================================================
 // Helpers
@@ -88,7 +92,13 @@ describe('tablesToDdl', () => {
     const tables: TableDefinition[] = [
       {
         name: 'follows',
-        columns: [{ name: 'created_at', tableName: 'follows', config: { type: 'datetime' } }],
+        columns: [
+          {
+            name: 'created_at',
+            tableName: 'follows',
+            config: { type: 'datetime' },
+          },
+        ],
         config: { schema: 'full', type: 'relation', in: 'user', out: 'user' },
       },
     ];
@@ -120,8 +130,8 @@ describe('tablesToDdl', () => {
     const ddl = tablesToDdl(tables);
     const emailIdx = ddl.indexes.find((i) => i.name === 'email_idx');
     expect(emailIdx).toBeDefined();
-    expect(emailIdx!.cols).toEqual(['email']);
-    expect(emailIdx!.index).toBe('unique');
+    expect(emailIdx?.cols).toEqual(['email']);
+    expect(emailIdx?.index).toBe('unique');
   });
 
   it('converts access definitions', () => {
@@ -189,6 +199,7 @@ describe('tablesToDdl', () => {
     ];
 
     const ddl = tablesToDdl(tables);
+    // Field-level permissions must NOT include delete (illegal on fields in SurrealDB 3.x)
     expect(ddl.tables[0].columns[0].permissions).toEqual({
       select: 'NONE',
       create: 'NONE',
@@ -226,7 +237,9 @@ describe('tablesToDdl', () => {
     const tables: TableDefinition[] = [
       {
         name: 'user',
-        columns: [{ name: 'email', tableName: 'user', config: { type: 'string' } }],
+        columns: [
+          { name: 'email', tableName: 'user', config: { type: 'string' } },
+        ],
         config: {
           schema: 'full',
           type: 'normal',
@@ -238,8 +251,8 @@ describe('tablesToDdl', () => {
     const ddl = tablesToDdl(tables);
     const idx = ddl.indexes.find((i) => i.name === 'idx_email');
     expect(idx).toBeDefined();
-    expect(idx!.cols).toEqual(['email']);
-    expect(idx!.index).toBe('unique');
+    expect(idx?.cols).toEqual(['email']);
+    expect(idx?.index).toBe('unique');
   });
 
   it('sets column defaults from config', () => {
@@ -323,7 +336,11 @@ describe('pushSchema', () => {
       {
         name: 'push_test_user',
         columns: [
-          { name: 'name', tableName: 'push_test_user', config: { type: 'string' } },
+          {
+            name: 'name',
+            tableName: 'push_test_user',
+            config: { type: 'string' },
+          },
           { name: 'age', tableName: 'push_test_user', config: { type: 'int' } },
         ],
         config: { schema: 'full', type: 'normal' },
@@ -344,7 +361,13 @@ describe('pushSchema', () => {
     const tables: TableDefinition[] = [
       {
         name: 'dry_run_table',
-        columns: [{ name: 'name', tableName: 'dry_run_table', config: { type: 'string' } }],
+        columns: [
+          {
+            name: 'name',
+            tableName: 'dry_run_table',
+            config: { type: 'string' },
+          },
+        ],
         config: { schema: 'full', type: 'normal' },
       },
     ];
@@ -368,7 +391,13 @@ describe('pushSchema', () => {
     const tables: TableDefinition[] = [
       {
         name: 'access_user',
-        columns: [{ name: 'email', tableName: 'access_user', config: { type: 'string' } }],
+        columns: [
+          {
+            name: 'email',
+            tableName: 'access_user',
+            config: { type: 'string' },
+          },
+        ],
         config: { schema: 'full', type: 'normal' },
       },
     ];
@@ -387,7 +416,11 @@ describe('pushSchema', () => {
       {
         name: 'complex_table',
         columns: [
-          { name: 'id_field', tableName: 'complex_table', config: { type: 'string' } },
+          {
+            name: 'id_field',
+            tableName: 'complex_table',
+            config: { type: 'string' },
+          },
           {
             name: 'unique_field',
             tableName: 'complex_table',
@@ -427,7 +460,13 @@ describe('pushSchema', () => {
     const tables: TableDefinition[] = [
       {
         name: 'evolving_table',
-        columns: [{ name: 'name', tableName: 'evolving_table', config: { type: 'string' } }],
+        columns: [
+          {
+            name: 'name',
+            tableName: 'evolving_table',
+            config: { type: 'string' },
+          },
+        ],
         config: { schema: 'full', type: 'normal' },
       },
     ];
@@ -442,8 +481,131 @@ describe('pushSchema', () => {
 
     const logCalls = vi.mocked(console.log).mock.calls;
     const hasOutput = logCalls.some(
-      (c) => String(c[0]).includes('up to date') || String(c[0]).includes('Schema changes'),
+      (c) =>
+        String(c[0]).includes('up to date') ||
+        String(c[0]).includes('Schema changes'),
     );
     expect(hasOutput).toBe(true);
+  });
+
+  it('uses provided driver when ownsDriver=false', async () => {
+    const tables: TableDefinition[] = [];
+    const config = makeConfig();
+    // Pass driver directly — pushSchema should not create its own
+    await pushSchema({ config, tables }, driver);
+
+    // safeDisconnect should NOT be called because ownsDriver=false
+    const logCalls = vi.mocked(console.log).mock.calls;
+    const upToDate = logCalls.find((c) => String(c[0]).includes('up to date'));
+    expect(upToDate).toBeDefined();
+  });
+});
+
+// ============================================================================
+// tablesToDdl — additional branches
+// ============================================================================
+
+describe('tablesToDdl additional branches', () => {
+  it('handles events with async and retry options', () => {
+    const events: EventConfig[] = [
+      {
+        name: 'async_event',
+        on: 'user',
+        when: '$before = NONE',
+        then: ['CREATE audit SET action = "created"'],
+        comment: 'Audit trail',
+        async: true,
+        retry: 3,
+        maxdepth: 5,
+      },
+    ];
+
+    const ddl = tablesToDdl([], undefined, events);
+    expect(ddl.events).toHaveLength(1);
+    expect(ddl.events[0].async).toBe(true);
+    expect(ddl.events[0].retry).toBe(3);
+    expect(ddl.events[0].maxdepth).toBe(5);
+    expect(ddl.events[0].comment).toBe('Audit trail');
+  });
+
+  it('handles functions with comment and permissions', () => {
+    const functions: FunctionConfig[] = [
+      {
+        name: 'fn::greet',
+        args: ['$name', '$greeting'],
+        body: 'RETURN $greeting + $name',
+        comment: 'Greeting function',
+        permissions: 'NONE',
+      },
+    ];
+
+    const ddl = tablesToDdl([], undefined, undefined, functions);
+    expect(ddl.functions).toHaveLength(1);
+    expect(ddl.functions[0].comment).toBe('Greeting function');
+    expect(ddl.functions[0].permissions).toBe('NONE');
+  });
+
+  it('handles functions with no args', () => {
+    const functions: FunctionConfig[] = [
+      {
+        name: 'fn::version',
+        body: 'RETURN "1.0.0"',
+      },
+    ];
+
+    const ddl = tablesToDdl([], undefined, undefined, functions);
+    expect(ddl.functions[0].args).toBeUndefined();
+  });
+
+  it('handles SCHEMALESS tables default optional to true', () => {
+    const tables: TableDefinition[] = [
+      {
+        name: 'less_table',
+        columns: [
+          {
+            name: 'flexible_col',
+            tableName: 'less_table',
+            config: { type: 'string' },
+          },
+        ],
+        config: { schema: 'less', type: 'normal' },
+      },
+    ];
+
+    const ddl = tablesToDdl(tables);
+    expect(ddl.tables[0].columns[0].optional).toBe(true);
+  });
+
+  it('handles table-level permissions', () => {
+    const tables: TableDefinition[] = [
+      {
+        name: 'protected_table',
+        columns: [
+          {
+            name: 'secret',
+            tableName: 'protected_table',
+            config: { type: 'string' },
+          },
+        ],
+        config: {
+          schema: 'full',
+          type: 'normal',
+          permissions: { select: 'NONE', create: 'NONE' },
+        },
+      },
+    ];
+
+    const ddl = tablesToDdl(tables);
+    expect(ddl.tables[0].permissions).toEqual({
+      select: 'NONE',
+      create: 'NONE',
+    });
+  });
+
+  it('handles empty access and events arrays', () => {
+    const ddl = tablesToDdl([], [], [], []);
+    expect(ddl.accessStructured).toEqual([]);
+    expect(ddl.events).toEqual([]);
+    expect(ddl.functions).toEqual([]);
   });
 });

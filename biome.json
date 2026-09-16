@@ -1,0 +1,41 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.5.10/schema.json",
+  "files": {
+    "includes": [
+      "packages/dali-orm/**",
+      "!packages/dali-orm/dist",
+      "!packages/dali-orm/.tsup"
+    ]
+  },
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineWidth": 80
+  },
+  "javascript": {
+    "formatter": {
+      "quoteStyle": "single"
+    }
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "suspicious": {
+        "noThenProperty": "off"
+      }
+    }
+  },
+  "overrides": [
+    {
+      "includes": ["**/__tests__/**", "**/*.test.ts"],
+      "linter": {
+        "rules": {
+          "correctness": {
+            "useYield": "off"
+          }
+        }
+      }
+    }
+  ]
+}

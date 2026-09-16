@@ -139,3 +139,20 @@ DEFINE FIELD IF NOT EXISTS email ON TABLE users TYPE string;
 -- DOWN ----
 REMOVE TABLE users;
 ```
+
+## SurrealDB 3.x Constraints
+
+- **rename_table does not exist.** SurrealDB has no `ALTER TABLE ... RENAME`; the
+  renderer throws with guidance. Migrate manually:
+  ```sql
+  DEFINE TABLE new_table SCHEMAFULL;
+  INSERT INTO new_table SELECT * FROM old_table;
+  REMOVE TABLE old_table;
+  ```
+- **Prerequisite**: namespace AND database must exist before push/migrate.
+  The API layer calls ensureDatabaseContext() and fails fast with:
+  `DEFINE NAMESPACE <ns>; USE NS <ns>; DEFINE DATABASE <db>;`
+- **Field permissions**: `select`, `create`, `update` only — `FOR delete` on
+  fields is rejected by SurrealDB 3.x (table-level delete is fine).
+- **FLEXIBLE**: only valid on `object` / `option<object>` fields.
+- **Defaults**: emitted unquoted for numbers/bools; `defaultNow()` → `DEFAULT time::now()`.

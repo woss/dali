@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vite-plus/test';
+import { describe, expect, it } from 'vitest';
 import { datetime, string } from '../../sdk/schema/column/simple-builders.js';
 import { defineTable } from '../../sdk/table.js';
 import { SchemaDiffer } from '../core/diff.js';
@@ -17,7 +17,9 @@ describe('index definition SQL generation', () => {
       },
       'users',
     );
-    expect(sql).toBe('DEFINE INDEX idx_users_email ON TABLE users COLUMNS email UNIQUE');
+    expect(sql).toBe(
+      'DEFINE INDEX idx_users_email ON TABLE users COLUMNS email UNIQUE',
+    );
   });
 
   it('generates DEFINE INDEX SQL for unique index with multiple fields', () => {
@@ -29,18 +31,26 @@ describe('index definition SQL generation', () => {
       },
       'users',
     );
-    expect(sql).toBe('DEFINE INDEX idx_users_name_age ON TABLE users COLUMNS name, age UNIQUE');
+    expect(sql).toBe(
+      'DEFINE INDEX idx_users_name_age ON TABLE users COLUMNS name, age UNIQUE',
+    );
   });
 
   it('throws error for empty index name', () => {
     expect(() =>
-      generator.generateIndexDefinition({ name: '', fields: ['email'], type: 'unique' }, 'users'),
+      generator.generateIndexDefinition(
+        { name: '', fields: ['email'], type: 'unique' },
+        'users',
+      ),
     ).toThrow('Index name is required');
   });
 
   it('throws error for empty fields', () => {
     expect(() =>
-      generator.generateIndexDefinition({ name: 'idx_test', fields: [], type: 'unique' }, 'users'),
+      generator.generateIndexDefinition(
+        { name: 'idx_test', fields: [], type: 'unique' },
+        'users',
+      ),
     ).toThrow('must have at least one field');
   });
 
@@ -68,7 +78,9 @@ describe('SchemaDiffer index detection', () => {
         'users',
         { email: string('email'), name: string('name') },
         {
-          indexes: [{ name: 'idx_users_email', fields: ['email'], type: 'unique' }],
+          indexes: [
+            { name: 'idx_users_email', fields: ['email'], type: 'unique' },
+          ],
         },
       ),
     ];
@@ -87,7 +99,9 @@ describe('SchemaDiffer index detection', () => {
         'users',
         { email: string('email'), name: string('name') },
         {
-          indexes: [{ name: 'idx_users_email', fields: ['email'], type: 'unique' }],
+          indexes: [
+            { name: 'idx_users_email', fields: ['email'], type: 'unique' },
+          ],
         },
       ),
     ];
@@ -103,7 +117,9 @@ describe('SchemaDiffer index detection', () => {
         'users',
         { email: string('email'), name: string('name') },
         {
-          indexes: [{ name: 'idx_users_email', fields: ['email'], type: 'unique' }],
+          indexes: [
+            { name: 'idx_users_email', fields: ['email'], type: 'unique' },
+          ],
         },
       ),
     ];
@@ -135,7 +151,9 @@ describe('SchemaDiffer index detection', () => {
         'posts',
         { title: string('title') },
         {
-          indexes: [{ name: 'idx_posts_title', fields: ['title'], type: 'unique' }],
+          indexes: [
+            { name: 'idx_posts_title', fields: ['title'], type: 'unique' },
+          ],
         },
       ),
     ];
@@ -169,8 +187,10 @@ describe('index migration integration', () => {
       },
     );
 
-    const sqlStatements = generator.generateTableMigration(table, 'up');
-    const indexStatements = sqlStatements.filter((s) => s.startsWith('DEFINE INDEX'));
+    const sqlStatements = generator.generateTableMigration(table);
+    const indexStatements = sqlStatements.filter((s) =>
+      s.startsWith('DEFINE INDEX'),
+    );
     expect(indexStatements).toHaveLength(1);
     expect(indexStatements[0]).toBe(
       'DEFINE INDEX idx_projects_directory_path ON TABLE projects COLUMNS directory_path UNIQUE',
@@ -195,7 +215,7 @@ describe('index migration integration', () => {
       },
     );
 
-    const sqlStatements = generator.generateTableMigration(table, 'up');
+    const sqlStatements = generator.generateTableMigration(table);
 
     // Order should be: DEFINE TABLE, DEFINE FIELD, DEFINE INDEX
     expect(sqlStatements[0]).toContain('DEFINE TABLE');

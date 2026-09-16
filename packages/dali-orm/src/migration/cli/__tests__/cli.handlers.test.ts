@@ -2,14 +2,14 @@
  * Comprehensive tests for CLI handler functions in cli.ts
  *
  * Tests main() routing to all sub-handlers:
- * - handleMigrate (up, down, reset, status, sync, resume, dev, deploy)
+ * - handleMigrate (up, status, sync, resume, dev, deploy)
  * - handleGenerate (with name, offline, schema option, connection failure)
  * - handlePull, handleDiff, handleQuery
  * - printHelp, printMigrateHelp (via main routing)
  *
  * All external modules are mocked for isolated testing.
  */
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { main, parseGlobalOptions } from '../../cli.js';
 
 // ============================================================================
@@ -44,12 +44,14 @@ const {
 
   const runner = {
     init: vi.fn().mockResolvedValue(undefined),
-    down: vi.fn().mockResolvedValue({ rolledBack: ['001_test'] }),
-    reset: vi.fn().mockResolvedValue(undefined),
     status: vi.fn().mockResolvedValue({
       applied: [
         { version: '001', name: 'initial', appliedAt: '2024-01-01T00:00:00Z' },
-        { version: '002', name: 'add_users', appliedAt: '2024-01-02T12:30:00Z' },
+        {
+          version: '002',
+          name: 'add_users',
+          appliedAt: '2024-01-02T12:30:00Z',
+        },
       ],
       pending: [],
       current: '002',
@@ -66,18 +68,23 @@ const {
     mockCreateConnection: vi.fn().mockResolvedValue(driver),
     mockCreateConnectionWithTimeout: vi.fn().mockResolvedValue(driver),
     mockSafeDisconnect: vi.fn().mockResolvedValue(undefined),
-    mockFormatError: vi.fn((e: unknown) => (e instanceof Error ? e.message : String(e))),
+    mockFormatError: vi.fn((e: unknown) =>
+      e instanceof Error ? e.message : String(e),
+    ),
     mockRunnerInstance: runner,
     mockLoadSchemaFiles: vi.fn().mockResolvedValue({
       tables: [
         {
           name: 'users',
-          columns: [{ name: 'id', tableName: 'users', config: { type: 'string' } }],
+          columns: [
+            { name: 'id', tableName: 'users', config: { type: 'string' } },
+          ],
           config: { schema: 'full', type: 'normal' },
         },
       ],
       access: [],
       functions: [],
+      analyzers: [],
     }),
     mockGenerateMigration: vi
       .fn()
@@ -163,6 +170,7 @@ const EMPTY_SCHEMA = {
   tables: [],
   access: [],
   functions: [],
+  analyzers: [],
 };
 
 // ============================================================================
@@ -207,26 +215,9 @@ describe('main', () => {
 
     it('migrate up --to passes target version', async () => {
       await main(['migrate', 'up', '--to', '002']);
-      expect(mockMigrateUp).toHaveBeenCalledWith(expect.objectContaining({ to: '002' }));
-    });
-
-    it('migrate down creates connection and calls runner.down', async () => {
-      await main(['migrate', 'down']);
-      expect(mockCreateConnection).toHaveBeenCalled();
-      expect(mockRunnerInstance.init).toHaveBeenCalled();
-      expect(mockRunnerInstance.down).toHaveBeenCalledWith(1);
-    });
-
-    it('migrate down --steps 3 passes steps param', async () => {
-      await main(['migrate', 'down', '--steps', '3']);
-      expect(mockRunnerInstance.down).toHaveBeenCalledWith(3);
-    });
-
-    it('migrate reset creates connection and calls runner.reset', async () => {
-      await main(['migrate', 'reset']);
-      expect(mockCreateConnection).toHaveBeenCalled();
-      expect(mockRunnerInstance.init).toHaveBeenCalled();
-      expect(mockRunnerInstance.reset).toHaveBeenCalled();
+      expect(mockMigrateUp).toHaveBeenCalledWith(
+        expect.objectContaining({ to: '002' }),
+      );
     });
 
     it('migrate status creates connection and calls runner.status', async () => {
@@ -238,7 +229,9 @@ describe('main', () => {
 
     it('migrate status prints migration status output', async () => {
       await main(['migrate', 'status']);
-      const logOutput = consoleLogSpy.mock.calls.map((c: unknown[]) => String(c[0])).join('\n');
+      const logOutput = consoleLogSpy.mock.calls
+        .map((c: unknown[]) => String(c[0]))
+        .join('\n');
       expect(logOutput).toContain('Migration Status');
       expect(logOutput).toContain('initial');
       expect(logOutput).toContain('001');
@@ -258,11 +251,15 @@ describe('main', () => {
 
     it('migrate dev with name calls migrateDev', async () => {
       await main(['migrate', 'dev', 'add_users']);
-      expect(mockMigrateDev).toHaveBeenCalledWith(expect.objectContaining({ name: 'add_users' }));
+      expect(mockMigrateDev).toHaveBeenCalledWith(
+        expect.objectContaining({ name: 'add_users' }),
+      );
     });
 
     it('migrate dev without name prints usage and exits', async () => {
-      await expect(main(['migrate', 'dev'])).rejects.toThrow('process.exit prevented in test');
+      await expect(main(['migrate', 'dev'])).rejects.toThrow(
+        'process.exit prevented in test',
+      );
       expect(exitSpy).toHaveBeenCalledWith(1);
     });
 
@@ -282,12 +279,16 @@ describe('main', () => {
 
     it('migrate dev --dry-run passes dryRun option', async () => {
       await main(['migrate', 'dev', 'test_mig', '--dry-run']);
-      expect(mockMigrateDev).toHaveBeenCalledWith(expect.objectContaining({ dryRun: true }));
+      expect(mockMigrateDev).toHaveBeenCalledWith(
+        expect.objectContaining({ dryRun: true }),
+      );
     });
 
     it('migrate dev slugification info printed when name differs', async () => {
       await main(['migrate', 'dev', 'My Migration!']);
-      const logOutput = consoleLogSpy.mock.calls.map((c: unknown[]) => String(c[0])).join('\n');
+      const logOutput = consoleLogSpy.mock.calls
+        .map((c: unknown[]) => String(c[0]))
+        .join('\n');
       expect(logOutput).toContain('slugified');
     });
 
@@ -298,19 +299,25 @@ describe('main', () => {
 
     it('migrate help prints migrate help text', async () => {
       await main(['migrate', 'help']);
-      const logOutput = consoleLogSpy.mock.calls.map((c: unknown[]) => String(c[0])).join('\n');
+      const logOutput = consoleLogSpy.mock.calls
+        .map((c: unknown[]) => String(c[0]))
+        .join('\n');
       expect(logOutput).toContain('Migrate Commands');
     });
 
     it('migrate --help prints migrate help text', async () => {
       await main(['migrate', '--help']);
-      const logOutput = consoleLogSpy.mock.calls.map((c: unknown[]) => String(c[0])).join('\n');
+      const logOutput = consoleLogSpy.mock.calls
+        .map((c: unknown[]) => String(c[0]))
+        .join('\n');
       expect(logOutput).toContain('Migrate Commands');
     });
 
     it('migrate -h prints migrate help text', async () => {
       await main(['migrate', '-h']);
-      const logOutput = consoleLogSpy.mock.calls.map((c: unknown[]) => String(c[0])).join('\n');
+      const logOutput = consoleLogSpy.mock.calls
+        .map((c: unknown[]) => String(c[0]))
+        .join('\n');
       expect(logOutput).toContain('Migrate Commands');
     });
 
@@ -319,18 +326,6 @@ describe('main', () => {
       expect(mockCreateConnection).toHaveBeenCalled();
       expect(mockRunnerInstance.init).toHaveBeenCalled();
       expect(mockRunnerInstance.status).toHaveBeenCalled();
-    });
-
-    it('migrate down handles connection failure', async () => {
-      mockCreateConnection.mockRejectedValueOnce(new Error('Connection failed'));
-      await expect(main(['migrate', 'down'])).rejects.toThrow('process.exit prevented in test');
-      expect(exitSpy).toHaveBeenCalledWith(1);
-    });
-
-    it('migrate reset handles connection failure', async () => {
-      mockCreateConnection.mockRejectedValueOnce(new Error('DB unreachable'));
-      await expect(main(['migrate', 'reset'])).rejects.toThrow('process.exit prevented in test');
-      expect(exitSpy).toHaveBeenCalledWith(1);
     });
   });
 
@@ -348,11 +343,14 @@ describe('main', () => {
         expect.anything(),
         undefined,
         expect.anything(),
+        expect.anything(),
       );
     });
 
     it('generate without name prints usage and exits', async () => {
-      await expect(main(['generate'])).rejects.toThrow('process.exit prevented in test');
+      await expect(main(['generate'])).rejects.toThrow(
+        'process.exit prevented in test',
+      );
       expect(exitSpy).toHaveBeenCalledWith(1);
     });
 
@@ -364,6 +362,7 @@ describe('main', () => {
         expect.anything(),
         undefined,
         expect.anything(),
+        expect.anything(),
       );
     });
 
@@ -374,6 +373,7 @@ describe('main', () => {
         expect.objectContaining({ name: 'explicit_name' }),
         expect.anything(),
         undefined,
+        expect.anything(),
         expect.anything(),
       );
     });
@@ -397,16 +397,23 @@ describe('main', () => {
     });
 
     it('generate handles connection failure and falls back', async () => {
-      mockCreateConnectionWithTimeout.mockRejectedValueOnce(new Error('Connection refused'));
+      mockCreateConnectionWithTimeout.mockRejectedValueOnce(
+        new Error('Connection refused'),
+      );
       await main(['generate', 'test_mig']);
-      const logOutput = consoleLogSpy.mock.calls.map((c: unknown[]) => String(c[0])).join('\n');
+      const logOutput = consoleLogSpy.mock.calls
+        .map((c: unknown[]) => String(c[0]))
+        .join('\n');
       expect(logOutput).toContain('Could not connect');
       expect(mockGenerateMigration).toHaveBeenCalled();
     });
 
     it('generate --schema uses custom schema path', async () => {
       await main(['generate', 'test_mig', '--schema', './custom-schema']);
-      expect(mockLoadSchemaFiles).toHaveBeenCalledWith('./custom-schema', expect.any(String));
+      expect(mockLoadSchemaFiles).toHaveBeenCalledWith(
+        './custom-schema',
+        expect.any(String),
+      );
     });
 
     it('generate with empty schema prints error and exits', async () => {
@@ -427,6 +434,7 @@ describe('main', () => {
         expect.anything(),
         undefined,
         expect.anything(),
+        expect.anything(),
       );
     });
 
@@ -437,6 +445,7 @@ describe('main', () => {
         expect.objectContaining({ fullMigration: true }),
         expect.anything(),
         undefined,
+        expect.anything(),
         expect.anything(),
       );
     });
@@ -449,6 +458,7 @@ describe('main', () => {
         expect.anything(),
         undefined,
         expect.anything(),
+        expect.anything(),
       );
     });
 
@@ -459,6 +469,7 @@ describe('main', () => {
         expect.objectContaining({ version: '20250101000000' }),
         expect.anything(),
         undefined,
+        expect.anything(),
         expect.anything(),
       );
     });
@@ -471,14 +482,18 @@ describe('main', () => {
 
     it('generate prints success message with output path', async () => {
       await main(['generate', 'test_mig']);
-      const logOutput = consoleLogSpy.mock.calls.map((c: unknown[]) => String(c[0])).join('\n');
+      const logOutput = consoleLogSpy.mock.calls
+        .map((c: unknown[]) => String(c[0]))
+        .join('\n');
       expect(logOutput).toContain('Migration created');
     });
 
     it('generate prints "No migration file" when outputPath is empty', async () => {
       mockGenerateMigration.mockResolvedValueOnce('');
       await main(['generate', 'test_mig']);
-      const logOutput = consoleLogSpy.mock.calls.map((c: unknown[]) => String(c[0])).join('\n');
+      const logOutput = consoleLogSpy.mock.calls
+        .map((c: unknown[]) => String(c[0]))
+        .join('\n');
       expect(logOutput).toContain('No migration file was created');
     });
   });
@@ -490,12 +505,16 @@ describe('main', () => {
   describe('pull command', () => {
     it('pull calls pullSchema without table arg', async () => {
       await main(['pull']);
-      expect(mockPullSchema).toHaveBeenCalledWith(expect.objectContaining({ table: undefined }));
+      expect(mockPullSchema).toHaveBeenCalledWith(
+        expect.objectContaining({ table: undefined }),
+      );
     });
 
     it('pull <table> calls pullSchema with table name', async () => {
       await main(['pull', 'users']);
-      expect(mockPullSchema).toHaveBeenCalledWith(expect.objectContaining({ table: 'users' }));
+      expect(mockPullSchema).toHaveBeenCalledWith(
+        expect.objectContaining({ table: 'users' }),
+      );
     });
 
     it('pull --output passes outputDir option', async () => {
@@ -518,12 +537,16 @@ describe('main', () => {
 
     it('diff --verbose passes verbose option', async () => {
       await main(['diff', '--verbose']);
-      expect(mockDiffSchema).toHaveBeenCalledWith(expect.objectContaining({ verbose: true }));
+      expect(mockDiffSchema).toHaveBeenCalledWith(
+        expect.objectContaining({ verbose: true }),
+      );
     });
 
     it('diff -V passes verbose option', async () => {
       await main(['diff', '-V']);
-      expect(mockDiffSchema).toHaveBeenCalledWith(expect.objectContaining({ verbose: true }));
+      expect(mockDiffSchema).toHaveBeenCalledWith(
+        expect.objectContaining({ verbose: true }),
+      );
     });
 
     it('diff passes tables from schema files', async () => {
@@ -531,7 +554,9 @@ describe('main', () => {
       expect(mockLoadSchemaFiles).toHaveBeenCalled();
       expect(mockDiffSchema).toHaveBeenCalledWith(
         expect.objectContaining({
-          tables: expect.arrayContaining([expect.objectContaining({ name: 'users' })]),
+          tables: expect.arrayContaining([
+            expect.objectContaining({ name: 'users' }),
+          ]),
         }),
       );
     });
@@ -555,13 +580,17 @@ describe('main', () => {
     it('query output is JSON formatted', async () => {
       mockDriver.query.mockResolvedValueOnce([{ id: '1', name: 'Alice' }]);
       await main(['query', 'SELECT * FROM users']);
-      const logOutput = consoleLogSpy.mock.calls.map((c: unknown[]) => String(c[0])).join('\n');
+      const logOutput = consoleLogSpy.mock.calls
+        .map((c: unknown[]) => String(c[0]))
+        .join('\n');
       expect(logOutput).toContain('"id"');
       expect(logOutput).toContain('"Alice"');
     });
 
     it('query without SQL prints usage and exits', async () => {
-      await expect(main(['query'])).rejects.toThrow('process.exit prevented in test');
+      await expect(main(['query'])).rejects.toThrow(
+        'process.exit prevented in test',
+      );
       expect(exitSpy).toHaveBeenCalledWith(1);
     });
   });
@@ -573,19 +602,25 @@ describe('main', () => {
   describe('help and version', () => {
     it('help command prints help text', async () => {
       await main(['help']);
-      const logOutput = consoleLogSpy.mock.calls.map((c: unknown[]) => String(c[0])).join('\n');
+      const logOutput = consoleLogSpy.mock.calls
+        .map((c: unknown[]) => String(c[0]))
+        .join('\n');
       expect(logOutput).toContain('DaliORM CLI');
     });
 
     it('--help flag prints help text', async () => {
       await main(['--help']);
-      const logOutput = consoleLogSpy.mock.calls.map((c: unknown[]) => String(c[0])).join('\n');
+      const logOutput = consoleLogSpy.mock.calls
+        .map((c: unknown[]) => String(c[0]))
+        .join('\n');
       expect(logOutput).toContain('DaliORM CLI');
     });
 
     it('-h flag prints help text', async () => {
       await main(['-h']);
-      const logOutput = consoleLogSpy.mock.calls.map((c: unknown[]) => String(c[0])).join('\n');
+      const logOutput = consoleLogSpy.mock.calls
+        .map((c: unknown[]) => String(c[0]))
+        .join('\n');
       expect(logOutput).toContain('DaliORM CLI');
     });
 
@@ -602,7 +637,9 @@ describe('main', () => {
     it('no arguments prints help and exits 0', async () => {
       await expect(main([])).rejects.toThrow('process.exit prevented in test');
       expect(exitSpy).toHaveBeenCalledWith(0);
-      const logOutput = consoleLogSpy.mock.calls.map((c: unknown[]) => String(c[0])).join('\n');
+      const logOutput = consoleLogSpy.mock.calls
+        .map((c: unknown[]) => String(c[0]))
+        .join('\n');
       expect(logOutput).toContain('DaliORM CLI');
     });
   });
@@ -614,7 +651,9 @@ describe('main', () => {
   describe('init command', () => {
     it('init prints initialization message', async () => {
       await main(['init']);
-      const logOutput = consoleLogSpy.mock.calls.map((c: unknown[]) => String(c[0])).join('\n');
+      const logOutput = consoleLogSpy.mock.calls
+        .map((c: unknown[]) => String(c[0]))
+        .join('\n');
       expect(logOutput).toContain('Initializing DaliORM project');
     });
   });
@@ -625,31 +664,45 @@ describe('main', () => {
 
   describe('error handling', () => {
     it('unknown command prints error and exits 1', async () => {
-      await expect(main(['unknown-cmd'])).rejects.toThrow('process.exit prevented in test');
+      await expect(main(['unknown-cmd'])).rejects.toThrow(
+        'process.exit prevented in test',
+      );
       expect(exitSpy).toHaveBeenCalledWith(1);
     });
 
     it('error in handler is caught and exits 1', async () => {
       mockPullSchema.mockRejectedValueOnce(new Error('Handler failed'));
-      await expect(main(['pull'])).rejects.toThrow('process.exit prevented in test');
+      await expect(main(['pull'])).rejects.toThrow(
+        'process.exit prevented in test',
+      );
       expect(exitSpy).toHaveBeenCalledWith(1);
     });
 
     it('error handler logs error message', async () => {
       mockPullSchema.mockRejectedValueOnce(new Error('DB failure'));
-      await expect(main(['pull'])).rejects.toThrow('process.exit prevented in test');
+      await expect(main(['pull'])).rejects.toThrow(
+        'process.exit prevented in test',
+      );
       expect(consoleErrorSpy).toHaveBeenCalledWith('Error:', 'DB failure');
     });
 
     it('handleGenerate error propagates to main catch', async () => {
-      mockLoadSchemaFiles.mockRejectedValueOnce(new Error('Schema load failed'));
-      await expect(main(['generate', 'test'])).rejects.toThrow('process.exit prevented in test');
+      mockLoadSchemaFiles.mockRejectedValueOnce(
+        new Error('Schema load failed'),
+      );
+      await expect(main(['generate', 'test'])).rejects.toThrow(
+        'process.exit prevented in test',
+      );
       expect(exitSpy).toHaveBeenCalledWith(1);
     });
 
     it('prints unknown command to stderr', async () => {
-      await expect(main(['bogus'])).rejects.toThrow('process.exit prevented in test');
-      expect(consoleErrorSpy).toHaveBeenCalledWith(expect.stringContaining('Unknown command'));
+      await expect(main(['bogus'])).rejects.toThrow(
+        'process.exit prevented in test',
+      );
+      expect(consoleErrorSpy).toHaveBeenCalledWith(
+        expect.stringContaining('Unknown command'),
+      );
     });
   });
 });
@@ -660,11 +713,18 @@ describe('main', () => {
 
 describe('parseGlobalOptions (additional edge cases)', () => {
   it('handles --snapshots with value', () => {
-    expect(parseGlobalOptions(['--snapshots', './my-snapshots']).snapshots).toBe('./my-snapshots');
+    expect(
+      parseGlobalOptions(['--snapshots', './my-snapshots']).snapshots,
+    ).toBe('./my-snapshots');
   });
 
   it('parses --offline flag combined with other options', () => {
-    const opts = parseGlobalOptions(['--offline', '--schema', './sch', '--full']);
+    const opts = parseGlobalOptions([
+      '--offline',
+      '--schema',
+      './sch',
+      '--full',
+    ]);
     expect(opts.offline).toBe(true);
     expect(opts.schema).toBe('./sch');
     expect(opts.full).toBe(true);
@@ -674,10 +734,5 @@ describe('parseGlobalOptions (additional edge cases)', () => {
     // In real usage, --to is parsed from the full args array
     const opts = parseGlobalOptions(['--to', '005', 'status']);
     expect(opts.to).toBe('005');
-  });
-
-  it('parses --steps as number from string', () => {
-    const opts = parseGlobalOptions(['--steps', '10']);
-    expect(opts.steps).toBe(10);
   });
 });

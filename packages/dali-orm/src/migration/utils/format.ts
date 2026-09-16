@@ -5,12 +5,18 @@
  * Single source of truth - Parse Don't Validate
  */
 
+import { isRaw, quoteString } from '../../core/surql.js';
+
 /**
  * Check if a string value represents a now() variant that should become time::now()
  */
 export function isNowVariant(value: string): boolean {
   const normalized = value.trim().toLowerCase();
-  return normalized === 'now' || normalized === 'now()' || normalized === 'time::now()';
+  return (
+    normalized === 'now' ||
+    normalized === 'now()' ||
+    normalized === 'time::now()'
+  );
 }
 
 /**
@@ -19,22 +25,24 @@ export function isNowVariant(value: string): boolean {
  * Handles: now() variants, booleans, strings, numbers, objects
  * Returns properly formatted SurrealQL literal
  */
-export function formatDefaultValue(value: unknown): string | number | boolean {
+export function formatDefaultValue(value: unknown): string {
   if (value === null) return 'NULL';
   if (value === undefined) return 'NONE';
+  if (isRaw(value)) return value.sql;
+  if (value instanceof Date) return quoteString(value.toISOString());
   if (typeof value === 'string') {
-    // SurrealDB function expressions (e.g., `crypto::blake3(content)`, `time::now()`) — emit unquoted
-    if (value.includes('::') && value.endsWith(')')) {
-      return value;
-    }
     if (isNowVariant(value)) return 'time::now()';
-    const normalized = value.trim().toLowerCase();
-    if (normalized === 'true') return 'true';
-    if (normalized === 'false') return 'false';
-    return `'${value.replace(/'/g, "\\'")}'`;
+    // Function-call expressions (e.g. `crypto::blake3(x)`) pass through unquoted
+    if (value.includes('::')) return value;
+    // Relative duration / keyword datetimes stay raw
+    if (value === 'now' || value.startsWith('+') || value.startsWith('!'))
+      return value;
+    // Bare ISO datetime literals are valid unquoted SurrealQL
+    if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/.test(value)) return value;
+    return quoteString(value);
   }
-  if (typeof value === 'boolean') return value;
-  if (typeof value === 'number') return value;
+  if (typeof value === 'boolean') return String(value);
+  if (typeof value === 'number') return String(value);
   if (typeof value === 'object') return `${JSON.stringify(value)}`;
   // istanbul ignore next
   return String(value as never);
@@ -91,6 +99,8 @@ export function validateChangefeed(value: string | undefined): void {
   // Pattern: number + unit (s, m, h, d, w)
   const pattern = /^\d+[smhdw]+$/;
   if (!pattern.test(value)) {
-    throw new Error(`Invalid changefeed duration: '${value}'. Expected format: '7d', '24h', '1w'`);
+    throw new Error(
+      `Invalid changefeed duration: '${value}'. Expected format: '7d', '24h', '1w'`,
+    );
   }
 }

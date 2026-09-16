@@ -6,7 +6,16 @@
  * into trusted typed output.
  */
 
-import { literal, object, optional, parse, record, string, union, unknown } from 'valibot';
+import {
+  literal,
+  object,
+  optional,
+  parse,
+  record,
+  string,
+  union,
+  unknown,
+} from 'valibot';
 
 // ============================================================================
 // Valibot Schemas for Each Auth Type
@@ -63,7 +72,13 @@ export const AuthConfigSchema = union([
 export type ValidatedAuthConfig =
   | { type: 'root'; username: string; password: string }
   | { type: 'namespace'; username: string; password: string; namespace: string }
-  | { type: 'database'; username: string; password: string; namespace: string; database: string }
+  | {
+      type: 'database';
+      username: string;
+      password: string;
+      namespace: string;
+      database: string;
+    }
   | {
       type: 'record';
       namespace: string;
@@ -196,7 +211,9 @@ export function validateAuthConfig(config: unknown): AuthValidationResult {
 /**
  * Convert valibot error to our format
  */
-export function convertValibotErrors(error: unknown): AuthValidationErrorDetail[] {
+export function convertValibotErrors(
+  error: unknown,
+): AuthValidationErrorDetail[] {
   if (!(error instanceof Error)) {
     return [{ field: 'unknown', message: String(error) }];
   }
@@ -230,7 +247,9 @@ export function convertValibotErrors(error: unknown): AuthValidationErrorDetail[
  */
 function extractMessage(fullMessage: string, field: string): string {
   // Try to extract the specific error message after the path
-  const pathIndex = fullMessage.toLowerCase().indexOf(`at path "${field}"`.toLowerCase());
+  const pathIndex = fullMessage
+    .toLowerCase()
+    .indexOf(`at path "${field}"`.toLowerCase());
   if (pathIndex === -1) {
     return fullMessage;
   }
