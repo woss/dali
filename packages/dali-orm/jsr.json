@@ -14,6 +14,12 @@
     "./sdk/schema": "./src/sdk/schema.ts",
     "./sdk/table": "./src/sdk/table.ts"
   },
+  "imports": {
+    "@surrealdb/node": "npm:@surrealdb/node@3.0.3",
+    "obug": "npm:obug@2.1.1",
+    "surrealdb": "npm:surrealdb@2.0.3",
+    "valibot": "npm:valibot@1.3.1"
+  },
   "publish": {
     "include": ["src/**/*.ts", "README.md", "CHANGELOG.md"],
     "exclude": [
