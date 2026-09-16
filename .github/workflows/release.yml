@@ -55,9 +55,13 @@ jobs:
         run: npm install -g npm@latest
       - name: "Pack (materialize catalog: dependencies)"
         working-directory: packages/dali-orm
-        run: pnpm pack --pack-destination "$GITHUB_WORKSPACE"
+        run: |
+          pnpm pack --pack-destination "$GITHUB_WORKSPACE/tmp-pkg"
+          mkdir -p "$GITHUB_WORKSPACE/publish/pkg"
+          tar xzf "$GITHUB_WORKSPACE"/tmp-pkg/woss-dali-orm-*.tgz -C "$GITHUB_WORKSPACE/publish/pkg"
       - name: Publish with provenance
-        run: npm publish woss-dali-orm-*.tgz --provenance --access public
+        working-directory: ${{ github.workspace }}/publish/pkg
+        run: npm publish --provenance --access public
 
   publish-jsr:
     name: Publish to JSR
@@ -67,16 +71,16 @@ jobs:
       contents: read
       id-token: write
     steps:
-      - uses: actions/checkout@v6
+      - uses: jdx/mise-action@v4
       - run: pnpm install --frozen-lockfile
       - name: Publish to JSR
         working-directory: packages/dali-orm
         run: npx jsr@latest publish
 
   github-release:
-    name: GitHub Release
-    needs: gates
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v6
         with:
