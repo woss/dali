@@ -79,26 +79,17 @@ pnpm --filter @woss/dali-orm exec dali-orm --help
 
 ### Deploy
 
-Versioning and publishing use [Changesets](https://github.com/changesets/changesets). Each PR that should trigger a release includes a changeset file describing the version bump and changelog entry.
+Releases are tag-based with keyless OIDC publishing — no npm/JSR tokens involved.
 
-```bash
-# Create a changeset for your PR (select packages + bump type)
-pnpm changeset
+1. Bump `version` in `packages/dali-orm/package.json` **and** `packages/dali-orm/jsr.json` (they must match), update `packages/dali-orm/CHANGELOG.md`, and commit.
+2. Tag and push: `git tag v0.4.0 && git push origin v0.4.0`.
 
-# Preview what the version bump will look like
-pnpm version-packages
+The [Release workflow](.github/workflows/release.yml) then runs, in order:
 
-# Publish (CI does this automatically on merge to main)
-pnpm release
-```
-
-On every push to `main`, the [Publish workflow](.github/workflows/publish.yml) runs `changesets/action`:
-
-- Creates or updates a "Version Packages" PR with aggregated version bumps and changelog entries
-- When that PR merges, publishes `@woss/dali-orm` and `@woss/dali-memory` to npm
-- Creates GitHub Releases with auto-generated changelog notes
-
-No manual tag management needed. To include a change in the next release, run `pnpm changeset` on your branch and commit the generated file.
+- `gates` — build, test coverage, lint, and tag/package version sync
+- `publish-npm` — publishes `@woss/dali-orm` to npm with provenance (npm Trusted Publishing)
+- `publish-jsr` — publishes to JSR via OIDC
+- `github-release` — attaches a source tarball to the GitHub Release
 
 ## License
 

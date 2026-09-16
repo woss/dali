@@ -187,13 +187,7 @@ dali-orm/
    pnpm build           # vp pack (all packages)
    ```
 
-4. **Changeset** — if your change should trigger a release, create a changeset:
-
-   ```bash
-   pnpm changeset
-   ```
-
-   Select packages to bump and describe the change. Commit the generated `.md` file.
+4. **Release** — publishing is tag-based (see [README](README.md#deploy)): bump `packages/dali-orm/package.json` + `jsr.json`, update the changelog, then tag `v<version>` and push the tag.
 
 5. **Commit** with a descriptive message:
 

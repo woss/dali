@@ -1,6 +1,6 @@
 # @woss/dali-orm
 
-## [Unreleased]
+## 0.4.0
 
 ### Added
 
@@ -24,7 +24,7 @@
 - `SerializedAnalyzer` type, `serializeAnalyzer()` and `restoreAnalyzer()` in snapshot module
 - Analyzer support in all migration generation paths: `generateMigration`, `fullMigration`, `snapshotMigration`, `liveMigration`
 - Analyzers emitted UP before tables, DOWN after tables (correct ordering since indexes depend on analyzers)
-- Section separators (`-- ---- Analyzers ----`) in generated migration files
+- New parity with the surrealdb reference: overhaul of the classes
 
 ### Changed
 
