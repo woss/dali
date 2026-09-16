@@ -16,6 +16,11 @@
   },
   "publish": {
     "include": ["src/**/*.ts", "README.md", "CHANGELOG.md"],
-    "exclude": ["src/**/__tests__/**", "src/**/*.test.ts", "src/**/*.d.ts", "tmp"]
+    "exclude": [
+      "src/**/__tests__/**",
+      "src/**/*.test.ts",
+      "src/**/*.d.ts",
+      "tmp"
+    ]
   }
 }
